@@ -1,0 +1,31 @@
+{
+  "name": "企业审批系统",
+  "appid": "",
+  "description": "企业审批系统移动端",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "vueVersion": "3",
+  "h5": {
+    "title": "企业审批系统",
+    "router": {
+      "mode": "hash",
+      "base": "/m/"
+    },
+    "devServer": {
+      "proxy": {
+        "/api": {
+          "target": "http://localhost:8080",
+          "changeOrigin": true
+        }
+      }
+    }
+  },
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false,
+      "es6": true
+    },
+    "usingComponents": true
+  }
+}
