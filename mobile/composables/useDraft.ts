@@ -47,7 +47,8 @@ function setLeaveAlert(on: boolean): void {
 }
 
 export function pathPreviewText(p: PathPreview | null): string {
-  if (!p || !p.nodes.length) return ''
+  if (!p) return '审批路径暂不可用，提交时会重新校验。\n\n'
+  if (!p.nodes.length) return ''
   const lines = p.nodes
     .map((n, i) => {
       const many = n.mode && n.mode !== 'SINGLE' && n.candidates?.length
@@ -120,19 +121,19 @@ export function useDraft<K extends TypePath>(type: K) {
   }
 
   async function persist(body: SaveBodyMap[K], opts: { silent?: boolean } = {}): Promise<DraftSaved> {
-      const sentRevision = revision
-      let r: DraftSaved
-      if (draft.id === null) {
-        r = await api.applications.create(type, body)
-      } else {
-        r = await api.applications.save(draft.id, type, { ...body, version: draft.version ?? undefined })
-      }
-      draft.id = r.id
-      draft.version = r.version
-      draft.appNo = r.appNo
-      if (revision === sentRevision) markClean()
-      if (!opts.silent) toast('草稿已保存', 'success')
-      return r
+    const sentRevision = revision
+    let r: DraftSaved
+    if (draft.id === null) {
+      r = await api.applications.create(type, body)
+    } else {
+      r = await api.applications.save(draft.id, type, { ...body, version: draft.version ?? undefined })
+    }
+    draft.id = r.id
+    draft.version = r.version
+    draft.appNo = r.appNo
+    if (revision === sentRevision) markClean()
+    if (!opts.silent) toast('草稿已保存', 'success')
+    return r
   }
 
   function lock(): void {
@@ -153,41 +154,41 @@ export function useDraft<K extends TypePath>(type: K) {
   async function submit(body: SaveBodyMap[K], opts: { afterSave?: (id: number) => Promise<string | void> } = {}): Promise<ActionResult | null> {
     lock()
     try {
-    const sentRevision = revision
-    loading('保存中')
-    let saved: DraftSaved
-    try {
-      saved = await persist(body, { silent: true })
-    } finally {
-      hideLoading()
-    }
-    const id = saved.id
-    const extra = await opts.afterSave?.(id)
-    let preview: PathPreview | null = null
-    loading('生成审批路径')
-    try {
-      preview = await api.applications.pathPreview(id)
-    } catch {
-      preview = null // 预览失败不阻止提交，以服务端校验为准
-    } finally {
-      hideLoading()
-    }
-    if (preview && preview.errors.length) {
-      await alert('暂时无法提交', preview.errors.join('\n'))
-      return null
-    }
-    // 打开确认框时生成幂等键；本次提交的重试都复用它
-    const idemKey = newIdemKey()
-    const ok = await confirm({
-      title: '确认提交',
-      content: `${pathPreviewText(preview)}${extra ? `${extra}\n\n` : ''}提交后进入审批流程，审批期间不能修改。`,
-      confirmText: '提交',
-    })
-    if (!ok) return null
-    if (revision !== sentRevision) {
-      toast('表单内容已变化，请检查后重新提交')
-      return null
-    }
+      const sentRevision = revision
+      loading('保存中')
+      let saved: DraftSaved
+      try {
+        saved = await persist(body, { silent: true })
+      } finally {
+        hideLoading()
+      }
+      const id = saved.id
+      const extra = await opts.afterSave?.(id)
+      let preview: PathPreview | null = null
+      loading('生成审批路径')
+      try {
+        preview = await api.applications.pathPreview(id)
+      } catch {
+        preview = null // 预览失败不阻止提交，以服务端校验为准
+      } finally {
+        hideLoading()
+      }
+      if (preview && preview.errors.length) {
+        await alert('暂时无法提交', preview.errors.join('\n'))
+        return null
+      }
+      // 打开确认框时生成幂等键；本次提交的重试都复用它
+      const idemKey = newIdemKey()
+      const ok = await confirm({
+        title: '确认提交',
+        content: `${pathPreviewText(preview)}${extra ? `${extra}\n\n` : ''}提交后进入审批流程，审批期间不能修改。`,
+        confirmText: '提交',
+      })
+      if (!ok) return null
+      if (revision !== sentRevision) {
+        toast('表单内容已变化，请检查后重新提交')
+        return null
+      }
       const r = await runIdempotent(idemKey, (key) => api.applications.submit(id, { appVersion: saved.version }, key), '提交中')
       if (r && revision === sentRevision) markClean()
       return r

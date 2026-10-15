@@ -1,17 +1,20 @@
 <script setup lang="ts">
 // 批准 / 驳回面板：批准意见可选；驳回理由必填 5-500 字。
 // 幂等键在弹窗打开时生成，同一弹窗内的重试复用同一个键。
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { api } from '@/lib/api'
 import type { ActionResult } from '@/lib/types'
 import { newIdemKey } from '@/lib/idem'
 import { useAction } from '@/composables/useAction'
+import { ApiError } from '@/lib/errors'
+import { sessionGeneration } from '@/stores/auth'
 
 const props = withDefaults(
   defineProps<{
     taskId: number
     /** 申请当前 version，作为 appVersion 提交 */
     appVersion: number
+    disabled?: boolean
     canApprove?: boolean
     canReject?: boolean
   }>(),
@@ -28,6 +31,8 @@ const idemKey = ref('')
 const touched = ref(false)
 const { loading, run } = useAction()
 
+let mounted = true
+onBeforeUnmount(() => { mounted = false })
 const MIN_REJECT = 5
 const MAX_LEN = 500
 const length = computed(() => [...comment.value.trim()].length)
@@ -38,6 +43,7 @@ const error = computed(() => {
 })
 
 function open(m: Mode) {
+  if (props.disabled || loading.value) return
   mode.value = m
   comment.value = ''
   touched.value = false
@@ -46,15 +52,22 @@ function open(m: Mode) {
 }
 
 async function confirm() {
+  if (props.disabled || loading.value) return
   touched.value = true
   if (error.value) return
   const text = comment.value.trim()
+  const generation = sessionGeneration()
+  const taskId = props.taskId
+  const appVersion = props.appVersion
   const r = await run({
     idemKey: idemKey.value,
-    action: (key) =>
-      mode.value === 'APPROVE'
-        ? api.tasks.approve(props.taskId, { appVersion: props.appVersion, comment: text || null }, key)
-        : api.tasks.reject(props.taskId, { appVersion: props.appVersion, comment: text }, key),
+    action: (key) => {
+      if (!mounted || generation !== sessionGeneration()) throw new ApiError({ code: 40101, message: '登录身份或页面已变化，请重新打开申请' }, 401)
+      if (props.disabled || taskId !== props.taskId || appVersion !== props.appVersion) throw new ApiError({ code: 40901, message: '申请状态已变化，请刷新后重新操作' }, 409)
+      return mode.value === 'APPROVE'
+        ? api.tasks.approve(taskId, { appVersion, comment: text || null }, key)
+        : api.tasks.reject(taskId, { appVersion, comment: text }, key)
+    },
     success: (res) =>
       mode.value === 'REJECT'
         ? '已驳回'
@@ -75,8 +88,8 @@ async function confirm() {
 
 <template>
   <div class="approve-panel">
-    <el-button v-if="canApprove" type="success" @click="open('APPROVE')">批准</el-button>
-    <el-button v-if="canReject" type="danger" plain @click="open('REJECT')">驳回</el-button>
+    <el-button v-if="canApprove" :disabled="disabled || loading" type="success" @click="open('APPROVE')">批准</el-button>
+    <el-button v-if="canReject" :disabled="disabled || loading" type="danger" plain @click="open('REJECT')">驳回</el-button>
 
     <el-dialog
       v-model="visible"
@@ -113,7 +126,7 @@ async function confirm() {
       </el-form>
       <template #footer>
         <el-button :disabled="loading" @click="visible = false">取消</el-button>
-        <el-button :type="mode === 'APPROVE' ? 'success' : 'danger'" :loading="loading" @click="confirm">
+        <el-button :type="mode === 'APPROVE' ? 'success' : 'danger'" :loading="loading" :disabled="disabled" @click="confirm">
           {{ mode === 'APPROVE' ? '确认批准' : '确认驳回' }}
         </el-button>
       </template>

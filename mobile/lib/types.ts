@@ -623,6 +623,8 @@ export interface ApplicationDetail {
   flow: FlowView | null
   logs: ApprovalLogView[]
   allowedActions: AppAction[]
+  /** 仅本人审批中的申请返回有效催办冷却时间 */
+  urgeNextAllowedAt?: string | null
   myTaskId: number | null // 当前用户在本单上的 PENDING 待办
 }
 

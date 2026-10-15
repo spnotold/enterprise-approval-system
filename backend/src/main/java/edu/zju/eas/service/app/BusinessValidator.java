@@ -2,6 +2,7 @@ package edu.zju.eas.service.app;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.zju.eas.dto.app.BusinessRequests.*;
 import edu.zju.eas.model.app.*;
 import edu.zju.eas.model.common.Attachment;
@@ -88,7 +89,7 @@ public class BusinessValidator {
     private void travel(Application app,Travel r,FieldErrors e,boolean full) {
         if(r.startTime()!=null&&r.endTime()!=null){
             if(r.endTime().isBefore(r.startTime()))e.add("endTime","TRAVEL_TIME","结束时间不能早于开始时间");
-            if(full&&ChronoUnit.DAYS.between(r.startTime().atZoneSameInstant(CN).toLocalDate(),r.endTime().atZoneSameInstant(CN).toLocalDate())+1>90)e.add("endTime","TRAVEL_TIME","出差跨度不能超过 90 天");
+            if(ChronoUnit.DAYS.between(r.startTime().atZoneSameInstant(CN).toLocalDate(),r.endTime().atZoneSameInstant(CN).toLocalDate())+1>90)e.add("endTime","TRAVEL_TIME","出差跨度不能超过 90 天");
         }
         Set<Long> seen=new HashSet<>();int i=0;for(var c:list(r.companions())){
             String p="companions["+(i++)+"].userId";
@@ -154,13 +155,19 @@ public class BusinessValidator {
         for(Iterator<String> it=values.fieldNames();it.hasNext();){String key=it.next();if(!known.contains(key))e.add("formValues."+key,"FORM_UNKNOWN_FIELD","表单包含未定义字段");}
         for(FormField f:version.getFormSchema().getFields()){
             JsonNode v=values.get(f.getKey());String p="formValues."+f.getKey();FieldRules rules=f.rulesOrEmpty();
+            if(v!=null&&v.isTextual()&&("TEXT".equals(f.getType())||"TEXTAREA".equals(f.getType()))){
+                int limit="TEXT".equals(f.getType())?200:2000;
+                int maximum=Math.min(rules.getMaxLength()==null?limit:rules.getMaxLength(),limit);
+                String text=v.asText();
+                if(text.codePointCount(0,text.length())>maximum){e.add(p,"FORM_LENGTH","文字长度不能超过 "+maximum+" 字");continue;}
+            }
             boolean empty=v==null||v.isNull()||(v.isTextual()&&v.asText().isBlank())||(v.isArray()&&v.isEmpty());
             if(empty){if(full&&f.isRequired())e.add(p,"FORM_REQUIRED","请填写"+f.getLabel());continue;}
             try{
                 switch(f.getType()){
                     case "TEXT","TEXTAREA" -> {
                         if(!v.isTextual())throw new IllegalArgumentException();String text=v.asText();int len=length(text);
-                        if(rules.getMaxLength()!=null&&len>rules.getMaxLength()||full&&rules.getMinLength()!=null&&len<rules.getMinLength())e.add(p,"FORM_LENGTH","文字长度不符合要求");
+                        if(full&&rules.getMinLength()!=null&&len<rules.getMinLength())e.add(p,"FORM_LENGTH","文字长度不符合要求");
                         String pattern=rules.getPattern();if("MOBILE".equals(rules.getPatternPreset()))pattern="^1[3-9]\\d{9}$";if("EMAIL".equals(rules.getPatternPreset()))pattern="^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
                         if(pattern!=null&&!Pattern.matches(pattern,text))e.add(p,"FORM_PATTERN",rules.getPatternMessage()==null?"格式不符合要求":rules.getPatternMessage());
                     }
@@ -191,6 +198,28 @@ public class BusinessValidator {
                 }
             }catch(IllegalArgumentException|ArithmeticException|DateTimeException ex){e.add(p,"FORM_TYPE","字段值格式不正确");}
         }
+    }
+
+    /** 复制来源仍保留原值；仅新草稿中不再符合当前规则的字段清空，供申请人重新填写。 */
+    public Custom sanitizeCopy(Application app,Custom input) {
+        ObjectNode values=input.formValues()==null?com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode():input.formValues().deepCopy();
+        int remaining=values.size()+1;
+        while(remaining-->0){
+            Custom candidate=new Custom(null,app.getTemplateId(),input.templateVersionId(),input.title(),values);
+            try{validate(app,candidate,false);return candidate;}
+            catch(BizException ex){
+                if(ex.errorCode()!=ErrorCode.BAD_REQUEST)throw ex;
+                boolean removed=false;
+                for(FieldError error:ex.errors()){
+                    if(error.field()!=null&&error.field().startsWith("formValues.")){
+                        String key=error.field().substring("formValues.".length());
+                        if(values.has(key)){values.remove(key);removed=true;}
+                    }
+                }
+                if(!removed)throw ex;
+            }
+        }
+        throw new IllegalStateException("复制表单清理未收敛");
     }
 
     private LocalDate boundDate(String expression){if(expression.startsWith("TODAY")){String suffix=expression.substring(5);return LocalDate.now(clock).plusDays(suffix.isEmpty()?0:Long.parseLong(suffix));}return LocalDate.parse(expression);}

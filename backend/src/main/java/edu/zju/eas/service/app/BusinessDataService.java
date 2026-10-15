@@ -130,6 +130,8 @@ public class BusinessDataService {
         return amount;
     }
 
+    public Custom sanitizeCopy(Application app,Custom request){return validator.sanitizeCopy(app,request);}
+
     public BizHandler.SubmitData prepare(Application app, CurrentUser user, boolean full) {
         Object request=request(app);
         if(full)validator.validate(app,request,true);
@@ -171,10 +173,11 @@ public class BusinessDataService {
             Map<String,Object> out=object(d);out.put("items",purchaseItems.selectList(Wrappers.<PurchaseItem>lambdaQuery().eq(PurchaseItem::getApplicationId,id).orderByAsc(PurchaseItem::getSeq))
                 .stream().map(i->{var row=object(i);row.put("quantity",i.getQuantity()==null?null:i.getQuantity().toPlainString());return row;}).toList());
             Long min=qs.stream().map(PurchaseQuote::getQuoteAmountCents).filter(Objects::nonNull).min(Long::compareTo).orElse(null);
-            out.put("quotes",qs.stream().map(q->{var row=object(q);row.put("attachments",files.metas(q.getAttachmentIds(),pool));row.put("lowest",q.getQuoteAmountCents()!=null&&q.getQuoteAmountCents().equals(min));return row;}).toList());
+            out.put("quotes",qs.stream().map(q->{var row=object(q);row.put("attachmentIds",attachments?list(q.getAttachmentIds()):List.of());row.put("attachments",files.metas(q.getAttachmentIds(),pool));row.put("lowest",q.getQuoteAmountCents()!=null&&q.getQuoteAmountCents().equals(min));return row;}).toList());
             Integer selected=null;for(int i=0;i<qs.size();i++)if(qs.get(i).getId().equals(d.getSelectedQuoteId()))selected=i;
             Long amount=selected==null?null:qs.get(selected).getQuoteAmountCents();
             out.put("selectedQuoteIndex",selected);out.put("selectedAmountCents",amount);out.put("notLowest",amount!=null&&min!=null&&amount>min);
+            out.put("singleSourceAttachmentIds",attachments?list(d.getSingleSourceAttachmentIds()):List.of());out.put("attachmentIds",attachments?list(d.getAttachmentIds()):List.of());
             out.put("singleSourceAttachments",files.metas(d.getSingleSourceAttachmentIds(),pool));out.put("attachments",files.metas(d.getAttachmentIds(),pool));return out;
         }
         if("TRAVEL".equals(app.getType())) {
@@ -182,7 +185,7 @@ public class BusinessDataService {
             out.put("durationHours",d.getDurationHours()==null?null:d.getDurationHours().toPlainString());
             out.put("companions",companions.selectList(Wrappers.<TravelCompanion>lambdaQuery().eq(TravelCompanion::getApplicationId,id).orderByAsc(TravelCompanion::getSeq)).stream().map(c->{
                 var row=object(c);var u=users.brief(c.getUserId());row.put("userName",u==null?null:u.realName());row.put("deptName",u==null?null:u.deptName());return row;}).toList());
-            out.put("lateReport",d.getStartTime()!=null && app.getSubmittedAt()!=null && d.getStartTime().isBefore(app.getSubmittedAt()));out.put("attachments",files.metas(d.getAttachmentIds(),pool));return out;
+            out.put("lateReport",d.getStartTime()!=null && app.getSubmittedAt()!=null && d.getStartTime().isBefore(app.getSubmittedAt()));out.put("attachmentIds",attachments?list(d.getAttachmentIds()):List.of());out.put("attachments",files.metas(d.getAttachmentIds(),pool));return out;
         }
         if("EXPENSE".equals(app.getType())) {
             ExpenseDetail d=expenses.selectById(id);if(d==null)return new LinkedHashMap<>();var out=object(d);
@@ -191,7 +194,9 @@ public class BusinessDataService {
                 var row=object(item);var t=expenseTypes.selectById(item.getExpenseTypeId());row.put("expenseTypeCode",t==null?null:t.getCode());row.put("expenseTypeName",t==null?null:t.getName());
                 var ivs=invoices.selectList(Wrappers.<ExpenseInvoice>lambdaQuery().eq(ExpenseInvoice::getExpenseItemId,item.getId()).orderByAsc(ExpenseInvoice::getSeq));
                 row.put("invoices",ivs.stream().map(iv->{var v=map("attachmentId",iv.getAttachmentId(),"invoiceNo",iv.getInvoiceNo(),"attachment",pool.containsKey(iv.getAttachmentId())?edu.zju.eas.service.file.AttachmentMeta.of(pool.get(iv.getAttachmentId())):null);
-                    var duplicate=duplicates(iv,revealDuplicate);v.put("suspectedDuplicate",!duplicate.isEmpty());v.put("duplicates",duplicate);return v;}).toList());rows.add(row);
+                    var duplicate=duplicates(iv,revealDuplicate);v.put("suspectedDuplicate",!duplicate.isEmpty());v.put("duplicates",duplicate);return v;}).toList());
+                if(!attachments)row.put("invoices",List.of());
+                rows.add(row);
                 if(Boolean.TRUE.equals(item.getNoInvoice())){noCount++;noAmount=add(noAmount,item.getAmountCents());}
             }
             var ids=relations.selectList(Wrappers.<ExpenseRelation>lambdaQuery().eq(ExpenseRelation::getExpenseApplicationId,id)).stream().map(ExpenseRelation::getRelatedApplicationId).toList();
@@ -199,8 +204,9 @@ public class BusinessDataService {
         }
         CustomFormData d=customs.selectById(id);if(d==null)return new LinkedHashMap<>();ProcessTemplateVersion v=versions.selectById(d.getTemplateVersionId());
         ProcessTemplate t=templates.selectById(app.getTemplateId());Map<String,Object> attached=new LinkedHashMap<>();
-        for(FormField f:v.getFormSchema().getFields())if("ATTACHMENT".equals(f.getType()))attached.put(f.getKey(),files.metas(ids(d.getFormValues().get(f.getKey())),pool));
-        return map("templateId",app.getTemplateId(),"templateVersionId",v.getId(),"versionNo",v.getVersionNo(),"formSchema",v.getFormSchema(),"formValues",d.getFormValues(),"attachments",attached,"outdated",!v.getId().equals(t.getCurrentVersionId()));
+        ObjectNode visibleValues=d.getFormValues().deepCopy();
+        for(FormField f:v.getFormSchema().getFields())if("ATTACHMENT".equals(f.getType())){attached.put(f.getKey(),files.metas(ids(d.getFormValues().get(f.getKey())),pool));if(!attachments)visibleValues.set(f.getKey(),Jsons.MAPPER.createArrayNode());}
+        return map("templateId",app.getTemplateId(),"templateVersionId",v.getId(),"versionNo",v.getVersionNo(),"formSchema",v.getFormSchema(),"formValues",visibleValues,"attachments",attached,"outdated",!v.getId().equals(t.getCurrentVersionId()));
     }
 
     public Map<String,Object> linked(Application a) {

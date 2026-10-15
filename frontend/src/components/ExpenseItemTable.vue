@@ -219,7 +219,7 @@ function typeName(r: object): string {
                 </template>
               </AttachmentUploader>
             </template>
-            <span v-else class="muted small">{{ row.invoices.length }} 张票据（无权查看附件）</span>
+            <span v-else class="muted small">无权查看票据附件</span>
           </template>
 
           <!-- 编辑 -->

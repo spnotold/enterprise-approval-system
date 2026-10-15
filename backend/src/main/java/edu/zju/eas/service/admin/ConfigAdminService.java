@@ -67,7 +67,11 @@ public class ConfigAdminService {
                 Long uid=null;
                 if(value.startsWith("DEPT:")) uid=flow.headOfCode(value.substring(5));
                 else if(value.startsWith("USER:")) { try {uid=Long.valueOf(value.substring(5));} catch(NumberFormatException ignored) {} }
-                valid=uid!=null && Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_user WHERE id=? AND status='ACTIVE')",Boolean.class,uid)) && !flow.isAdminOnly(uid);
+                valid=uid!=null && Boolean.TRUE.equals(jdbc.queryForObject("""
+                        SELECT EXISTS(SELECT 1 FROM sys_user u JOIN user_role ur ON ur.user_id=u.id
+                        JOIN role_permission rp ON rp.role_id=ur.role_id JOIN permission p ON p.id=rp.permission_id
+                        WHERE u.id=? AND u.status='ACTIVE' AND p.code='TASK_HANDLE')
+                        """,Boolean.class,uid)) && !flow.isAdminOnly(uid);
             }
             default -> valid=false;
         }

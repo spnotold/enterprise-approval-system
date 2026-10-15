@@ -53,6 +53,22 @@ public class OverdueReminderJob {
         for (Overdue o : rows) {
             try {
                 Boolean ok = tx.execute(s -> {
+                    // 先锁申请，再确认待办；扫描后可能已经完成、撤回或转办。
+                    // 加锁顺序与流程引擎一致，通知写入前不会再发生状态流转。
+                    var locked = jdbc.queryForList("""
+                            SELECT id FROM application
+                             WHERE id = ? AND status = 'IN_APPROVAL' AND deleted_at IS NULL
+                             FOR UPDATE
+                            """, Long.class, o.applicationId());
+                    if (locked.isEmpty()) return false;
+                    Boolean pending = jdbc.queryForObject("""
+                            SELECT EXISTS (
+                                SELECT 1 FROM approval_task t
+                                JOIN flow_node_instance n ON n.id = t.node_instance_id
+                                WHERE t.id = ? AND t.assignee_id = ?
+                                  AND t.status = 'PENDING' AND n.status = 'ACTIVE')
+                            """, Boolean.class, o.taskId(), o.assigneeId());
+                    if (!Boolean.TRUE.equals(pending)) return false;
                     Application app = applicationMapper.selectById(o.applicationId());
                     if (app == null) return false;
                     return notifications.overdue(app, o.taskId(), o.assigneeId(), day, o.pendingHours());

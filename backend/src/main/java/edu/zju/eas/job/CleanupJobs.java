@@ -32,7 +32,7 @@ public class CleanupJobs {
     public int purgeTempAttachments() {
         List<String> keys = jdbc.queryForList("""
                 UPDATE attachment SET status = 'DELETED', deleted_at = now()
-                 WHERE status = 'TEMP' AND created_at < now() - make_interval(hours => ?)
+                 WHERE status = 'TEMP' AND updated_at < now() - make_interval(hours => ?)
                 RETURNING storage_key
                 """, String.class, TEMP_ATTACHMENT_HOURS);
         removeObjects(keys);

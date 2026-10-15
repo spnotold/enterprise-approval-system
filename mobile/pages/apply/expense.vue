@@ -113,7 +113,12 @@ async function act(full: boolean): Promise<void> {
   try {
     if (full) { const r = await submit(data.body, { afterSave: loadDuplicates }); if (r) { ready.value = false; finishSubmit(r) } }
     else { loading('保存中'); const r = await save(data.body); await loadDuplicates(r.id) }
-  } catch (e) { applyApiError(fe, e, { remap: f => remapIndex(f, 'items', itemMap), onRefresh: reloadDraft }) }
+  } catch (e) {
+    applyApiError(fe, e, {
+      remap: f => /^(title|description|relatedApplicationIds|independentReason|items)(?:$|\[|\.)/.test(f) ? remapIndex(f, 'items', itemMap) : null,
+      onRefresh: reloadDraft,
+    })
+  }
   finally { hideLoading() }
 }
 onLoad(async q => {

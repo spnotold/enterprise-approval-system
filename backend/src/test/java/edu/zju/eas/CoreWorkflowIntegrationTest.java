@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import java.time.OffsetDateTime;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import static edu.zju.eas.service.app.BusinessDataService.map;
@@ -142,6 +143,7 @@ class CoreWorkflowIntegrationTest {
         assertEquals(200,action("/tasks/"+pending(expense,head)+"/approve",head,1,"expense-head-"+expense).getResponse().getStatus());
         MvcResult linked=call(get("/applications/"+travel),finance,null);assertEquals(200,linked.getResponse().getStatus(),linked.getResponse().getContentAsString());JsonNode detail=data(linked);
         assertEquals("LINKED",detail.path("viewMode").asText());assertFalse(detail.path("canReadAttachments").asBoolean());assertTrue(detail.path("travel").isNull());assertEquals(0,detail.path("logs").size());assertFalse(detail.path("linked").isNull());
+        for(JsonNode node:detail.path("flow").path("nodes")){assertTrue(node.path("conditionText").isNull());assertTrue(node.path("resolveNote").isNull());}
         assertEquals(404,call(get("/applications/"+travel+"/logs"),finance,null).getResponse().getStatus());
     }
 
@@ -219,5 +221,5 @@ class CoreWorkflowIntegrationTest {
     private long pending(long app,long assignee){return jdbc.queryForObject("SELECT id FROM approval_task WHERE application_id=? AND assignee_id=? AND status='PENDING'",Long.class,app,assignee);}
     private MvcResult action(String path,long user,int version,String key)throws Exception{return call(post(path).header("Idempotency-Key",key),user,map("appVersion",version));}
     private MvcResult call(MockHttpServletRequestBuilder request,long user,Object body)throws Exception{request.header("Authorization","Bearer "+tokens.issueAccess(user,0));if(body!=null)request.contentType("application/json").content(Jsons.write(body));return mvc.perform(request).andReturn();}
-    private JsonNode data(MvcResult result)throws Exception{JsonNode response=Jsons.read(result.getResponse().getContentAsString(),JsonNode.class);assertEquals(0,response.path("code").asInt(),response.toString());return response.path("data");}
+    private JsonNode data(MvcResult result)throws Exception{JsonNode response=Jsons.read(result.getResponse().getContentAsString(StandardCharsets.UTF_8),JsonNode.class);assertEquals(0,response.path("code").asInt(),response.toString());return response.path("data");}
 }

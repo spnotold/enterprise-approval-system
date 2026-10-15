@@ -86,6 +86,15 @@ public class ApplicationService {
         remapArray(body,"attachmentIds",ids);remapArray(body,"singleSourceAttachmentIds",ids);
         if(body.path("quotes").isArray())for(JsonNode quote:body.path("quotes"))remapArray((ObjectNode)quote,"attachmentIds",ids);
         if(body.path("items").isArray())for(JsonNode item:body.path("items"))if(item.path("invoices").isArray())for(JsonNode invoice:item.path("invoices"))((ObjectNode)invoice).put("attachmentId",ids.get(invoice.path("attachmentId").longValue()));
+        if("TRAVEL".equals(source.getType())){
+            var valid=Jsons.MAPPER.createArrayNode();Set<Long> seen=new HashSet<>();
+            for(JsonNode c:body.path("companions")){
+                if(c.path("userId").isNull()||!c.has("userId")){valid.add(c);continue;}
+                Long uid=c.path("userId").longValue();var companion=users.get(uid);
+                if(companion!=null&&"ACTIVE".equals(companion.getStatus())&&!uid.equals(user.id())&&seen.add(uid))valid.add(c);
+            }
+            body.set("companions",valid);
+        }
         if("CUSTOM".equals(source.getType())){
             ProcessTemplateVersion old=versions.selectById(body.path("templateVersionId").longValue());ProcessTemplateVersion current=versions.selectById(template.getCurrentVersionId());
             ObjectNode carried=Jsons.MAPPER.createObjectNode();
@@ -95,6 +104,7 @@ public class ApplicationService {
             body.set("formValues",carried);body.put("templateVersionId",current.getId());
         }
         Object request=switch(source.getType()){case "PURCHASE"->Jsons.convert(body,Purchase.class);case "TRAVEL"->Jsons.convert(body,Travel.class);case "EXPENSE"->Jsons.convert(body,Expense.class);default->Jsons.convert(body,Custom.class);};
+        if(request instanceof Custom custom)request=business.sanitizeCopy(target,custom);
         Long amount=business.save(target,request,user);setDraftValues(target,source.getTitle(),amount);return saved(applications.selectById(target.getId()));
     }
 
@@ -131,15 +141,16 @@ public class ApplicationService {
         Map<String,Object> out=map("id",a.getId(),"appNo",a.getAppNo(),"type",a.getType(),"title",a.getTitle(),"status",a.getStatus(),"version",a.getVersion(),"templateId",a.getTemplateId(),"templateName",template.getName(),"templateVersionNo",version==null?null:version.getVersionNo(),"applicant",users.brief(a.getApplicantId()),"deptId",a.getDeptId(),"deptName",departments.name(a.getDeptId()),"amountCents",a.getAmountCents(),"currentNodeSeq",a.getCurrentNodeSeq(),"submittedAt",a.getSubmittedAt(),"finishedAt",a.getFinishedAt(),"createdAt",a.getCreatedAt(),"updatedAt",a.getUpdatedAt(),"viewMode",full?"FULL":"LINKED","linked",full?null:business.linked(a),"canReadAttachments",canFiles,"allowedActions",actions,"myTaskId",myTask==null?null:myTask.getId());
         Application source=full&&a.getSourceApplicationId()!=null?applications.selectById(a.getSourceApplicationId()):null;
         out.put("source",source!=null&&access.canViewApplication(user,source)?link(source):null);
+        out.put("urgeNextAllowedAt",user.id().equals(a.getApplicantId())&&"IN_APPROVAL".equals(a.getStatus())?engine.nextUrgeAllowedAt(id):null);
         out.put("followUps",full?applications.selectList(Wrappers.<Application>lambdaQuery().eq(Application::getSourceApplicationId,id).isNull(Application::getDeletedAt)).stream().filter(f->access.canViewApplication(user,f)).map(ApplicationService::link).toList():List.of());
-        for(String type:TYPES)out.put(type.toLowerCase(Locale.ROOT),full&&a.getType().equals(type)?business.view(a,true,revealDuplicates(user,a)):null);
+        for(String type:TYPES)out.put(type.toLowerCase(Locale.ROOT),full&&a.getType().equals(type)?business.view(a,canFiles,revealDuplicates(user,a)):null);
         out.put("flow",flow(a,!full));out.put("logs",full?logRows(id):List.of());return out;
     }
 
     public List<Map<String,Object>> logs(Long id,CurrentUser u){Application a=applications.selectById(id);if(!access.canViewApplication(u,a))throw BizException.notFound();if(u.isAdmin()&&!u.id().equals(a.getApplicantId()))audit.logBizAccess(u,a,"LOGS");return logRows(id);}
     public PathPreview preview(Long id,CurrentUser u){Application a=own(id,u);if(!"DRAFT".equals(a.getStatus()))throw BizException.stateChanged();return engine.preview(a,u);}
     public List<Map<String,Object>> linkable(CurrentUser u){return applications.selectList(Wrappers.<Application>lambdaQuery().eq(Application::getApplicantId,u.id()).eq(Application::getStatus,"APPROVED").in(Application::getType,List.of("TRAVEL","PURCHASE")).isNull(Application::getDeletedAt).orderByDesc(Application::getFinishedAt)).stream().map(business::linked).toList();}
-    public List<Map<String,Object>> invoiceDuplicates(Long id,CurrentUser u){Application a=applications.selectById(id);if(!access.canViewApplication(u,a))throw BizException.notFound();if(!"EXPENSE".equals(a.getType()))return List.of();if(u.isAdmin())audit.logBizAccess(u,a,"INVOICE_DUPLICATES");return invoices.selectList(Wrappers.<ExpenseInvoice>lambdaQuery().eq(ExpenseInvoice::getApplicationId,id)).stream().flatMap(iv->business.duplicates(iv,revealDuplicates(u,a)).stream()).toList();}
+    public List<Map<String,Object>> invoiceDuplicates(Long id,CurrentUser u){Application a=applications.selectById(id);if(!access.canViewApplication(u,a)||!access.canReadApplicationAttachments(u,a))throw BizException.notFound();if(!"EXPENSE".equals(a.getType()))return List.of();if(u.isAdmin())audit.logBizAccess(u,a,"INVOICE_DUPLICATES");return invoices.selectList(Wrappers.<ExpenseInvoice>lambdaQuery().eq(ExpenseInvoice::getApplicationId,id)).stream().flatMap(iv->business.duplicates(iv,revealDuplicates(u,a)).stream()).toList();}
 
     public PageResponse<Map<String,Object>> taskList(CurrentUser user,boolean pending,String type,String keyword,int page,int size){
         checkPage(page,size);if(!user.has(Perms.TASK_HANDLE))throw BizException.forbidden();if(type!=null&&!TYPES.contains(type)||keyword!=null&&keyword.length()>100)throw new BizException(ErrorCode.BAD_REQUEST);
@@ -159,6 +170,7 @@ public class ApplicationService {
         List<Map<String,Object>> result=new ArrayList<>();for(var n:nodes.selectList(Wrappers.<FlowNodeInstance>lambdaQuery().eq(FlowNodeInstance::getApplicationId,a.getId()).orderByAsc(FlowNodeInstance::getSeq))){
             var assigned=tasks.selectList(Wrappers.<ApprovalTask>lambdaQuery().eq(ApprovalTask::getNodeInstanceId,n.getId()).orderByAsc(ApprovalTask::getId));
             result.add(map("seq",n.getSeq(),"nodeKey",n.getNodeKey(),"name",n.getName(),"status",n.getStatus(),"mode",n.getMode(),"effective",n.getEffective(),"conditionResult",n.getConditionResult(),"conditionText",conditionText(instance,n.getSeq()),"assignee",users.brief(n.getAssigneeId()),"candidates",n.getCandidateIds()==null?List.of():n.getCandidateIds().stream().map(users::brief).filter(Objects::nonNull).toList(),"requiredCount",n.getRequiredCount(),"approvedCount",n.getApprovedCount(),"resolveNote",n.getResolveNote(),"activatedAt",n.getActivatedAt(),"finishedAt",n.getFinishedAt(),"tasks",assigned.stream().map(t->map("id",t.getId(),"assignee",users.brief(t.getAssigneeId()),"status",t.getStatus(),"comment",restricted?null:t.getComment(),"createdAt",t.getCreatedAt(),"actedAt",t.getActedAt())).toList()));
+            if(restricted){Map<String,Object> visible=result.get(result.size()-1);visible.put("conditionText",null);visible.put("resolveNote",null);}
         }return map("templateCode",templates.selectById(a.getTemplateId()).getCode(),"versionNo",instance.getVersionNo(),"nodes",result);
     }
     private String conditionText(FlowInstance instance,int seq){for(JsonNode n:instance.getSnapshot().path("nodes"))if(n.path("seq").asInt()==seq)return n.path("conditionText").isTextual()?n.path("conditionText").asText():null;return null;}

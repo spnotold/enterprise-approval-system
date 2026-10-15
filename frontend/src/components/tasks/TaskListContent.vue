@@ -73,7 +73,7 @@ function switchKind() {
     <div class="page-header">
       <div>
         <h2 class="page-title">{{ title }}</h2>
-        <div class="page-subtitle">{{ pending ? '只显示分配给本人的待办；进入详情核对业务内容和流程后审批。' : '显示本人已处理、已取消或已转办的任务，保留处理结果与意见。' }}</div>
+        <div class="page-subtitle">{{ pending ? '只显示分配给本人的待办；进入详情核对业务内容和流程后审批。' : '显示本人已批准、已驳回或已转办的任务，保留处理结果与意见。' }}</div>
       </div>
       <div class="toolbar">
         <el-button @click="switchKind">{{ pending ? '查看已办' : '查看待办' }}</el-button>
@@ -85,7 +85,7 @@ function switchKind() {
     </el-alert>
     <el-card shadow="never">
       <el-form class="toolbar" @submit.prevent="list.search()">
-        <el-input v-model="filters.keyword" placeholder="编号或标题" aria-label="编号或标题" :prefix-icon="Search" maxlength="200" clearable @clear="list.search()" />
+        <el-input v-model="filters.keyword" placeholder="编号或标题" aria-label="编号或标题" :prefix-icon="Search" maxlength="100" clearable @clear="list.search()" />
         <el-select v-model="filters.type" placeholder="全部申请类型" aria-label="申请类型" clearable @change="list.search()">
           <el-option v-for="option in typeOptions" :key="option.value" :value="option.value" :label="option.label" />
         </el-select>

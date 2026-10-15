@@ -40,6 +40,7 @@ function locate(): void {
   scrollToError()
 }
 function remap(field: string): string | null {
+  if (!/^(title|reason|budgetLimitCents|expectedArrivalDate|singleSourceReason|singleSourceAttachmentIds|selectedQuoteIndex|selectionReason|notLowestReason|items|quotes|attachmentIds)(?:$|\[|\.)/.test(field)) return null
   const item = remapIndex(field, 'items', itemMap)
   return item === null ? null : remapIndex(item, 'quotes', quoteMap)
 }

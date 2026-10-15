@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import javax.sql.DataSource;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -124,7 +125,7 @@ public abstract class IntegrationTestBase {
     }
 
     protected static JsonNode body(MvcResult r) throws Exception {
-        return Jsons.read(r.getResponse().getContentAsString(), JsonNode.class);
+        return Jsons.read(r.getResponse().getContentAsString(StandardCharsets.UTF_8), JsonNode.class);
     }
 
     protected static JsonNode data(MvcResult r) throws Exception {

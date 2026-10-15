@@ -524,14 +524,23 @@ public class FlowEngine {
         OffsetDateTime next = OffsetDateTime.ofInstant(Instant.ofEpochSecond((bucket + 1) * URGE_BUCKET_SECONDS),
                 ZoneOffset.ofHours(8));
         if (urgeMapper.insertOnce(node.getId(), appId, u.id(), bucket) == null) {
-            throw BizException.rule(null, "URGE_TOO_FREQUENT", "同一节点每 4 小时只能催办一次，下次可催办时间 "
-                    + next.toLocalDateTime().toString().replace('T', ' ').substring(0, 16));
+            return new UrgeResult(false, next);
         }
         for (ApprovalTask t : taskMapper.selectList(Wrappers.<ApprovalTask>lambdaQuery()
                 .eq(ApprovalTask::getNodeInstanceId, node.getId()).eq(ApprovalTask::getStatus, ApprovalTask.PENDING))) {
             notifyService.urged(app, node.getId(), bucket, t.getAssigneeId(), u.realName());
         }
         return new UrgeResult(true, next);
+    }
+
+    public OffsetDateTime nextUrgeAllowedAt(Long appId) {
+        FlowNodeInstance node=nodeMapper.activeOf(appId);
+        if(node==null)return null;
+        long bucket=clock.instant().getEpochSecond()/URGE_BUCKET_SECONDS;
+        boolean urged=urgeMapper.selectCount(Wrappers.<edu.zju.eas.model.flow.UrgeRecord>lambdaQuery()
+                .eq(edu.zju.eas.model.flow.UrgeRecord::getNodeInstanceId,node.getId())
+                .eq(edu.zju.eas.model.flow.UrgeRecord::getTimeBucket,bucket))>0;
+        return urged?OffsetDateTime.ofInstant(Instant.ofEpochSecond((bucket+1)*URGE_BUCKET_SECONDS),ZoneOffset.ofHours(8)):null;
     }
 
     // =====================================================================

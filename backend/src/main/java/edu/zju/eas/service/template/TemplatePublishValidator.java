@@ -7,8 +7,10 @@ import edu.zju.eas.model.org.Department;
 import edu.zju.eas.model.org.SysUser;
 import edu.zju.eas.model.template.*;
 import edu.zju.eas.repository.DepartmentMapper;
+import edu.zju.eas.repository.AuthQueryMapper;
 import edu.zju.eas.repository.FlowQueryMapper;
 import edu.zju.eas.repository.SysUserMapper;
+import edu.zju.eas.security.Perms;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
@@ -23,6 +25,7 @@ public class TemplatePublishValidator {
     private final DepartmentMapper departments;
     private final SysUserMapper users;
     private final FlowQueryMapper flow;
+    private final AuthQueryMapper permissions;
     private static final Set<String> RESERVED=Set.of("amountcents","naturaldays","id","applicationid","applicantid","deptid","status","version","templateid","templateversionid","createdat","submittedat","finishedat","__proto__","constructor","prototype");
     private static final Set<String> MIME=Set.of("image/jpeg","image/png","application/pdf");
     private static final Set<String> ROLES=Set.of("EMPLOYEE","DEPT_HEAD","FINANCE_APPROVER","ENTERPRISE_HEAD");
@@ -66,7 +69,8 @@ public class TemplatePublishValidator {
                 if(!lower.add(k) || RESERVED.contains(k)) add(out,"TPL_FIELD_KEY_DUP",p+".key","字段标识重复或使用保留字");
                 byKey.put(f.getKey(),f);
             }
-            if(blank(f.getLabel()) || f.getLabel().length()>50 || f.getType()==null || !FormField.TYPES.contains(f.getType())) {add(out,"TPL_FIELD_INVALID",p,"字段名称或类型不合法");continue;}
+            if(blank(f.getLabel()) || f.getLabel().length()>50) add(out,"TPL_FIELD_INVALID",p+".label","字段名称须为1至50字");
+            if(f.getType()==null || !FormField.TYPES.contains(f.getType())) {add(out,"TPL_FIELD_INVALID",p+".type","字段类型不合法");continue;}
             if((f.getPlaceholder()!=null && f.getPlaceholder().length()>200) || (f.getHelp()!=null && f.getHelp().length()>500)) add(out,"TPL_FIELD_INVALID",p,"占位提示或帮助文字过长");
             if(f.isStatAmount()){amounts++;if(!FormField.AMOUNT.equals(f.getType())) add(out,"TPL_FIELD_INVALID",p+".statAmount","只有金额字段可以作为统计金额");}
             if(FormField.RADIO.equals(f.getType())) {
@@ -89,7 +93,7 @@ public class TemplatePublishValidator {
         for(int i=0;i<nodes.size();i++) {
             NodeDef n=nodes.get(i);String p="nodes["+i+"]";
             if(n==null){add(out,"TPL_NODE_INCOMPLETE",p,"节点不得为空");continue;}
-            if(blank(n.getNodeKey()) || !n.getNodeKey().matches("[A-Za-z][A-Za-z0-9_]{0,49}") || !keys.add(n.getNodeKey().toLowerCase(Locale.ROOT))) add(out,"TPL_CYCLE",p+".nodeKey","顺序节点的标识不得为空或重复");
+            if(blank(n.getNodeKey()) || !n.getNodeKey().matches("[A-Za-z][A-Za-z0-9_]{0,31}") || !keys.add(n.getNodeKey().toLowerCase(Locale.ROOT))) add(out,"TPL_CYCLE",p+".nodeKey","顺序节点的标识须为1至32位且不得重复");
             if(blank(n.getName()) || n.getName().length()>50) add(out,"TPL_NODE_INCOMPLETE",p+".name","节点名称须为1至50字");
             String mode=n.modeOrDefault();
             if(!List.of(NodeDef.SINGLE,NodeDef.COUNTERSIGN,NodeDef.OR_SIGN).contains(mode)) add(out,"TPL_NODE_INCOMPLETE",p+".mode","不支持的审批模式");
@@ -161,7 +165,9 @@ public class TemplatePublishValidator {
         }
     }
     private boolean validUser(Long id) {
-        SysUser u=id==null?null:users.selectById(id);return u!=null && SysUser.ACTIVE.equals(u.getStatus()) && !flow.isAdminOnly(id);
+        SysUser u=id==null?null:users.selectById(id);
+        return u!=null && SysUser.ACTIVE.equals(u.getStatus()) && !flow.isAdminOnly(id)
+                && permissions.permissionCodes(id).contains(Perms.TASK_HANDLE);
     }
     private void condition(Condition c,Map<String,FormField> fields,boolean builtin,String path,List<ValidationIssue> out) {
         if(!List.of("AND","OR").contains(c.getLogic()==null?"":c.getLogic()) || c.getRules()==null || c.getRules().isEmpty() || c.getRules().size()>50) {add(out,"TPL_CONDITION_REF",path,"条件须有AND/OR逻辑及1至50条规则");return;}

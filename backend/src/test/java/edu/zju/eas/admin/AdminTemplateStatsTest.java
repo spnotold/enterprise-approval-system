@@ -173,6 +173,18 @@ class AdminTemplateStatsTest {
         } finally {pool.shutdownNow();}
     }
 
+    @Test void publicationRejectsApproversWithoutTaskPermissionAndOverlongNodeKeys() {
+        long id=custom();Draft valid=draft("初审");
+        valid.nodeConfig().getNodes().get(0).setNodeKey("N".repeat(33));
+        templates.saveDraft(id,valid);
+        assertThat(templates.validate(id)).extracting(ValidationIssue::code).contains("TPL_CYCLE");
+        valid.nodeConfig().getNodes().get(0).setNodeKey("N1");
+        jdbc.update("DELETE FROM user_role WHERE user_id=3");
+        templates.saveDraft(id,valid);
+        assertThat(templates.validate(id)).extracting(ValidationIssue::code).contains("TPL_APPROVER_INVALID");
+        assertThatThrownBy(()->config.update(SysConfigService.FALLBACK_APPROVER,new ConfigSave("USER:3","无审批权限人员"))).isInstanceOf(BizException.class);
+    }
+
     @Test void failedAuditRollsBackEntirePublication() {
         long id=custom();templates.saveDraft(id,draft("初审"));
         jdbc.execute("ALTER TABLE audit_log ADD CONSTRAINT test_audit_failure CHECK(action<>'TEMPLATE_PUBLISH')");

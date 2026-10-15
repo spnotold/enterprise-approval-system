@@ -29,7 +29,7 @@ public class AdminQueryService {
             JOIN process_template p ON p.id=a.template_id JOIN sys_user u ON u.id=t.assignee_id
             JOIN sys_user ap ON ap.id=a.applicant_id LEFT JOIN department d ON d.id=a.dept_id
             JOIN flow_node_instance n ON n.id=t.node_instance_id
-            WHERE t.status='PENDING' AND a.status='IN_APPROVAL' AND a.deleted_at IS NULL
+            WHERE t.status='PENDING' AND n.status='ACTIVE' AND a.status='IN_APPROVAL' AND a.deleted_at IS NULL
             """;
         List<Object> args=new ArrayList<>();
         if(assigneeStatus!=null && !assigneeStatus.isBlank()){from+=" AND u.status=?";args.add(assigneeStatus);}

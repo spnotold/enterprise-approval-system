@@ -28,9 +28,10 @@ const detail = ref<ApplicationDetail | null>(null)
 const loading = ref(false)
 const loadError = ref<ApiError | null>(null)
 const acting = ref<AppAction | null>(null)
+const now = ref(Date.now())
 const urgeLimit = ref<{ id: number; seq: number | null; nextAt: string } | null>(null)
 const act = useAction()
-const busy = computed(() => loading.value || acting.value !== null)
+const busy = computed(() => loading.value || loadError.value !== null || acting.value !== null)
 const full = computed(() => detail.value?.viewMode === 'FULL')
 const columns = computed(() => isMobile.value ? 1 : 2)
 const activeNodes = computed(() => detail.value?.flow?.nodes.filter((node) => node.status === 'ACTIVE') ?? [])
@@ -73,20 +74,31 @@ async function load() {
     const result = await api.applications.detail(id)
     if (seq !== requestSeq || id !== props.id || generation !== sessionGeneration()) return
     detail.value = result
+    now.value = Date.now()
+    const limit = urgeLimit.value
+    if (result.status !== 'IN_APPROVAL' || result.applicant.id !== auth.me?.id ||
+        (limit && (limit.id !== result.id || limit.seq !== result.currentNodeSeq || Date.parse(limit.nextAt) <= now.value))) {
+      urgeLimit.value = null
+    }
+    if (result.status === 'IN_APPROVAL' && result.applicant.id === auth.me?.id && result.urgeNextAllowedAt && Date.parse(result.urgeNextAllowedAt) > now.value) {
+      urgeLimit.value = { id: result.id, seq: result.currentNodeSeq, nextAt: result.urgeNextAllowedAt }
+    }
   } catch (e) {
     if (seq !== requestSeq || id !== props.id || generation !== sessionGeneration()) return
-    detail.value = null
     loadError.value = toApiError(e)
+    // 临时刷新失败保留输入；权限失效时立即移除旧内容。
+    if ([40101, 40102, 40301, 40401].includes(loadError.value.code)) detail.value = null
     if (isServerError(loadError.value)) showError(loadError.value)
   } finally {
     if (seq === requestSeq) loading.value = false
   }
 }
-watch(() => props.id, () => {
+watch([() => props.id, () => auth.me?.id], () => {
   detail.value = null
   urgeLimit.value = null
-  void load()
-}, { immediate: true })
+  if (auth.me) void load()
+  else { requestSeq += 1; loading.value = false; loadError.value = null }
+}, { immediate: true, flush: 'sync' })
 watch(() => notice.lastAppEvent, (event) => {
   if (event?.applicationId === props.id) void load()
 })
@@ -151,12 +163,11 @@ async function ownerOperation(action: 'WITHDRAW' | 'SUBMIT' | 'COPY' | 'DELETE')
   }
 }
 
-const now = ref(Date.now())
 const timer = window.setInterval(() => { now.value = Date.now() }, 30_000)
 onBeforeUnmount(() => window.clearInterval(timer))
 const nextUrgeAt = computed(() => {
   const limit = urgeLimit.value
-  return limit && limit.id === detail.value?.id && limit.seq === detail.value.currentNodeSeq && Date.parse(limit.nextAt) > now.value ? limit.nextAt : null
+  return ownerAction('URGE') && detail.value?.status === 'IN_APPROVAL' && limit && limit.id === detail.value?.id && limit.seq === detail.value.currentNodeSeq && Date.parse(limit.nextAt) > now.value ? limit.nextAt : null
 })
 async function urge() {
   const snapshot = detail.value
@@ -190,14 +201,15 @@ async function urge() {
       <div><h2 class="page-title">申请详情</h2><div v-if="detail" class="page-subtitle mono">{{ detail.appNo }}</div></div>
       <div class="toolbar">
         <el-button :disabled="acting !== null" @click="back">返回</el-button>
-        <el-button :icon="Refresh" :loading="loading" :disabled="busy" @click="load">刷新</el-button>
+        <el-button :icon="Refresh" :loading="loading" :disabled="loading || acting !== null" @click="load">刷新</el-button>
       </div>
     </div>
-    <el-skeleton v-if="loading" :rows="12" animated />
-    <el-result v-else-if="loadError" icon="warning" :title="loadError.code === 40401 || loadError.httpStatus === 404 ? '无权查看或已不存在' : errorText(loadError)">
+    <el-skeleton v-if="loading && !detail" :rows="12" animated />
+    <el-result v-else-if="loadError && !detail" icon="warning" :title="loadError.code === 40401 || loadError.httpStatus === 404 ? '无权查看或已不存在' : errorText(loadError)">
       <template #extra><el-button @click="back">返回</el-button><el-button type="primary" @click="load">重新加载</el-button></template>
     </el-result>
     <template v-else-if="detail">
+      <el-alert v-if="loadError" :title="errorText(loadError, '刷新失败，请重试后再操作')" type="warning" :closable="false" show-icon />
       <el-alert v-if="!full" title="关联申请只读摘要" description="此查看方式仅展示关联摘要及流程结果，附件和审批意见不可见。" type="info" :closable="false" show-icon />
       <el-alert v-else-if="!detail.canReadAttachments" title="可查看业务内容；当前无权预览或下载附件。" type="info" :closable="false" show-icon />
       <el-card shadow="never">
@@ -256,7 +268,7 @@ async function urge() {
         <el-button v-if="ownerAction('WITHDRAW')" type="danger" plain :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
         <el-button v-if="ownerAction('URGE')" :loading="acting === 'URGE'" :disabled="busy || !!nextUrgeAt" @click="urge">催办</el-button>
         <el-button v-if="ownerAction('SUBMIT')" type="primary" :loading="acting === 'SUBMIT'" :disabled="busy" @click="ownerOperation('SUBMIT')">提交申请</el-button>
-        <ApprovePanel v-if="canHandle && detail.myTaskId && !busy" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @done="load" @refresh="load" />
+        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @done="load" @refresh="load" />
       </div>
     </template>
   </div>

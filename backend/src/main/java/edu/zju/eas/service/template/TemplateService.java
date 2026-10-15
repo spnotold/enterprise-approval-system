@@ -15,6 +15,7 @@ import edu.zju.eas.service.admin.AdminSupport;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -32,7 +33,7 @@ public class TemplateService {
     private final AdminSupport support;
     private final AuditService audit;
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<Option> available() {
         var u = require(Perms.APP_CREATE);
         return jdbc.query("""
@@ -45,7 +46,7 @@ public class TemplateService {
                 r.getString("description"),r.getString("category"),r.getString("biz_type")),u.deptId());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Detail current(Long id) {
         var u=require(Perms.APP_CREATE);
         ProcessTemplate t=template(id);
@@ -56,13 +57,13 @@ public class TemplateService {
         return new Detail(id,t.getCode(),t.getName(),t.getDescription(),t.getCategory(),t.getBizType(),v.getId(),v.getVersionNo(),v.getFormSchema());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<AdminItem> list() {
         require(Perms.ADMIN_TEMPLATE);
         return jdbc.queryForList("SELECT id FROM process_template ORDER BY sort_order,id",Long.class).stream().map(this::item).toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public AdminDetail get(Long id) { require(Perms.ADMIN_TEMPLATE); return detail(id); }
 
     @Transactional
@@ -133,7 +134,7 @@ public class TemplateService {
         touch(id);audit.write("TEMPLATE_DRAFT_DISCARD","TEMPLATE",id.toString(),before,null,"丢弃模板草稿");
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<ValidationIssue> validate(Long id) {
         require(Perms.ADMIN_TEMPLATE);ProcessTemplate t=template(id);Long draft=draftId(id);
         if(draft==null) return List.of(new ValidationIssue("TPL_BASIC","draft","没有可发布的草稿版本"));
