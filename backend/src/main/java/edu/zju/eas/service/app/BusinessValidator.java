@@ -43,6 +43,7 @@ public class BusinessValidator {
     }
 
     private void purchase(Purchase r,FieldErrors e,boolean full) {
+        dateYear(r.expectedArrivalDate(),"expectedArrivalDate",e);
         var qs=list(r.quotes());var items=list(r.items());Set<String> suppliers=new HashSet<>();
         if(r.selectedQuoteIndex()!=null && (r.selectedQuoteIndex()<0||r.selectedQuoteIndex()>=qs.size()))e.add("selectedQuoteIndex","PUR_SELECTED_INVALID","拟选报价不属于本单");
         long lowest=Long.MAX_VALUE;
@@ -87,7 +88,9 @@ public class BusinessValidator {
     }
 
     private void travel(Application app,Travel r,FieldErrors e,boolean full) {
-        if(r.startTime()!=null&&r.endTime()!=null){
+        boolean startYear=dateYear(r.startTime()==null?null:r.startTime().toLocalDate(),"startTime",e);
+        boolean endYear=dateYear(r.endTime()==null?null:r.endTime().toLocalDate(),"endTime",e);
+        if(r.startTime()!=null&&r.endTime()!=null&&startYear&&endYear){
             if(r.endTime().isBefore(r.startTime()))e.add("endTime","TRAVEL_TIME","结束时间不能早于开始时间");
             if(ChronoUnit.DAYS.between(r.startTime().atZoneSameInstant(CN).toLocalDate(),r.endTime().atZoneSameInstant(CN).toLocalDate())+1>90)e.add("endTime","TRAVEL_TIME","出差跨度不能超过 90 天");
         }
@@ -112,6 +115,7 @@ public class BusinessValidator {
         }
         int i=0;for(var item:list(r.items())){
             String p="items["+(i++)+"].";
+            dateYear(item.occurDate(),p+"occurDate",e);
             if(!blank(item.expenseTypeCode())){
                 var t=expenseTypes.selectOne(Wrappers.<ExpenseType>lambdaQuery().eq(ExpenseType::getCode,item.expenseTypeCode()));
                 if(t==null||(full&&!Boolean.TRUE.equals(t.getEnabled())))e.add(p+"expenseTypeCode","EXP_ITEM_TYPE","请选择启用的费用类型");
@@ -222,6 +226,13 @@ public class BusinessValidator {
         throw new IllegalStateException("复制表单清理未收敛");
     }
 
+    /** 与客户端四位年份日期格式一致，先于 JDBC 写入检查，避免数据库日期范围溢出。 */
+    private boolean dateYear(LocalDate date,String field,FieldErrors errors){
+        if(date!=null&&(date.getYear()<1||date.getYear()>9999)){
+            errors.add(field,"DATE_RANGE","日期年份需在 0001 至 9999 之间");return false;
+        }
+        return true;
+    }
     private LocalDate boundDate(String expression){if(expression.startsWith("TODAY")){String suffix=expression.substring(5);return LocalDate.now(clock).plusDays(suffix.isEmpty()?0:Long.parseLong(suffix));}return LocalDate.parse(expression);}
     static int length(String value){return blank(value)?0:value.trim().codePointCount(0,value.trim().length());}
     static boolean httpUrl(String s){try{URI uri=URI.create(s);return Set.of("http","https").contains(uri.getScheme())&&uri.getHost()!=null;}catch(IllegalArgumentException e){return false;}}

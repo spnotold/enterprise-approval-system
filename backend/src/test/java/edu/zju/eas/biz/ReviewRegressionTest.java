@@ -68,6 +68,7 @@ class ReviewRegressionTest extends IntegrationTestBase {
         }
         var travelView=data(call(get("/applications/"+travelId),"rd_emp_chen",null)).path("travel");assertEquals(0,travelView.path("attachments").size());assertEquals(0,travelView.path("attachmentIds").size());
         var purchaseView=data(call(get("/applications/"+purchaseId),"rd_emp_chen",null)).path("purchase");assertEquals(0,purchaseView.path("quotes").get(0).path("attachmentIds").size());
+        assertEquals(0,purchaseView.path("attachmentIds").size());assertEquals(0,purchaseView.path("singleSourceAttachmentIds").size());
         assertEquals(0,data(call(get("/applications/"+expenseId),"rd_emp_chen",null)).path("expense").path("items").get(0).path("invoices").size());
         assertEquals(0,data(call(get("/applications/"+customId),"rd_emp_chen",null)).path("custom").path("formValues").path("files").size());
         assertEquals(404,call(get("/applications/"+expenseId+"/invoice-duplicates"),"rd_emp_chen",null).getResponse().getStatus());
@@ -89,6 +90,15 @@ class ReviewRegressionTest extends IntegrationTestBase {
         }
         assertEquals(400,call(post("/applications/custom"),"rd_emp_wang",customBody(template,version,map("longText","a".repeat(2001)))).getResponse().getStatus());
         assertEquals(200,call(post("/applications/custom"),"rd_emp_wang",customBody(template,version,map("shortText","a".repeat(200),"longText","a".repeat(2000)))).getResponse().getStatus());
+    }
+
+    @Test void extremeDateYearsAreRejectedBeforeDatabaseWrites() throws Exception {
+        var travel=travelBody(10000);travel.put("startTime","+300000-01-01T00:00:00+08:00");travel.put("endTime","+300000-01-01T01:00:00+08:00");
+        var t=call(post("/applications/travel"),"rd_emp_wang",travel);assertEquals(400,t.getResponse().getStatus());assertTrue(body(t).path("errors").toString().contains("DATE_RANGE"));
+        var p=call(post("/applications/purchase"),"rd_emp_wang",map("title","极端年份","expectedArrivalDate","+6000000-01-01"));assertEquals(400,p.getResponse().getStatus());assertTrue(body(p).path("errors").toString().contains("expectedArrivalDate"));
+        var item=expenseItem(1000);item.put("occurDate","-10000-01-01");
+        var e=call(post("/applications/expense"),"rd_emp_wang",expenseBody(List.of(item)));assertEquals(400,e.getResponse().getStatus());assertTrue(body(e).path("errors").toString().contains("items[0].occurDate"));
+        assertEquals(200,call(post("/applications/purchase"),"rd_emp_wang",map("expectedArrivalDate","9999-12-31")).getResponse().getStatus());
     }
 
     @Test void urgeCooldownSurvivesDetailReloadWithoutDuplicateNotifications() throws Exception {
