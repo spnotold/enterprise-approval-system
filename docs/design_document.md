@@ -54,55 +54,80 @@ Web 端：
 
 # 2 项目结构
 
-```text
-enterprise_approval
+```text title="enterprise-approval-system/"
+enterprise-approval-system
 │  .gitignore
-│  docker-compose.yml       # docker 配置文件
+│  docker-compose.yml         # docker 配置文件
 │  README.md
-│  template.env             # .env 模板
+│  template.env               # .env 模板
 │
-├─backend                   # 后端
-├─frontend                  # Web 前端
-├─mobile                    # 移动端（uni-app）
-├─nginx                     # Nginx 配置与镜像构建
+├─backend                     # 后端
+├─frontend                    # Web 前端
+├─mobile                      # 移动端（uni-app）
+├─nginx                       # Nginx 配置与镜像构建
+├─db
+│  └─init
+│        01_create_app_user.sh    # 创建运行账号 eas_app，设置默认权限
 └─docs
-      design_document.md    # 设计文档（Markdown）
-      user_guide.pdf        # 使用手册
+   │  design_document.md      # 设计文档
+   │  design_document.docx
+   │  user_guide.md           # 使用手册
+   │  test_report.md          # 测试报告
+   │  summary.md              # 总结
+   │  git_log.txt             # git log 导出
+   │  demo_video.md           # 演示视频链接与说明
+   │
+   └─experiment_report        # 实验报告（含封面）
 ```
+
+`db/init` 挂载到 postgres 容器的 `/docker-entrypoint-initdb.d`，只在数据卷首次初始化时执行（见 Q16）。
 
 ## 2.1 后端
 
-```text
+```text title="backend/"
 backend
 │  .gitignore
 │  Dockerfile                    # docker 配置文件
 │  pom.xml                       # Maven 配置文件
 │
-└─src/main
+├─src/main
+│  ├─java/edu/zju/eas
+│  │  │  EasApplication.java      # 程序入口
+│  │  │
+│  │  ├─config        # 配置：安全、跨域、MyBatis-Plus、MinIO
+│  │  ├─controller    # 控制器，接收前端请求
+│  │  ├─dto           # 数据传输对象（请求体）
+│  │  ├─model         # 实体类，对应数据库表
+│  │  ├─repository    # Mapper 接口，定义数据库操作
+│  │  ├─response      # 统一响应格式与错误码
+│  │  └─service       # 服务层，处理核心业务逻辑
+│  │     ├─flow       # 流程引擎：审批人解析、状态流转
+│  │     ├─notify     # 站内通知、SSE 推送、邮件投递
+│  │     └─job        # 定时任务
+│  │
+│  └─resources
+│        application.yml        # 配置模板，敏感项取自环境变量
+│        application-demo.yml   # 演示环境配置
+│        db/migration           # Flyway 建表与基础数据脚本
+│        db/demo                # 演示账号与示例申请
+│
+└─src/test
    ├─java/edu/zju/eas
-   │  │  EasApplication.java      # 程序入口
+   │  │  IntegrationTestBase.java  # Testcontainers 启动 PostgreSQL 16
    │  │
-   │  ├─config        # 配置：安全、跨域、MyBatis-Plus、MinIO
-   │  ├─controller    # 控制器，接收前端请求
-   │  ├─dto           # 数据传输对象（请求体）
-   │  ├─model         # 实体类，对应数据库表
-   │  ├─repository    # Mapper 接口，定义数据库操作
-   │  ├─response      # 统一响应格式与错误码
-   │  └─service       # 服务层，处理核心业务逻辑
-   │     ├─flow       # 流程引擎：审批人解析、状态流转
-   │     ├─notify     # 站内通知、SSE 推送、邮件投递
-   │     └─job        # 定时任务
+   │  ├─security      # 越权、自审、管理员不能审批
+   │  ├─flow          # 状态流转、并发审批与撤回、幂等
+   │  ├─biz           # 采购 / 差旅 / 报销规则、金额重算、票据去重
+   │  ├─template      # 发布前校验、版本快照
+   │  └─notify        # 通知去重与隔离
    │
    └─resources
-         application.yml        # 配置模板，敏感项取自环境变量
-         application-demo.yml   # 演示环境配置
-         db/migration           # Flyway 建表与基础数据脚本
-         db/demo                # 演示账号与示例申请
+         application-test.yml   # 测试配置
 ```
 
 ## 2.2 前端
 
-```text
+```text title="frontend/"
 frontend
 │  .gitignore
 │  Dockerfile               # docker 配置文件
@@ -126,7 +151,7 @@ frontend
    └─router                 # 路由与守卫
 ```
 
-```text
+```text title="mobile/"
 mobile
 │  manifest.json            # 应用配置（H5、微信小程序）
 │  pages.json               # 页面路由与 tabBar
@@ -138,9 +163,10 @@ mobile
 └─static                    # 图标等静态资源
 ```
 
+
 # 3 数据库设计
 
-数据库共 34 张表，按用途分为三组：组织与权限、模板与流程、业务明细与附件。全部表结构由 Flyway 脚本创建，不手工改库。
+数据库共 35 张表，按用途分为三组：组织与权限、模板与流程、业务明细与附件。全部表结构由 Flyway 脚本创建，不手工改库。
 
 ## 3.1 E-R 图
 
@@ -175,6 +201,7 @@ erDiagram
   application ||--|| flow_instance : "实例快照"
   flow_instance ||--o{ flow_node_instance : "节点"
   flow_node_instance ||--o{ approval_task : "待办"
+  flow_node_instance ||--o{ assignee_history : "转办记录"
   sys_user ||--o{ approval_task : "被分配人"
   application ||--o{ approval_log : "日志"
   flow_node_instance ||--o{ urge_record : "催办"
@@ -213,7 +240,7 @@ erDiagram
 | user_role | 用户角色 | UK(user_id, role_id)；is_primary_handler 表示该角色的主办人，部分唯一索引保证每个角色至多一名 |
 | data_scope_grant | 数据范围授权 | permission_code、scope_type ∈ DEPT / ALL、有效期、原因；回收只写 revoked_at |
 | refresh_token | 刷新令牌 | 只存 SHA-256；family_id 用于重用检测 |
-| process_template | 流程模板 | code UK；category ∈ BUILTIN / CUSTOM；enabled；current_version_id |
+| process_template | 流程模板 | code UK；category ∈ BUILTIN / CUSTOM；enabled；current_version_id。审批人规则保存在版本的 node_config 中，例如用章模板的“印章管理员”节点是指定用户规则（SPECIFIED_USER，演示数据为钱会计），不是内置角色 |
 | process_template_dept | 模板适用部门 | PK(template_id, dept_id) |
 | process_template_version | 模板版本 | UK(template_id, version_no)；status ∈ DRAFT / PUBLISHED / ARCHIVED；form_schema、node_config 为 JSONB；每个模板至多一个 DRAFT、一个 PUBLISHED（部分唯一索引）；触发器禁止修改已发布版本 |
 | application | 申请主表 | app_no UK；type；status；applicant_id、dept_id（提交时固化）；amount_cents；current_node_seq；source_application_id（复制来源）；version（乐观锁）；deleted_at 只允许草稿 |
@@ -227,7 +254,8 @@ erDiagram
 | flow_instance | 流程实例 | application_id UK；snapshot JSONB |
 | flow_node_instance | 节点实例 | UK(flow_instance_id, seq)；status；assignee_id；部分唯一索引保证同一实例只有一个 ACTIVE 节点 |
 | approval_task | 待办 | status ∈ PENDING / APPROVED / REJECTED / CANCELED / TRANSFERRED；每个节点同一审批人至多一个 PENDING |
-| approval_log | 审批日志 | 操作人、动作、意见、前后状态、模板版本号；只追加 |
+| assignee_history | 节点审批人变更记录 | node_instance_id、from_task_id、to_task_id、from_user_id、to_user_id、reason、operator_id、created_at；转办时写入，只追加 |
+| approval_log | 审批日志 | 操作人、动作、意见、前后状态、模板版本号；部分唯一索引 UNIQUE(task_id, action) WHERE task_id IS NOT NULL，同一待办的批准 / 驳回只能记一次；只追加 |
 | audit_log | 管理审计日志 | 动作、目标、before_data / after_data、原因、IP；只追加 |
 | attachment | 附件 | storage_key UK；size_bytes ≤ 10 MB（CHECK）；sha256；status ∈ TEMP / BOUND / DELETED |
 | notification | 站内通知 | UK(recipient_id, dedup_key) 去重；is_read；link_path |
@@ -248,9 +276,10 @@ erDiagram
 | 申请 | 只有草稿可软删除；定时任务物理清理 30 天前的软删草稿，明细随之 CASCADE |
 | 采购明细、报价、费用明细、票据、同行人、表单值 | 随申请 CASCADE |
 | 流程实例、节点、待办 | 永不删除 |
-| 审批日志、审计日志 | 禁止 UPDATE / DELETE：触发器拒绝，运行账号也没有这两项权限 |
+| 审批日志、审计日志、审批人变更记录 | 禁止 UPDATE / DELETE：触发器拒绝，运行账号也没有这两项权限 |
 | 附件 | TEMP 超过 24 小时未引用则删除；提交后的附件永久保留 |
 | 授权 | 回收写 revoked_at，不删除 |
+
 
 # 4 功能设计
 
@@ -272,7 +301,7 @@ erDiagram
 
 指定表名与主键：
 
-```java
+```java title="Application.java"
 @TableName(value = "application", autoResultMap = true) // 指定表名
 public class Application {
     @TableId(type = IdType.AUTO)  // 主键由数据库 IDENTITY 生成
@@ -283,7 +312,7 @@ public class Application {
 
 申请人、部门、状态、金额这些字段只在服务层赋值，接口的请求体里没有对应字段：
 
-```java
+```java title="Application.java"
 public class Application {
     private String type;          // PURCHASE / TRAVEL / EXPENSE / CUSTOM
     private String title;
@@ -301,7 +330,7 @@ public class Application {
 
 乐观锁字段：
 
-```java
+```java title="Application.java"
 public class Application {
     @Version            // 乐观锁版本号，所有状态变更都带 version 条件
     private Integer version;
@@ -310,7 +339,7 @@ public class Application {
 
 JSONB 列通过类型处理器映射成对象，以模板版本为例：
 
-```java
+```java title="ProcessTemplateVersion.java"
 @TableName(value = "process_template_version", autoResultMap = true)
 public class ProcessTemplateVersion {
     @TableId(type = IdType.AUTO)
@@ -347,14 +376,14 @@ public class ProcessTemplateVersion {
 
 以 `ApplicationMapper` 为例：
 
-```java
+```java title="ApplicationMapper.java"
 @Mapper  // 由 @MapperScan 统一扫描
 public interface ApplicationMapper extends BaseMapper<Application> {}
 ```
 
 简单查询用 `LambdaQueryWrapper` 构造，字段名由方法引用得到，不写字符串：
 
-```java
+```java title="ApplicationService.java"
 List<Application> drafts = applicationMapper.selectList(
     Wrappers.<Application>lambdaQuery()
         .eq(Application::getApplicantId, uid)
@@ -365,7 +394,7 @@ List<Application> drafts = applicationMapper.selectList(
 
 状态流转用 `@Update` 直接写 SQL，返回影响行数。影响 0 行说明状态或版本已被别人改过，服务层据此回滚：
 
-```java
+```java title="ApplicationMapper.java"
 public interface ApplicationMapper extends BaseMapper<Application> {
     @Update("""
         UPDATE application
@@ -381,7 +410,7 @@ public interface ApplicationMapper extends BaseMapper<Application> {
 
 带数据范围的列表查询写在 XML 中，范围条件直接进 SQL，分页的 `total` 不会把无权查看的记录算进去：
 
-```sql
+```sql title="ApplicationMapper.xml"
 -- scope=dept：只返回本人负责部门的非草稿申请
 SELECT a.*
   FROM application a
@@ -404,7 +433,7 @@ SELECT a.*
 1. `SecurityConfig`：配置安全策略
     1. 无状态会话，关闭表单登录与 Session
     2. 公开接口：注册、登录、刷新令牌、部门列表、用户名 / 邮箱可用性检查；其余接口需登录
-    3. `/api/v1/admin/**` 需要管理类权限点
+    3. `/api/admin/**` 需要管理类权限点
     4. 定义密码编码器 `DelegatingPasswordEncoder`，默认 BCrypt（cost = 10）
     5. 注册 JWT 校验过滤器
 2. `JwtConfig`：HS256 密钥来自环境变量 `JWT_SECRET`（≥ 32 字节）；访问令牌 30 分钟，刷新令牌 7 天
@@ -416,7 +445,7 @@ SELECT a.*
 
 以 `SecurityConfig` 为例：
 
-```java
+```java title="SecurityConfig.java"
 @Configuration
 @EnableMethodSecurity  // 开启 @PreAuthorize
 public class SecurityConfig {
@@ -426,12 +455,11 @@ public class SecurityConfig {
         http.csrf(c -> c.disable())   // 认证走 Authorization 头，不用 Cookie
             .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
             .authorizeHttpRequests(a -> a
-                .requestMatchers("/api/v1/auth/register",
-                                 "/api/v1/auth/login",
-                                 "/api/v1/auth/refresh",
-                                 "/api/v1/auth/availability",
-                                 "/api/v1/public/**").permitAll()
-                .requestMatchers("/api/v1/admin/**").hasRole("SYS_ADMIN")
+                // 路径不含 context-path，实际 URL 为 /api/auth/...
+                .requestMatchers("/auth/register", "/auth/login",
+                                 "/auth/refresh", "/auth/availability",
+                                 "/public/**").permitAll()
+                .requestMatchers("/admin/**").hasRole("SYS_ADMIN")
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter,
                 UsernamePasswordAuthenticationFilter.class);
@@ -448,7 +476,7 @@ public class SecurityConfig {
 
 `JwtAuthFilter` 解析 `Authorization: Bearer <token>`，校验签名和过期时间后，再比对令牌中的 `tv` 与数据库中的 `sys_user.token_version`，并要求用户状态为 `ACTIVE`。用户被停用、角色变更或修改密码时 `token_version + 1`，旧令牌立即失效。用户的角色、权限点、负责部门和有效授权用 Caffeine 缓存 30 秒，管理员修改时主动清除。
 
-CSRF 关闭的依据：API 认证依赖 `Authorization` 头，浏览器跨站请求不会自动带上它。唯一用 Cookie 的是 Web 端刷新令牌，该 Cookie 设置 `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`，刷新接口另外校验 `Origin`。
+CSRF 关闭的依据：API 认证依赖 `Authorization` 头，浏览器跨站请求不会自动带上它。唯一用 Cookie 的是 Web 端刷新令牌，该 Cookie 设置 `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`，刷新接口另外校验 `Origin`。
 
 ### 4.1.4 DTO：数据传输对象
 
@@ -465,7 +493,7 @@ DTO 用于接收前端请求体，只包含允许用户填写的字段。申请�
 
 使用 Bean Validation 注解检查格式，以 `RegisterRequest` 为例：
 
-```java
+```java title="RegisterRequest.java"
 public record RegisterRequest(
     @NotBlank @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9_]{3,31}$",
         message = "用户名为 4-32 位字母、数字或下划线，以字母开头")
@@ -485,7 +513,7 @@ public record RegisterRequest(
 
 报销单的请求体：明细金额是整数分，合计金额不接收：
 
-```java
+```java title="ExpenseSaveRequest.java"
 public record ExpenseSaveRequest(
     @NotNull Integer version,           // 草稿版本，用于并发保存检查
     @Size(max = 100) String title,
@@ -520,7 +548,7 @@ public record ExpenseSaveRequest(
 
 以 `ApiResponse` 为例：
 
-```java
+```java title="ApiResponse.java"
 public record ApiResponse<T>(
     int code,           // 0 表示成功，其余见 ErrorCode
     String message,
@@ -562,7 +590,7 @@ public record ApiResponse<T>(
 
 校验失败的响应示例：
 
-```json
+```json title="响应示例"
 {
   "code": 42201,
   "message": "业务规则校验失败",
@@ -577,6 +605,7 @@ public record ApiResponse<T>(
   ]
 }
 ```
+
 
 ### 4.1.6 Service：核心业务逻辑
 
@@ -610,7 +639,7 @@ public record ApiResponse<T>(
 
 `@Service` 标注服务类，写操作方法加 `@Transactional`：
 
-```java
+```java title="AuthService.java"
 @Service
 @RequiredArgsConstructor  // 构造器注入
 public class AuthService {}
@@ -618,7 +647,7 @@ public class AuthService {}
 
 用户注册：
 
-```java
+```java title="AuthService.java"
 public class AuthService {
     @Transactional
     public Long register(RegisterRequest req) {
@@ -646,7 +675,7 @@ public class AuthService {
 
 用户登录：
 
-```java
+```java title="AuthService.java"
 public class AuthService {
     @Transactional(noRollbackFor = BizException.class)
     public TokenPair login(LoginRequest req, ClientInfo client) {
@@ -675,7 +704,7 @@ public class AuthService {
 
 `AccessPolicy` 判断能否查看一张申请：
 
-```java
+```java title="AccessPolicy.java"
 public class AccessPolicy {
     public boolean canViewApplication(CurrentUser u, Application app) {
         if (app.getDeletedAt() != null) return false;
@@ -708,12 +737,15 @@ public class AccessPolicy {
 
 流程引擎的批准操作。`approve` 在一个事务里完成：推进申请、完成任务、激活下一节点、写日志和通知。
 
-```java
+```java title="FlowEngine.java"
 public class FlowEngine {
     @Transactional
     public ActionResult approve(Long taskId, CurrentUser u,
                                 ApproveRequest req) {
         ApprovalTask task = taskMapper.selectById(taskId);
+        if (task == null || !task.getAssigneeId().equals(u.id())) {
+            throw new BizException(ErrorCode.NOT_CURRENT_APPROVER);
+        }
         Application app = appMapper.selectById(task.getApplicationId());
         if (app.getApplicantId().equals(u.id())) {
             throw new BizException(ErrorCode.SELF_APPROVAL_FORBIDDEN);
@@ -747,60 +779,60 @@ public class FlowEngine {
 
 ### 4.1.7 Controller：接收前端请求
 
-1. `AuthController`（`/api/v1/auth`）：注册、登录、刷新令牌、退出、可用性检查、SSE 票据
-2. `MeController`（`/api/v1/me`）：个人信息、修改密码、邮件提醒开关
-3. `ApplicationController`（`/api/v1/applications`）：
+1. `AuthController`（`/api/auth`）：注册、登录、刷新令牌、退出、可用性检查、SSE 票据
+2. `MeController`（`/api/me`）：个人信息、修改密码、邮件提醒开关
+3. `ApplicationController`（`/api/applications`）：
     1. 各类申请的新建与保存草稿
     2. 列表、详情、审批日志
     3. 提交、撤回、删除草稿、复制重提
     4. 审批路径预览、可关联申请
     5. 催办【增强】、跨单重复票据提示【增强】
-4. `TaskController`（`/api/v1/tasks`）：待办、已办、批准、驳回
-5. `TemplateController`（`/api/v1/templates`）：可发起的模板、模板当前版本
-6. `FileController`（`/api/v1/files`）：上传、预览、下载
-7. `NotificationController`（`/api/v1/notifications`）：列表、未读数、标记已读、全部已读、SSE 连接、增量拉取
-8. `StatsController`（`/api/v1/stats`）：个人、本部门、财务、企业统计
-9. `admin` 包（`/api/v1/admin/**`）：用户与注册审核、部门、角色、授权、模板设计与发布、费用类型、系统配置、待办监控与转办、审计日志
+4. `TaskController`（`/api/tasks`）：待办、已办、批准、驳回
+5. `TemplateController`（`/api/templates`）：可发起的模板、模板当前版本
+6. `FileController`（`/api/files`）：上传、预览、下载
+7. `NotificationController`（`/api/notifications`）：列表、未读数、标记已读、全部已读、SSE 连接、增量拉取
+8. `StatsController`（`/api/stats`）：个人、本部门、财务、企业统计
+9. `admin` 包（`/api/admin/**`）：用户与注册审核、部门、角色、授权、模板设计与发布、费用类型、系统配置、待办监控与转办、审计日志
 
-主要接口：
+主要接口（后端配置 `server.servlet.context-path: /api`，所有接口路径都以 `/api` 开头；Nginx 按 `/api/` 原样转发，Vite 开发服务器同样代理 `/api`）：
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| POST | `/auth/register` | 公开 | 注册，状态为待审核 |
-| POST | `/auth/login` | 公开（限流） | 登录，返回访问令牌 |
-| POST | `/auth/refresh` | 刷新令牌 | 轮换刷新令牌 |
-| POST | `/applications/{type}` | `APP_CREATE` | 新建草稿，`type` 为 purchase / travel / expense / custom |
-| PUT | `/applications/{id}/{type}` | 本人草稿 | 保存草稿，带 `version` |
-| GET | `/applications?scope=` | 登录，按范围 | `scope` 取 mine / dept / granted；类型、状态、提交时间、关键词筛选，分页 |
-| GET | `/applications/{id}` | 可查看 | 详情，含 `allowedActions` |
-| POST | `/applications/{id}/submit` | 本人草稿 + 幂等键 | 提交 |
-| POST | `/applications/{id}/withdraw` | 本人 + 幂等键 | 撤回 |
-| DELETE | `/applications/{id}` | 本人草稿 | 删除草稿 |
-| POST | `/applications/{id}/copy` | 本人、已驳回 / 已撤回 | 复制为新草稿 |
-| GET | `/tasks/pending`、`/tasks/done` | `TASK_HANDLE` | 待办、已办 |
-| POST | `/tasks/{taskId}/approve` | 当前审批人 + 幂等键 | 批准 |
-| POST | `/tasks/{taskId}/reject` | 当前审批人 + 幂等键 | 驳回，理由必填 |
-| POST | `/files` | 登录（限流） | 上传附件 |
-| GET | `/files/{id}/content` | 可读附件 | 预览 / 下载 |
-| GET | `/notifications/unread-count` | 登录 | 未读数 |
-| POST | `/notifications/{id}/read` | 本人通知 | 标记已读 |
-| GET | `/notifications/stream?ticket=` | 一次性票据 | SSE 连接 |
-| GET | `/stats/dept` | `STATS_DEPT` | 本部门统计 |
-| POST | `/admin/templates/{id}/publish` | `ADMIN_TEMPLATE` | 发布模板版本 |
-| POST | `/admin/tasks/{taskId}/transfer` | `ADMIN_TRANSFER` | 转办，需填原因 |
+| POST | `/api/auth/register` | 公开 | 注册，状态为待审核 |
+| POST | `/api/auth/login` | 公开（限流） | 登录，返回访问令牌 |
+| POST | `/api/auth/refresh` | 刷新令牌 | 轮换刷新令牌 |
+| POST | `/api/applications/{type}` | `APP_CREATE` | 新建草稿，`type` 为 purchase / travel / expense / custom |
+| PUT | `/api/applications/{id}/{type}` | 本人草稿 | 保存草稿，带 `version` |
+| GET | `/api/applications?scope=` | 登录，按范围 | `scope` 取 mine / dept / granted；类型、状态、提交时间、关键词筛选，分页 |
+| GET | `/api/applications/{id}` | 可查看 | 详情，含 `allowedActions` |
+| POST | `/api/applications/{id}/submit` | 本人草稿 + 幂等键 | 提交 |
+| POST | `/api/applications/{id}/withdraw` | 本人 + 幂等键 | 撤回 |
+| DELETE | `/api/applications/{id}` | 本人草稿 | 删除草稿 |
+| POST | `/api/applications/{id}/copy` | 本人、已驳回 / 已撤回 | 复制为新草稿 |
+| GET | `/api/tasks/pending`、`/api/tasks/done` | `TASK_HANDLE` | 待办、已办 |
+| POST | `/api/tasks/{taskId}/approve` | 当前审批人 + 幂等键 | 批准 |
+| POST | `/api/tasks/{taskId}/reject` | 当前审批人 + 幂等键 | 驳回，理由必填 |
+| POST | `/api/files` | 登录（限流） | 上传附件 |
+| GET | `/api/files/{id}/content` | 可读附件 | 预览 / 下载 |
+| GET | `/api/notifications/unread-count` | 登录 | 未读数 |
+| POST | `/api/notifications/{id}/read` | 本人通知 | 标记已读 |
+| GET | `/api/notifications/stream?ticket=` | 一次性票据 | SSE 连接 |
+| GET | `/api/stats/dept` | `STATS_DEPT` | 本部门统计 |
+| POST | `/api/admin/templates/{id}/publish` | `ADMIN_TEMPLATE` | 发布模板版本 |
+| POST | `/api/admin/tasks/{taskId}/transfer` | `ADMIN_TRANSFER` | 转办，需填原因 |
 
 `@RestController` 标注控制器，`@RequestMapping` 指定基础路径：
 
-```java
+```java title="AuthController.java"
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")   // 实际路径 /api/auth
 @RequiredArgsConstructor
 public class AuthController {}
 ```
 
 用户注册，调用 Service 层：
 
-```java
+```java title="AuthController.java"
 public class AuthController {
     @PostMapping("/register")
     public ApiResponse<Map<String, Long>> register(
@@ -813,9 +845,9 @@ public class AuthController {
 
 批准待办。`@PreAuthorize` 只检查功能权限，是否为当前审批人由 `FlowEngine` 在 SQL 条件里判断：
 
-```java
+```java title="TaskController.java"
 @RestController
-@RequestMapping("/api/v1/tasks")
+@RequestMapping("/tasks")  // 实际路径 /api/tasks
 public class TaskController {
     @PostMapping("/{taskId}/approve")
     @PreAuthorize("hasAuthority('TASK_HANDLE')")
@@ -831,8 +863,8 @@ public class TaskController {
 
 请求与响应示例：
 
-```http
-POST /api/v1/tasks/1203/approve
+```http title="请求示例"
+POST /api/tasks/1203/approve
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 Idempotency-Key: 6f1c9d1e-3b7a-4f7e-9a0d-2c5e8b4a7f10
 Content-Type: application/json
@@ -840,7 +872,7 @@ Content-Type: application/json
 {"appVersion": 5, "comment": "同意"}
 ```
 
-```json
+```json title="响应示例"
 {
   "code": 0,
   "message": "OK",
@@ -859,7 +891,7 @@ Content-Type: application/json
 
 启动 Spring Boot 服务，扫描 Mapper，开启定时任务：
 
-```java
+```java title="EasApplication.java"
 @SpringBootApplication
 @MapperScan("edu.zju.eas.repository")
 @EnableScheduling
@@ -879,6 +911,7 @@ public class EasApplication {
 
 启动时 Flyway 先执行迁移脚本，迁移失败则应用不启动；`demo` profile 额外加载 `db/demo` 下的演示数据。
 
+
 ## 4.2 前端
 
 ### 4.2.1 Lib：库/工具函数
@@ -894,8 +927,8 @@ public class EasApplication {
 
 以 `http.ts` 为例：
 
-```typescript
-const http = axios.create({ baseURL: import.meta.env.VITE_API_BASE });
+```typescript title="src/lib/http.ts"
+const http = axios.create({ baseURL: '/api' }); // 与后端 context-path 一致
 
 http.interceptors.request.use((config) => {
   const token = useAuthStore().accessToken;
@@ -928,7 +961,7 @@ http.interceptors.response.use(
 
 状态流转类请求带上幂等键。键在用户打开确认框时生成，同一次操作的重试复用同一个键：
 
-```typescript
+```typescript title="src/lib/api/tasks.ts"
 export function approveTask(taskId: number, body: ApproveBody,
                             idemKey: string) {
   return http.post<ActionResult>(`/tasks/${taskId}/approve`, body, {
@@ -939,7 +972,7 @@ export function approveTask(taskId: number, body: ApproveBody,
 
 金额转换不经过 `parseFloat`，避免 `0.1 + 0.2` 这类浮点误差：
 
-```typescript
+```typescript title="src/lib/money.ts"
 // "12.3" -> 1230，"12.30" -> 1230；非法输入返回 null
 export function yuanToCents(input: string): number | null {
   const m = /^(\d{1,6})(?:\.(\d{1,2}))?$/.exec(input.trim());
@@ -970,7 +1003,7 @@ Vue 3 的组合式函数相当于 React 的 Hooks，把可复用的状态和逻�
 
 以 `useSse.ts` 为例：
 
-```typescript
+```typescript title="src/composables/useSse.ts"
 export function useSse(onMessage: (n: NoticeEvent) => void) {
   let es: EventSource | null = null;
   let failures = 0;
@@ -979,7 +1012,7 @@ export function useSse(onMessage: (n: NoticeEvent) => void) {
   async function connect() {
     // EventSource 不能带请求头，先用访问令牌换一次性票据
     const { ticket } = await api.notifications.sseTicket();
-    es = new EventSource(`/api/v1/notifications/stream?ticket=${ticket}`);
+    es = new EventSource(`/api/notifications/stream?ticket=${ticket}`);
     es.addEventListener('notification', (e) => {
       failures = 0;
       onMessage(JSON.parse((e as MessageEvent).data));
@@ -1013,7 +1046,7 @@ Pinia store 相当于 React 的 Context，被多个页面共享的状态放在�
 
 以 `auth.ts` 为例：
 
-```typescript
+```typescript title="src/stores/auth.ts"
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     accessToken: sessionStorage.getItem('at') as string | null,
@@ -1068,7 +1101,7 @@ export const useAuthStore = defineStore('auth', {
 
 以报销明细表中的一行为例，使用 Element Plus 组件搭建：
 
-```vue
+```vue title="src/components/ExpenseItemTable.vue"
 <template>
   <el-table :data="items" border>
     <el-table-column label="费用类型" width="130">
@@ -1114,6 +1147,20 @@ const totalCents = computed(() =>
 
 所有用户输入（文件名、意见、表单值）都按文本插值渲染，项目禁用 `v-html`（ESLint 规则 `vue/no-v-html` 设为 error）。
 
+界面状态规范，所有页面统一按下表处理：
+
+| 场景 | 表现 | 实现 |
+|---|---|---|
+| 加载 | 列表和详情显示骨架屏；按钮请求期间显示 loading 并禁用，防止重复点击 | `v-loading`、`el-skeleton`；`useAction` 统一管理按钮状态 |
+| 空结果 | 无数据显示“暂无数据”；有筛选条件时显示“没有符合条件的记录”和“清空筛选”按钮 | `el-empty`，由 `useListQuery` 判断是否带筛选 |
+| 校验错误 | 字段下方红字；服务端返回的 `errors[].field` 映射到对应表单项（含 `items[2].amountCents` 这类明细行），并滚动到第一个错误 | `el-form` 的 `validate` 与 `setFieldError` 封装 |
+| 提交成功 | 顶部提示“提交成功，当前审批人：李研”，跳转到详情页 | `ElMessage.success` |
+| 操作失败 | 顶部红色提示服务端 `message`；409 弹窗说明“状态已变化”并提供“刷新”按钮；500 显示 traceId | `ElMessage.error`、`ElMessageBox.alert`，由 `http.ts` 拦截器统一处理 |
+| 删除 / 撤回 / 驳回 | 二次确认，写明后果（如“撤回后待办将失效”）；驳回弹窗理由必填 | `ElMessageBox.confirm`、`ApprovePanel.vue` |
+| 离开未保存的表单 | 提示“有未保存的修改” | `useDraftForm` 中的路由守卫与 `beforeunload` |
+
+移动端对应使用 `uni.showLoading`、`uni.showToast`、`uni.showModal`。
+
 ### 4.2.5 Views 与 Router：页面和路由
 
 1. `router/index.ts`：路由表与全局守卫。守卫只负责体验（未登录跳转登录页、无权限的菜单不显示），权限以后端为准
@@ -1146,7 +1193,7 @@ const totalCents = computed(() =>
 
 路由表中用 `meta` 声明菜单需要的权限点：
 
-```typescript
+```typescript title="src/router/index.ts"
 const routes: RouteRecordRaw[] = [
   { path: '/login', component: () => import('@/views/Login.vue'),
     meta: { public: true } },
@@ -1185,13 +1232,14 @@ router.beforeEach((to) => {
 | `pages/notice/list` | 消息 | tabBar 角标显示未读数 |
 | `pages/me/index`、`pages/stats/index` | 我的、统计 | uCharts 图表 |
 
+
 # 5 Q & A
 
 ## Q1：附件和票据是如何存储的？
 
 文件存放在 MinIO 私有桶 `eas-files` 中，数据库 `attachment` 表只记录元数据：原始文件名、上传人、上传时间、大小、服务端检测到的类型、SHA-256 和对象键。对象键格式为 `yyyy/MM/{uuid}`，与原文件名无关，文件名里的特殊字符不会影响存储路径。
 
-浏览器拿不到 MinIO 地址。预览和下载都请求 `GET /files/{id}/content`，后端先调用 `AccessPolicy.canReadAttachment` 判断权限，再从 MinIO 读出文件流转发给浏览器，所以权限检查绕不过去。
+浏览器拿不到 MinIO 地址。预览和下载都请求 `GET /api/files/{id}/content`，后端先调用 `AccessPolicy.canReadAttachment` 判断权限，再从 MinIO 读出文件流转发给浏览器，所以权限检查绕不过去。
 
 上传流程：
 
@@ -1204,7 +1252,7 @@ sequenceDiagram
   participant M as MinIO
   participant DB as PostgreSQL
   C->>C: 前端预检(类型/大小/数量)
-  C->>N: POST /files (multipart)
+  C->>N: POST /api/files (multipart, 单文件)
   N->>S: 转发(超 11m 直接 413)
   S->>S: 魔数识别真实类型
   S->>S: 计算 SHA-256 / PDF 主动内容检查
@@ -1217,7 +1265,7 @@ sequenceDiagram
 
 文件类型以文件头魔数为准，不信任扩展名和浏览器给的 `Content-Type`：
 
-```java
+```java title="FileService.java"
 public class FileService {
     private static final Set<String> ALLOWED =
         Set.of("image/jpeg", "image/png", "application/pdf");
@@ -1252,7 +1300,8 @@ public class FileService {
 | 项 | 限制 | 检查位置 |
 |---|---|---|
 | 类型 | JPEG、PNG、PDF | 前端 `accept`；后端 Tika |
-| 单文件 | ≤ 10 MB | 前端、Nginx（`client_max_body_size 11m`，含表单开销）、Spring `max-file-size`、数据库 CHECK |
+| 单文件 | ≤ 10 MB | 前端、Spring `max-file-size: 10MB`、数据库 CHECK |
+| 单次请求 | 只带 1 个文件，多个文件由前端逐个上传；请求体 ≤ 11 MB | Nginx `client_max_body_size 11m`（10 MB 文件加 multipart 开销）、Spring `max-request-size: 11MB` |
 | 每条报销明细 | ≤ 10 个票据 | 服务端 |
 | 每张申请 | ≤ 50 个附件，总大小 ≤ 100 MB | 服务端，可在系统配置中调整 |
 | 上传频率 | 每用户每分钟 ≤ 30 次 | Bucket4j 限流 |
@@ -1312,6 +1361,8 @@ public class FileService {
 | 修改、删除审批日志与审计日志 | — | — | — | — | — |
 | 读取、标记他人通知 | — | — | — | — | — |
 
+一人兼任多个角色时（如钱会计同时是财务部负责人和财务审批人），功能权限取各角色权限点的并集；数据范围按每个角色和每条授权分别求值，再取并集，例如本人负责部门的申请加上被授权部门的申请。审批不参与这种合并，能批哪张单始终只看具体待办：钱会计以部门负责人身份拿到的待办，不会因为他也是财务审批人而能处理财务节点上分配给吴审的待办。
+
 这些检查都在服务端：功能权限由 `@PreAuthorize` 检查，资源权限由 `AccessPolicy` 检查（见 4.1.6），列表的数据范围写进 SQL 条件（见 4.1.2），审批权写在批准 / 驳回的 SQL 条件里（`assignee_id = 当前用户 AND status = 'PENDING'`）。前端隐藏菜单和按钮只是为了界面整洁。
 
 ## Q4：申请人、部门、金额这些字段如何防止被前端篡改？
@@ -1349,7 +1400,7 @@ public class FileService {
 
 “未选最低价”的判断：
 
-```java
+```java title="PurchaseService.java"
 long lowest = quotes.stream()
     .mapToLong(PurchaseQuote::getQuoteAmountCents).min().orElseThrow();
 boolean notLowest = selected.getQuoteAmountCents() > lowest;
@@ -1367,7 +1418,7 @@ if (notLowest && length(detail.getNotLowestReason()) < 10) {
 
 出差天数按自然日计算：取开始、结束时间在上海时区的日期，`天数 = 结束日期 − 开始日期 + 1`。例如 11 月 20 日 18:00 出发、11 月 21 日 09:00 返回，记 2 天。差旅补贴、考勤、统计都按天计，晚上出发次日返回的行程实际占用了两个工作日，所以用自然日作为主口径。实际时长（小时，保留一位小数）作为辅助信息，用来区分当日往返和跨夜，上例为 15.0 小时。
 
-```java
+```java title="TravelService.java"
 public class TravelService {
     private static final ZoneId CN = ZoneId.of("Asia/Shanghai");
 
@@ -1396,7 +1447,7 @@ public class TravelService {
 
 金额在前端以字符串输入，用 `yuanToCents` 转成整数分（见 4.2.1），接口只传分。提交时服务端用明细金额重新求和，覆盖客户端可能传来的任何合计值：
 
-```java
+```java title="ExpenseService.java"
 public class ExpenseService {
     long recomputeTotal(List<ExpenseItem> items) {
         long total = 0;
@@ -1430,7 +1481,7 @@ public class ExpenseService {
 
 同单票据去重在数据库层有唯一索引兜底：
 
-```sql
+```sql title="V1__init_schema.sql"
 CREATE UNIQUE INDEX uk_invoice_app_sha
     ON expense_invoice (application_id, file_sha256);
 
@@ -1442,6 +1493,7 @@ CREATE UNIQUE INDEX uk_invoice_app_no
 费用类型预置交通、住宿、餐饮、办公、其他五种，管理员可新增和停用；已被引用的类型不能删除。财务审核界面中，无票明细整行橙色高亮，页头显示“含 N 条无票支出（合计 ¥X）”。
 
 内置报销流程：① 部门负责人审批 → ② 财务审核（财务审批人主办人）→ ③ 企业负责人审批（仅当金额 ≥ 1 万元）。
+
 
 ## Q8：管理员如何自定义审批流程？
 
@@ -1475,7 +1527,7 @@ flowchart TB
 
 `form_schema` 示例（请假申请，节选）：
 
-```json
+```json title="form_schema.json"
 {
   "fields": [
     {"key": "leaveType", "label": "请假类型", "type": "RADIO",
@@ -1507,7 +1559,7 @@ flowchart TB
 
 生效条件可以引用数字、金额、日期、单选字段，内置模板还可以引用系统变量 `amountCents`、`naturalDays`；运算符为等于、不等于、大于、大于等于、小于、小于等于、属于。条件不满足的节点在实例中标记为 `SKIPPED`。
 
-```json
+```json title="node_config.json"
 {
   "nodes": [
     {"nodeKey": "N1", "name": "部门负责人审批",
@@ -1547,7 +1599,7 @@ flowchart TB
 
 员工端由 `FormRenderer` 按 `form_schema` 渲染表单。服务端提交校验使用同一份 Schema，由 `FormSchemaValidator` 逐字段检查，Schema 中未定义的字段一律拒绝。
 
-初始化数据中带两个自定义模板：请假申请（部门负责人 → 企业负责人，请假超过 3 天时）、用章申请（部门负责人 → 印章管理员）。
+初始化数据中带两个自定义模板：请假申请（部门负责人 → 企业负责人，请假超过 3 天时）、用章申请（部门负责人 → 印章管理员）。“印章管理员”节点用的是指定用户规则，指向钱会计，系统没有这个内置角色；换人时管理员修改模板并发布新版本即可。
 
 ## Q9：审批流程是如何流转的？审批人如何确定？
 
@@ -1612,7 +1664,7 @@ stateDiagram-v2
 
 快照示例：
 
-```json
+```json title="flow_instance.snapshot"
 {
   "templateCode": "BUILTIN_EXPENSE",
   "versionNo": 1,
@@ -1651,7 +1703,7 @@ stateDiagram-v2
 
 批准的 SQL 序列：
 
-```sql
+```sql title="批准：SQL 序列"
 -- ① 锁定并推进申请：状态、版本、当前节点都要对得上
 UPDATE application
    SET version          = version + 1,
@@ -1702,7 +1754,7 @@ ON CONFLICT (recipient_id, dedup_key) DO NOTHING;
 
 撤回的 SQL 序列：
 
-```sql
+```sql title="撤回：SQL 序列"
 UPDATE application
    SET status = 'WITHDRAWN', version = version + 1,
        finished_at = now(), updated_at = now()
@@ -1766,7 +1818,7 @@ T1 为撤回事务，T2 为批准事务，两者竞争同一 `application` 行�
 
 已驳回、已撤回都是终态，不能改回草稿。申请人在详情页点击“复制并修改”，生成一张新草稿（新编号），`source_application_id` 指向原单，业务字段和附件引用一并复制。新单提交时按当时的模板版本重新解析流程。两张单的详情页互相显示“来源单 / 后续单”链接，原单的审批历史保持不变。
 
-审批人被停用时，其名下的待办由管理员转办：选择新审批人（不能是申请人，不能是只有管理员角色的账号）并填写原因。原待办变为 `TRANSFERRED`，为新审批人创建 PENDING 待办，节点实例的审批人更新，并在 `assignee_history` 中追加记录；同时写审批日志 `TRANSFER` 和审计日志，通知新旧审批人与申请人。这是唯一能修改已提交实例审批人的途径。
+审批人被停用时，其名下的待办由管理员转办：选择新审批人（不能是申请人，不能是只有管理员角色的账号）并填写原因。原待办变为 `TRANSFERRED`，为新审批人创建 PENDING 待办，节点实例的审批人更新，并在 `assignee_history` 表追加一条变更记录（原审批人、新审批人、原因、操作人）；同时写审批日志 `TRANSFER` 和审计日志，通知新旧审批人与申请人。这是唯一能修改已提交实例审批人的途径。
 
 ## Q12：审批日志和管理变更如何留痕、防止篡改？
 
@@ -1774,9 +1826,9 @@ T1 为撤回事务，T2 为批准事务，两者竞争同一 `application` 行�
 
 管理变更写入 `audit_log`：注册审核、角色授予与回收、主办人设置、部门负责人变更、数据范围授权与回收、模板发布与启停、系统配置修改、转办、管理员查看业务正文、账号锁定。每条记录保存操作人、目标对象、修改前后的值（JSONB）、原因和 IP。管理端写操作由 `@Audited` 切面统一记录，管理端审计页可按对象查询，并以 JSON 差异对比显示前后值。
 
-两张表只允许追加，靠两层保证：
+转办记录写入 `assignee_history`。这三张表只允许追加，靠两层保证：
 
-```sql
+```sql title="V2__append_only_triggers.sql"
 -- 触发器：任何 UPDATE / DELETE 都报错
 CREATE FUNCTION forbid_change() RETURNS trigger AS $$
 BEGIN
@@ -1791,11 +1843,15 @@ CREATE TRIGGER trg_audit_log_append_only
     BEFORE UPDATE OR DELETE ON audit_log
     FOR EACH ROW EXECUTE FUNCTION forbid_change();
 
+-- assignee_history 同样挂 forbid_change 触发器，此处省略
+
 -- 运行账号 eas_app 对日志表只有 INSERT 和 SELECT
-REVOKE UPDATE, DELETE ON approval_log, audit_log FROM eas_app;
+REVOKE UPDATE, DELETE ON approval_log, audit_log, assignee_history
+    FROM eas_app;
 ```
 
 表属主 `eas_owner` 只在 Flyway 迁移时使用，应用运行时用 `eas_app` 连接数据库。即使应用代码有缺陷，也改不了日志。
+
 
 ## Q13：站内通知和实时提醒是如何实现的？
 
@@ -1815,7 +1871,7 @@ REVOKE UPDATE, DELETE ON approval_log, audit_log FROM eas_app;
 
 未读数、标记已读的 SQL 都带 `recipient_id = 当前用户`：
 
-```sql
+```sql title="NotificationMapper.xml"
 -- 标记已读：只能标记自己的通知
 UPDATE notification
    SET is_read = true, read_at = now()
@@ -1831,9 +1887,9 @@ UPDATE notification
 sequenceDiagram
   participant C as Web/H5 页面
   participant S as 后端
-  C->>S: POST /auth/sse-ticket (Bearer)
+  C->>S: POST /api/auth/sse-ticket (Bearer)
   S-->>C: {ticket, expiresIn: 60}
-  C->>S: GET /notifications/stream?ticket=...
+  C->>S: GET /api/notifications/stream?ticket=...
   S->>S: 校验并作废 ticket，注册 SseEmitter(userId), 超时 30 min
   Note over S: 某审批事务提交后 AFTER_COMMIT 事件
   S-->>C: event: notification<br/>data: {id,type,title,linkPath,unreadCount}
@@ -1844,7 +1900,7 @@ sequenceDiagram
 
 推送在事务提交之后进行，事务回滚就不会推送：
 
-```java
+```java title="NotificationPusher.java"
 @Component
 @RequiredArgsConstructor
 public class NotificationPusher {
@@ -1860,7 +1916,7 @@ public class NotificationPusher {
 
 `EventSource` 不能设置请求头，所以先用访问令牌换一个一次性票据（60 秒有效，用一次即作废，绑定用户），再用票据建立连接，访问令牌不出现在 URL 中。Nginx 对 SSE 路径关闭缓冲（`proxy_buffering off`，`proxy_read_timeout 1h`）。实时推送只是提醒，数据以接口查询为准；推送丢失时，轮询和页面切回时的拉取会补齐。
 
-微信小程序不支持 `EventSource`，改为页面 `onShow` 时立即拉取，前台期间每 15 秒请求一次 `/notifications/changes?since=上次最大ID`，`onHide` 时停止；有新通知时弹出 Toast 并更新“消息”tab 的角标。
+微信小程序不支持 `EventSource`，改为页面 `onShow` 时立即拉取，前台期间每 15 秒请求一次 `/api/notifications/changes?since=上次最大ID`，`onHide` 时停止；有新通知时弹出 Toast 并更新“消息”tab 的角标。
 
 页面关闭后靠邮件提醒。业务事务内同时写一条 `notification_delivery(status = PENDING)`，`MailDispatcher` 每 10 秒取一批待发记录（`FOR UPDATE SKIP LOCKED`，每批 50 条）发送；失败按 1、2、4、8、16 分钟退避重试，5 次后标记失败，站内通知不受影响。邮件只包含标题、申请编号、类型、状态、操作人、时间和“在系统中查看”链接，不包含金额明细和票据。用户可在个人中心关闭邮件提醒。演示环境用 Mailpit 收件，Web 界面在 8025 端口。
 
@@ -1869,6 +1925,8 @@ public class NotificationPusher {
 | Web | SSE，失败降级为轮询 | 邮件 |
 | H5（手机浏览器、微信内置浏览器） | SSE，失败降级为轮询 | 邮件 |
 | 微信小程序 | 前台 15 秒轮询 + `onShow` 拉取 | 邮件 |
+
+站内通知不依赖浏览器通知权限，也不依赖邮件。用户拒绝浏览器通知权限时，只是不弹系统通知，页面内角标和通知中心照常更新；邮件发送失败只影响 `notification_delivery` 的状态，站内通知已经在业务事务里写入，随时可查。演示时可以：在浏览器中拒绝通知权限后让审批人批准，观察申请人页面角标变化；或停掉 mailpit 容器（`docker compose stop mailpit`）再提交申请，审批人的通知中心仍有新待办，投递记录显示重试中，重新启动 mailpit 后邮件补发。
 
 ## Q14：统计数据的口径是什么？
 
@@ -1894,7 +1952,7 @@ public class NotificationPusher {
 
 本部门统计 SQL：
 
-```sql
+```sql title="StatsMapper.xml"
 -- 状态分布与金额
 -- :fromTs/:toTs 由上海时区日期换算，区间 [from 00:00, to+1 00:00)
 SELECT a.type,
@@ -1942,20 +2000,93 @@ SELECT to_char(a.submitted_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM')
 
 ## Q16：系统如何部署和初始化？
 
-在项目根目录执行 `docker compose up -d --build`，启动以下容器：
+在项目根目录复制 `template.env` 为 `.env`，填好密码和密钥后执行 `docker compose up -d --build`，启动以下容器：
 
 | 服务 | 镜像 | 说明 |
 |---|---|---|
-| postgres | `postgres:16-alpine` | 数据卷 `pgdata`；初始化脚本创建运行账号 `eas_app` |
-| minio | `minio/minio` | 数据卷 `miniodata` |
-| minio-init | `minio/mc` | 一次性任务：创建私有桶 `eas-files` |
+| postgres | `postgres:16-alpine` | 数据卷 `pgdata`；挂载 `db/init` 到 `/docker-entrypoint-initdb.d`，首次初始化时创建运行账号 `eas_app` |
+| minio | `minio/minio` | 数据卷 `miniodata`；root 账号只给 minio-init 使用 |
+| minio-init | `minio/mc` | 一次性任务：创建私有桶 `eas-files`，创建只能读写该桶的专用 access key |
 | mailpit | `axllent/mailpit` | 演示用 SMTP 与收件箱（8025） |
-| backend | 由 `backend/Dockerfile` 构建 | 启动时执行 Flyway 迁移 |
+| backend | 由 `backend/Dockerfile` 构建 | 启动时用 `eas_owner` 执行 Flyway 迁移，运行时用 `eas_app` 连接 |
 | nginx | 由 `nginx/Dockerfile` 构建 | 多阶段构建 Web 与 H5，托管静态资源并反向代理 `/api/` |
 
-`docker-compose.yml` 中 backend 部分：
+数据库用两个账号：`eas_owner` 是表属主，只在 Flyway 迁移时使用；`eas_app` 是应用运行账号，只有 DML 权限。postgres 镜像在数据卷为空时，会以 `POSTGRES_USER`（即 `eas_owner`）身份执行 `/docker-entrypoint-initdb.d` 下的脚本：
 
-```yaml
+```yaml title="docker-compose.yml"
+postgres:
+  image: postgres:16-alpine
+  environment:
+    POSTGRES_DB: eas
+    POSTGRES_USER: eas_owner            # 表属主，Flyway 迁移用
+    POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?set DB_OWNER_PASSWORD}
+    EAS_APP_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}  # 供 init 脚本使用
+    TZ: Asia/Shanghai
+  volumes:
+    - pgdata:/var/lib/postgresql/data
+    - ./db/init:/docker-entrypoint-initdb.d:ro
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U eas_owner -d eas"]
+    interval: 5s
+    retries: 20
+```
+
+```bash title="db/init/01_create_app_user.sh"
+#!/bin/bash
+# 数据卷首次初始化时由 postgres 镜像执行，执行身份为 eas_owner
+set -euo pipefail
+
+psql -v ON_ERROR_STOP=1 -v app_pwd="$EAS_APP_PASSWORD" \
+     --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<'SQL'
+CREATE ROLE eas_app LOGIN PASSWORD :'app_pwd';
+GRANT CONNECT ON DATABASE eas TO eas_app;
+GRANT USAGE ON SCHEMA public TO eas_app;   -- 不授予 CREATE
+
+-- 之后 eas_owner（Flyway）创建的表和序列自动授权给 eas_app
+ALTER DEFAULT PRIVILEGES FOR ROLE eas_owner IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO eas_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE eas_owner IN SCHEMA public
+    GRANT USAGE, SELECT ON SEQUENCES TO eas_app;
+SQL
+```
+
+表是 Flyway 之后才建的，所以这里用 `ALTER DEFAULT PRIVILEGES` 而不是直接 `GRANT ... ON ALL TABLES`。Flyway 的 `V2__append_only_triggers.sql` 再对日志表执行 `REVOKE UPDATE, DELETE`（见 Q12）。init 脚本只在数据卷为空时执行一次，修改 `DB_PASSWORD` 后需要手动 `ALTER ROLE`，或 `docker compose down -v` 重建。
+
+MinIO 的 root 账号不交给后端。minio-init 用 root 建桶，再创建一个只能读写 `eas-files` 的用户，后端使用这个用户的密钥：
+
+```yaml title="docker-compose.yml"
+minio-init:
+  image: minio/mc
+  depends_on: { minio: { condition: service_healthy } }
+  environment:
+    ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+    ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+    APP_KEY: ${MINIO_APP_ACCESS_KEY:?set MINIO_APP_ACCESS_KEY}
+    APP_SECRET: ${MINIO_APP_SECRET_KEY:?set MINIO_APP_SECRET_KEY}
+    POLICY: |
+      {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow",
+         "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+         "Resource": ["arn:aws:s3:::eas-files/*"]},
+        {"Effect": "Allow", "Action": ["s3:ListBucket"],
+         "Resource": ["arn:aws:s3:::eas-files"]}]}
+  entrypoint: >
+    /bin/sh -c '
+    mc alias set local http://minio:9000 "$$ROOT_USER" "$$ROOT_PASSWORD" &&
+    mc mb -p local/eas-files &&
+    mc anonymous set none local/eas-files &&
+    printf "%s" "$$POLICY" > /tmp/eas-files-rw.json &&
+    mc admin policy create local eas-files-rw /tmp/eas-files-rw.json &&
+    mc admin user add local "$$APP_KEY" "$$APP_SECRET" &&
+    (mc admin policy attach local eas-files-rw --user "$$APP_KEY" || true)'
+  restart: "no"
+```
+
+脚本可以重复执行：桶已存在时 `mb -p` 不报错，策略和用户会被覆盖，策略已绑定时忽略错误。
+
+backend 部分，数据库和 MinIO 都使用低权限账号：
+
+```yaml title="docker-compose.yml"
 backend:
   build: ./backend
   depends_on:
@@ -1970,17 +2101,73 @@ backend:
     FLYWAY_PASSWORD: ${DB_OWNER_PASSWORD}
     JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (>=32 bytes)}
     MINIO_ENDPOINT: http://minio:9000
+    MINIO_ACCESS_KEY: ${MINIO_APP_ACCESS_KEY}   # 专用 key，非 root
+    MINIO_SECRET_KEY: ${MINIO_APP_SECRET_KEY}
     MINIO_BUCKET: eas-files
     SMTP_HOST: ${SMTP_HOST:-mailpit}
     SMTP_PORT: ${SMTP_PORT:-1025}
     TZ: Asia/Shanghai
   healthcheck:
-    test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+    test: ["CMD-SHELL", "wget -qO- localhost:8080/api/actuator/health"]
     interval: 10s
     retries: 30
 ```
 
-只有 nginx（80）和 mailpit 的 Web 界面（8025）对宿主机开放端口，数据库与 MinIO 只在 compose 内部网络可见。密码和 JWT 密钥写在 `.env` 中，`.env` 不进 git，仓库只提供 `template.env`。
+后端配置中设置 `context-path`，所有接口都以 `/api` 开头；上传限制与 Nginx 保持一致：
+
+```yaml title="backend/src/main/resources/application.yml"
+server:
+  port: 8080
+  servlet:
+    context-path: /api          # 接口统一前缀
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  flyway:
+    user: ${FLYWAY_USER}
+    password: ${FLYWAY_PASSWORD}
+  servlet:
+    multipart:
+      max-file-size: 10MB       # 单文件
+      max-request-size: 11MB    # 单次请求，含 multipart 开销
+eas:
+  minio:
+    endpoint: ${MINIO_ENDPOINT}
+    access-key: ${MINIO_ACCESS_KEY}
+    secret-key: ${MINIO_SECRET_KEY}
+    bucket: ${MINIO_BUCKET}
+```
+
+```nginx title="nginx/default.conf"
+server {
+  listen 80;
+  client_max_body_size 11m;       # 单文件 10 MB，前端逐个上传
+
+  location / {                    # Web 端
+    root /usr/share/nginx/html/web;
+    try_files $uri $uri/ /index.html;
+  }
+  location /m/ {                  # 移动 H5
+    alias /usr/share/nginx/html/h5/;
+    try_files $uri $uri/ /m/index.html;
+  }
+  location /api/notifications/stream {   # SSE 不缓冲
+    proxy_pass http://backend:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_read_timeout 1h;
+  }
+  location /api/ {                # 原样转发，保留 /api 前缀
+    proxy_pass http://backend:8080;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+}
+```
+
+只有 nginx（80）和 mailpit 的 Web 界面（8025）对宿主机开放端口，数据库与 MinIO 只在 compose 内部网络可见。`.env` 中需要填写 `DB_OWNER_PASSWORD`、`DB_PASSWORD`、`MINIO_ROOT_USER`、`MINIO_ROOT_PASSWORD`、`MINIO_APP_ACCESS_KEY`、`MINIO_APP_SECRET_KEY`、`JWT_SECRET`。`.env` 不进 git，仓库只提供 `template.env`。
 
 Flyway 脚本：
 
@@ -2009,15 +2196,80 @@ Flyway 脚本：
 
 示例申请让统计图表一开始就有数据：王工有已通过的差旅单（供报销关联）、审批中的采购单、已驳回的报销单各一张，周敏有一张审批中的请假单。
 
-代码用 git 管理：`main` 为可演示版本，`dev` 为集成分支，功能在 `feature/<模块>` 分支开发；提交信息采用 `feat(flow): ...`、`fix(expense): ...` 格式；里程碑打 tag。提交作业时附带 `.git` 目录。
+代码用 git 管理（提交前把 `git log --stat` 导出到 `docs/git_log.txt`）：`main` 为可演示版本，`dev` 为集成分支，功能在 `feature/<模块>` 分支开发；提交信息采用 `feat(flow): ...`、`fix(expense): ...` 格式；里程碑打 tag。提交作业时附带 `.git` 目录。
 
-## Q17：增强功能是如何实现的？
+## Q17：关键场景如何测试和演示？
+
+后端测试放在 `backend/src/test/java/edu/zju/eas` 下，按 `security`、`flow`、`biz`、`template`、`notify` 分包（目录见 2.1）。测试使用 JUnit 5 和 Spring Boot Test，数据库用 Testcontainers 启动真实的 PostgreSQL 16，Flyway 迁移和演示数据与部署环境一致。条件更新、部分唯一索引、触发器这些行为只有在真实 PostgreSQL 上才测得准，所以不用 H2。`mvn test` 一条命令运行全部用例，结果整理到 `docs/test_report.md`。
+
+关键用例与演示账号（密码均为 `Demo@2026`）：
+
+| 编号 | 场景 | 账号与操作 | 预期结果 |
+|---|---|---|---|
+| T01 | 越权查看 | `rd_emp_chen` 打开 `rd_emp_wang` 的申请详情；列表 `scope=mine` | 详情返回 404；列表中没有王工的申请 |
+| T02 | 跨部门隔离 | `mkt_head_sun` 查询本部门申请、打开研发部申请 | 列表只有市场部；研发部申请返回 404 |
+| T03 | 非当前审批人 | `fin_auditor_wu` 批准一张还停在部门负责人节点的申请 | 403，`40302` |
+| T04 | 管理员不能审批 | `admin` 调用批准接口 | 403，`40301`；待办列表不可访问 |
+| T05 | 禁止自审 | `rd_head_li` 提交报销 | 第 1 节点替代为 `ceo_zhao`，快照中有替代说明；李研的待办里没有这张单。数据层面即使把待办指向申请人，批准 SQL 的 `applicant_id <> :uid` 条件也会拒绝 |
+| T06 | 字段篡改 | `rd_emp_wang` 提交时请求体带 `applicantId: 5`、`totalAmountCents: 1` | 申请人仍为王工；合计按明细重算 |
+| T07 | 金额重算 | 两条明细分别填 0.10 元、0.20 元 | 合计 30 分，界面显示 ¥0.30 |
+| T08 | 同单重复票据 | 两条明细挂同一个文件 | 422，`EXP_DUP_INVOICE_IN_APP` |
+| T09 | 文件类型 | 把 `.exe` 改名为 `.png` 上传 | 415，`41501` |
+| T10 | 撤回与审批并发 | `rd_emp_wang` 撤回与 `rd_head_li` 批准同时发出（测试中用 `CountDownLatch` 对齐） | 一个 200、一个 409；只有一条有效日志；待办状态与申请状态一致 |
+| T11 | 双浏览器同时批准 | `rd_head_li` 用两个不同幂等键并发批准同一待办 | 一个成功，另一个 `40901`；下一节点只有一个待办 |
+| T12 | 重复提交幂等 | `rd_emp_wang` 用同一个 `Idempotency-Key` 提交两次 | 两次响应相同，第二次带 `Idempotent-Replayed: true`；只生成一个流程实例 |
+| T13 | 通知去重与隔离 | T12 之后查询李研的通知；`rd_emp_chen` 标记李研的通知为已读 | 李研只有一条 `TASK_ASSIGNED`；陈工的请求返回 404 |
+| T14 | 版本快照 | 提交报销后，`admin` 把企业负责人阈值改为 5000 元并发布新版本 | 已提交申请的节点与审批人不变，新申请按新版本 |
+| T15 | 注册审核 | `pending_he` 登录 | 403，`40104`，提示待审核 |
+| T16 | 终态不可变 | 对已通过的申请再次调用批准或撤回 | 409，`40901` |
+
+T10 的写法：两个线程在同一时刻发请求，断言结果恰好一成一败，并检查数据库状态一致。
+
+```java title="WithdrawApproveRaceTest.java"
+class WithdrawApproveRaceTest extends IntegrationTestBase {
+
+    @RepeatedTest(20)  // 多跑几轮，覆盖两种加锁先后
+    void withdrawAndApproveAtSameTime() throws Exception {
+        Application app = demo.submitExpenseAs("rd_emp_wang");
+        long taskId = demo.pendingTaskOf(app, "rd_head_li");
+        int v = app.getVersion();
+
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        Future<Integer> w = pool.submit(() -> {
+            start.await();
+            return api.as("rd_emp_wang").withdraw(app.getId(), v);
+        });
+        Future<Integer> a = pool.submit(() -> {
+            start.await();
+            return api.as("rd_head_li").approve(taskId, v);
+        });
+        start.countDown();
+
+        // 恰好一个成功、一个 409
+        assertThat(List.of(w.get(), a.get()))
+            .containsExactlyInAnyOrder(200, 409);
+
+        Application after = appMapper.selectById(app.getId());
+        long logs = logMapper.countActions(app.getId(),
+                                           "WITHDRAW", "APPROVE");
+        assertThat(logs).isEqualTo(1);
+        if (after.getStatus().equals("WITHDRAWN")) {
+            assertThat(taskMapper.countPending(app.getId())).isZero();
+        }
+    }
+}
+```
+
+`IntegrationTestBase` 用 `@Testcontainers` 和 `@ServiceConnection` 启动 `postgres:16-alpine` 容器，所有测试类共享同一个容器；每个用例开始前重置演示数据。前端用 Vitest 测试金额转换函数（`yuanToCents` 的边界输入）。演示视频按上表顺序录制 T01、T05、T07、T10、T12、T13，视频链接与操作说明写在 `docs/demo_video.md`。
+
+## Q18：增强功能是如何实现的？
 
 以下三项为【增强】，基础流程不依赖它们。
 
 会签 / 或签：节点 `mode` 可选 `COUNTERSIGN`（会签，全部同意才通过，任一驳回即驳回）或 `OR_SIGN`（或签，任一人处理即决定节点结果，其余待办自动取消）。节点激活时为每个审批人创建待办，节点实例记录 `required_count`、`approved_count`。批准时先原子地累加计数：
 
-```sql
+```sql title="FlowNodeInstanceMapper.xml"
 UPDATE flow_node_instance
    SET approved_count = approved_count + 1
  WHERE id = :nodeId AND status = 'ACTIVE'
@@ -2030,7 +2282,7 @@ RETURNING approved_count, required_count;
 
 跨单重复票据预警：同一报销单内的重复票据直接拒绝（见 Q7）；跨报销单的重复只提示、不拦截，因为分次报销、发票冲红重开等合法情况也会出现同号票据，是否重复由财务判断。提交时和财务打开详情时查询：
 
-```sql
+```sql title="ExpenseInvoiceMapper.xml"
 SELECT ei.id, ei.invoice_no, a.app_no, a.status
   FROM expense_invoice ei
   JOIN application a ON a.id = ei.application_id
@@ -2041,4 +2293,5 @@ SELECT ei.id, ei.invoice_no, a.app_no, a.status
 ```
 
 申请人看到黄色提示“该票据疑似已在其他报销单中使用”，仍可提交；财务审核界面用红色标签显示疑似重复的票据和对方申请编号。对方申请的正文仍受权限控制，这里只显示编号和状态。
+
 

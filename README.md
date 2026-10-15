@@ -1,6 +1,6 @@
 # 企业审批系统
 
-浙江大学 BS 体系软件设计课程大程。系统覆盖请假、采购、差旅、报销、用章等企业常见审批场景，支持自定义审批流程、站内通知与统计报表，提供 Web 端和移动端（H5 / 微信小程序）。
+浙江大学《BS 体系软件设计》课程大程。系统内置采购、差旅、报销三类业务审批，并支持管理员配置自定义流程（初始化数据中带请假、用章两个种子模板），提供站内通知、统计报表，以及 Web 端和移动端（H5 / 微信小程序）。
 
 作者：李宇航
 
@@ -27,7 +27,18 @@ enterprise-approval-system
 ├── frontend                # Web 前端（Vue 3）
 ├── mobile                  # 移动端（uni-app）
 ├── nginx                   # Nginx 配置与镜像构建
-└── docs                    # 设计文档（design_document.md / .docx）
+├── db
+│   └── init
+│       └── 01_create_app_user.sh   # 创建运行账号 eas_app，设置默认权限
+└── docs
+    ├── design_document.md  # 设计文档
+    ├── design_document.docx
+    ├── user_guide.md       # 使用手册
+    ├── test_report.md      # 测试报告
+    ├── summary.md          # 总结
+    ├── git_log.txt         # git log 导出
+    ├── demo_video.md       # 演示视频链接与说明
+    └── experiment_report   # 实验报告（含封面）
 ```
 
 后端包结构位于 `backend/src/main/java/edu/zju/eas`：`config`、`controller`、`dto`、`model`、`repository`、`response`、`service`（含 `flow` 流程引擎、`notify` 通知、`job` 定时任务）。数据库脚本位于 `backend/src/main/resources/db`。

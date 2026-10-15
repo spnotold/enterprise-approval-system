@@ -1,0 +1,98 @@
+commit 0512c54ffadf2b71655ef6d6349262232e92b1b4
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 14:35:30 2026 +0800
+
+    docs: replace pdf with markdown version
+
+ README.md                |    2 +-
+ docs/design_document.md  | 2044 ++++++++++++++++++++++++++++++++++++++++++++++
+ docs/design_document.pdf |  Bin 10354056 -> 0 bytes
+ 3 files changed, 2045 insertions(+), 1 deletion(-)
+
+commit 350c8c2980a9d5a1ba26fb9b6965d04ff0f8b2f0
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 14:32:17 2026 +0800
+
+    chore: add docker compose skeleton
+
+ docker-compose.yml | 83 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ nginx/Dockerfile   | 20 +++++++++++++
+ nginx/nginx.conf   | 35 +++++++++++++++++++++++
+ 3 files changed, 138 insertions(+)
+
+commit d75c37857d52353b3abc8922e197d8729fbacb59
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 14:31:59 2026 +0800
+
+    chore: add frontend and mobile skeleton
+
+ frontend/.gitignore         |  6 ++++++
+ frontend/Dockerfile         | 10 ++++++++++
+ frontend/index.html         | 12 ++++++++++++
+ frontend/package.json       | 26 ++++++++++++++++++++++++++
+ frontend/src/App.vue        |  5 +++++
+ frontend/src/main.ts        | 13 +++++++++++++
+ frontend/template.env.local |  2 ++
+ frontend/tsconfig.json      | 21 +++++++++++++++++++++
+ frontend/vite.config.ts     | 24 ++++++++++++++++++++++++
+ mobile/manifest.json        | 31 +++++++++++++++++++++++++++++++
+ mobile/package.json         | 27 +++++++++++++++++++++++++++
+ mobile/pages.json           | 15 +++++++++++++++
+ 12 files changed, 192 insertions(+)
+
+commit 6c098cb6878cd8e25bf3b4f354859887021f1943
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 14:31:36 2026 +0800
+
+    chore: add backend skeleton
+
+ backend/.gitignore                                 |   6 +
+ backend/Dockerfile                                 |  13 ++
+ backend/pom.xml                                    | 137 +++++++++++++++++++++
+ .../src/main/java/edu/zju/eas/EasApplication.java  |  12 ++
+ backend/src/main/resources/application-demo.yml    |   7 ++
+ backend/src/main/resources/application.yml         |  49 ++++++++
+ 6 files changed, 224 insertions(+)
+
+commit 43ad3a6d958da78d4f9f578f1a5fabdab57d39b7
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 14:31:12 2026 +0800
+
+    docs: add design document
+
+ docs/design_document.docx | Bin 0 -> 10214458 bytes
+ docs/design_document.pdf  | Bin 0 -> 10354056 bytes
+ 2 files changed, 0 insertions(+), 0 deletions(-)
+
+commit 548b2536e5b81b8f6c208186faaddf62ba87a5f5
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 14:31:12 2026 +0800
+
+    chore: init project structure
+
+ .gitignore                                         |  9 +++
+ README.md                                          | 86 ++++++++++++++++++++++
+ backend/src/main/java/edu/zju/eas/config/.gitkeep  |  0
+ .../src/main/java/edu/zju/eas/controller/.gitkeep  |  0
+ backend/src/main/java/edu/zju/eas/dto/.gitkeep     |  0
+ backend/src/main/java/edu/zju/eas/model/.gitkeep   |  0
+ .../src/main/java/edu/zju/eas/repository/.gitkeep  |  0
+ .../src/main/java/edu/zju/eas/response/.gitkeep    |  0
+ .../main/java/edu/zju/eas/service/flow/.gitkeep    |  0
+ .../src/main/java/edu/zju/eas/service/job/.gitkeep |  0
+ .../main/java/edu/zju/eas/service/notify/.gitkeep  |  0
+ backend/src/main/resources/db/demo/.gitkeep        |  0
+ backend/src/main/resources/db/migration/.gitkeep   |  0
+ frontend/public/.gitkeep                           |  0
+ frontend/src/components/.gitkeep                   |  0
+ frontend/src/composables/.gitkeep                  |  0
+ frontend/src/lib/.gitkeep                          |  0
+ frontend/src/router/.gitkeep                       |  0
+ frontend/src/stores/.gitkeep                       |  0
+ frontend/src/views/admin/.gitkeep                  |  0
+ mobile/components/.gitkeep                         |  0
+ mobile/lib/.gitkeep                                |  0
+ mobile/pages/.gitkeep                              |  0
+ mobile/static/.gitkeep                             |  0
+ template.env                                       | 17 +++++
+ 25 files changed, 112 insertions(+)
