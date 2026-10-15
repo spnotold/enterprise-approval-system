@@ -268,7 +268,7 @@ async function urge() {
         <el-button v-if="ownerAction('WITHDRAW')" type="danger" plain :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
         <el-button v-if="ownerAction('URGE')" :loading="acting === 'URGE'" :disabled="busy || !!nextUrgeAt" @click="urge">催办</el-button>
         <el-button v-if="ownerAction('SUBMIT')" type="primary" :loading="acting === 'SUBMIT'" :disabled="busy" @click="ownerOperation('SUBMIT')">提交申请</el-button>
-        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @done="load" @refresh="load" />
+        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @done="load" @refresh="load" />
       </div>
     </template>
   </div>

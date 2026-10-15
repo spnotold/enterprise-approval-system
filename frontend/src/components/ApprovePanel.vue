@@ -15,10 +15,12 @@ const props = withDefaults(
     /** 申请当前 version，作为 appVersion 提交 */
     appVersion: number
     disabled?: boolean
+    refreshing?: boolean
+    refreshError?: string | null
     canApprove?: boolean
     canReject?: boolean
   }>(),
-  { canApprove: true, canReject: true },
+  { canApprove: true, canReject: true, refreshing: false, refreshError: null },
 )
 
 const emit = defineEmits<{ done: [r: ActionResult]; refresh: [] }>()
@@ -101,6 +103,23 @@ async function confirm() {
       :show-close="!loading"
     >
       <el-alert
+        v-if="refreshError"
+        title="申请状态刷新失败，已保留审批意见"
+        :description="refreshError"
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+      <el-alert
+        v-else-if="refreshing"
+        title="正在更新申请状态，请稍候；已填写的意见会保留。"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+      <el-alert
         v-if="mode === 'REJECT'"
         type="warning"
         :closable="false"
@@ -125,6 +144,7 @@ async function confirm() {
         </el-form-item>
       </el-form>
       <template #footer>
+        <el-button v-if="refreshError" :loading="refreshing" :disabled="refreshing || loading" @click="emit('refresh')">重新加载</el-button>
         <el-button :disabled="loading" @click="visible = false">取消</el-button>
         <el-button :type="mode === 'APPROVE' ? 'success' : 'danger'" :loading="loading" :disabled="disabled" @click="confirm">
           {{ mode === 'APPROVE' ? '确认批准' : '确认驳回' }}
