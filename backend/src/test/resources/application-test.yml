@@ -1,0 +1,7 @@
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo
+
+eas:
+  jwt:
+    secret: test-secret-for-integration-tests-only-32b
