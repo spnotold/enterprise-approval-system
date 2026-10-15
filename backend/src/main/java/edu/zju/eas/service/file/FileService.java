@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedInputStream;
@@ -81,6 +83,7 @@ public class FileService {
         try (InputStream in = file.getInputStream()) {
             sha256 = storage.put(key, in, file.getSize(), detected);    // 边写边算哈希
         }
+        removeOnRollback(key);
         Attachment a = new Attachment();
         a.setUploaderId(u.id());
         a.setRefType(refType);
@@ -131,13 +134,16 @@ public class FileService {
         OffsetDateTime now = OffsetDateTime.now(clock);
         for (Attachment a : found.values()) {
             if (Attachment.TEMP.equals(a.getStatus())) {
-                attachmentMapper.update(null, Wrappers.<Attachment>lambdaUpdate()
+                int changed = attachmentMapper.update(null, Wrappers.<Attachment>lambdaUpdate()
                         .set(Attachment::getStatus, Attachment.BOUND)
                         .set(Attachment::getApplicationId, app.getId())
                         .set(Attachment::getBoundAt, now)
                         .eq(Attachment::getId, a.getId())
                         .eq(Attachment::getStatus, Attachment.TEMP)
                         .eq(Attachment::getUploaderId, u.id()));
+                if (changed != 1) {
+                    throw BizException.stateChanged();
+                }
                 a.setStatus(Attachment.BOUND);
                 a.setApplicationId(app.getId());
             }
@@ -170,6 +176,7 @@ public class FileService {
         for (Attachment src : boundOf(sourceAppId).values()) {
             String key = YearMonth.now(clock).toString().replace('-', '/') + "/" + UUID.randomUUID();
             storage.copy(src.getStorageKey(), key);
+            removeOnRollback(key);
             Attachment a = new Attachment();
             a.setUploaderId(u.id());
             a.setApplicationId(target.getId());
@@ -199,6 +206,15 @@ public class FileService {
             }
         }
         return list;
+    }
+
+    /** MinIO 不参与数据库事务；失败回滚时清理本事务新写入的对象。 */
+    private void removeOnRollback(String key) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) storage.remove(key);
+            }
+        });
     }
 
     static boolean extensionMatches(String name, String detected) {

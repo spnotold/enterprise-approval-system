@@ -2,12 +2,12 @@ package edu.zju.eas.repository;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import edu.zju.eas.dto.app.ApplicationSummary;
 import edu.zju.eas.dto.app.ListQuery;
 import edu.zju.eas.model.app.Application;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
@@ -113,8 +113,31 @@ public interface ApplicationMapper extends BaseMapper<Application> {
             """)
     int softDelete(@Param("id") Long id, @Param("uid") Long uid);
 
-    /** 列表：数据范围条件直接进 SQL，分页的 total 不会把无权查看的记录算进去（见 ApplicationMapper.xml） */
-    IPage<ApplicationSummary> pageList(IPage<ApplicationSummary> page, @Param("q") ListQuery q);
-
-    List<ApplicationSummary> summariesByIds(@Param("ids") List<Long> ids);
+    /** 列表范围在分页前进入 SQL，q 中的用户和部门范围只能由服务端构造。 */
+    @Select("""
+        <script>
+        SELECT a.* FROM application a WHERE a.deleted_at IS NULL
+        <choose>
+          <when test="q.scope == 'mine'">AND a.applicant_id = #{q.userId}</when>
+          <otherwise>
+            AND a.status &lt;&gt; 'DRAFT'
+            <if test="!q.allDepartments">
+              <choose>
+                <when test="q.deptIds != null and !q.deptIds.isEmpty()">
+                  AND a.dept_id IN <foreach collection="q.deptIds" item="d" open="(" close=")" separator=",">#{d}</foreach>
+                </when>
+                <otherwise>AND FALSE</otherwise>
+              </choose>
+            </if>
+          </otherwise>
+        </choose>
+        <if test="q.type != null">AND a.type = #{q.type}</if>
+        <if test="q.status != null">AND a.status = #{q.status}</if>
+        <if test="q.from != null">AND a.submitted_at &gt;= (CAST(#{q.from} AS date)::timestamp AT TIME ZONE 'Asia/Shanghai')</if>
+        <if test="q.to != null">AND a.submitted_at &lt; ((CAST(#{q.to} AS date) + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')</if>
+        <if test="q.keyword != null">AND strpos(lower(a.app_no || ' ' || coalesce(a.title, '')), lower(#{q.keyword})) &gt; 0</if>
+        ORDER BY a.updated_at DESC, a.id DESC
+        </script>
+        """)
+    IPage<Application> pageList(IPage<Application> page, @Param("q") ListQuery q);
 }

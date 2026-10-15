@@ -219,6 +219,7 @@ public class FlowEngine {
             n.put("nodeKey", p.def().getNodeKey());
             n.put("name", p.def().getName());
             n.put("mode", p.def().modeOrDefault());
+            n.put("conditionText", p.conditionText());
             n.put("rule", p.def().getApproverRule());
             if (p.def().getFallbackRule() != null) {
                 n.put("fallbackRule", p.def().getFallbackRule());
