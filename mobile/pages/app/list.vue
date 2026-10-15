@@ -11,6 +11,7 @@ import { auth, requireLogin } from '@/stores/auth'
 import { NOTICE_EVENT } from '@/stores/notice'
 import { APP_STATUS_LABEL, APP_STATUS_ORDER, APP_TYPE_LABEL } from '@/utils/labels'
 import { goDetail } from '@/utils/nav'
+import { pickerValue, type UniPickerChangeEvent } from '@/utils/uniEvent'
 
 const scope = ref<ListScope>('mine')
 const type = ref<AppType | null>(null)
@@ -62,13 +63,13 @@ function setScope(s: ListScope): void {
   reload()
 }
 
-function onType(e: { detail: { value: number | string } }): void {
-  type.value = TYPE_OPTIONS[Number(e.detail.value)].value
+function onType(e: Event | UniPickerChangeEvent): void {
+  type.value = TYPE_OPTIONS[Number(pickerValue(e))].value
   reload()
 }
 
-function onStatus(e: { detail: { value: number | string } }): void {
-  status.value = STATUS_OPTIONS[Number(e.detail.value)].value
+function onStatus(e: Event | UniPickerChangeEvent): void {
+  status.value = STATUS_OPTIONS[Number(pickerValue(e))].value
   reload()
 }
 

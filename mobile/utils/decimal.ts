@@ -11,6 +11,14 @@ export function decimalPlaces(s: string): number {
   return m && m[3] ? m[3].length : 0
 }
 
+/** 精度至多 4 位的小数转为万分之一单位，供步长校验使用。 */
+export function decimalUnits(s: string | null | undefined): bigint | null {
+  const m = DEC.exec(s?.trim() ?? '')
+  if (!m || (m[3]?.length ?? 0) > 4) return null
+  const value = BigInt(m[2]) * 10000n + BigInt((m[3] ?? '').padEnd(4, '0'))
+  return m[1] ? -value : value
+}
+
 /** 规范化：去掉多余的前导 0 与末尾 0，"-0" 记为 "0" */
 function normalize(s: string): { neg: boolean; int: string; frac: string } | null {
   const m = DEC.exec(s.trim())

@@ -24,8 +24,11 @@ declare const wx: {
 }
 
 declare module '@qiun/ucharts' {
-  // uCharts 没有类型声明，只在 components/UChart.vue 中使用
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const uCharts: any
-  export default uCharts
+  // 仅声明封装实际使用的公开 API；复杂配置通过 unknown 保持显式边界。
+  export default class UCharts {
+    constructor(options: Record<string, unknown>)
+    touchLegend(event: unknown): void
+    showToolTip(event: unknown): void
+    stopAnimation(): void
+  }
 }

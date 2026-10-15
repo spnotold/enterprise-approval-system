@@ -9,6 +9,7 @@ import { notice } from '@/stores/notice'
 import { confirm, showError, toast } from '@/utils/feedback'
 import { ROLE_LABEL } from '@/utils/labels'
 import { go, goAppList } from '@/utils/nav'
+import { switchValue, type UniSwitchChangeEvent } from '@/utils/uniEvent'
 
 const me = computed(() => auth.state.me)
 const adminOnly = computed(() => auth.isAdminOnly)
@@ -24,8 +25,8 @@ onShow(() => {
   if (auth.isLoggedIn) auth.reloadMe().catch(() => {})
 })
 
-async function toggleEmail(e: { detail: { value: boolean } }): Promise<void> {
-  const value = e.detail.value
+async function toggleEmail(e: Event | UniSwitchChangeEvent): Promise<void> {
+  const value = switchValue(e)
   savingPref.value = true
   try {
     auth.setMe(await api.me.updatePreferences({ emailNotify: value }))

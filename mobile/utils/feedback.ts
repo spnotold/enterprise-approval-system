@@ -65,7 +65,7 @@ export function showError(err: unknown, h: ErrorHandlers = {}): void {
     const title = e.code === 40905 ? '草稿已在别处修改' : '申请状态已变化'
     uni.showModal({
       title,
-      content: `${e.message}。请刷新后查看最新状态。`,
+      content: `${e.message}。请刷新后查看最新状态。${e.code === 40905 ? '刷新将用服务器草稿覆盖当前未保存的修改。' : ''}`,
       confirmText: '刷新',
       showCancel: !!h.onRefresh,
       success: (r) => {

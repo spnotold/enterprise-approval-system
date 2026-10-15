@@ -7,6 +7,7 @@ import type { DeptOption } from '@/lib/types'
 import FormItem from '@/components/FormItem.vue'
 import { useFieldErrors } from '@/composables/useFieldErrors'
 import { alert, showError } from '@/utils/feedback'
+import { inputValue, pickerValue, type UniInputEvent, type UniPickerChangeEvent } from '@/utils/uniEvent'
 
 const USERNAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{3,31}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -43,10 +44,15 @@ const strength = computed(() => {
   return { text: '弱', cls: 'text-danger' }
 })
 
-function onInput(key: keyof typeof form, e: { detail: { value: string } }): void {
-  form[key] = e.detail.value
+function onInput(key: keyof typeof form, e: Event | UniInputEvent): void {
+  form[key] = inputValue(e)
   fe.clearField(key)
   if (key === 'username' || key === 'email') available[key] = null
+}
+
+function onDepartmentChange(e: Event | UniPickerChangeEvent): void {
+  deptIndex.value = Number(pickerValue(e))
+  fe.clearField('requestedDeptId')
 }
 
 async function checkAvailability(key: 'username' | 'email'): Promise<void> {
@@ -175,7 +181,7 @@ async function submit(): Promise<void> {
           :range="depts"
           range-key="name"
           :value="deptIndex < 0 ? 0 : deptIndex"
-          @change="deptIndex = Number($event.detail.value); fe.clearField('requestedDeptId')"
+          @change="onDepartmentChange"
         >
           <view class="picker-value" :class="{ 'is-error': !!fe.get('requestedDeptId') }">
             <text :class="{ placeholder: deptIndex < 0 }">{{ deptIndex < 0 ? '请选择部门' : depts[deptIndex].name }}</text>

@@ -3,6 +3,7 @@
 // 不经过 parseFloat，换算全部交给 lib/money.ts。
 import { nextTick, ref, watch } from 'vue'
 import { centsToYuan, yuanToCents } from '@/lib/money'
+import { inputValue, type UniInputEvent } from '@/utils/uniEvent'
 
 const props = withDefaults(
   defineProps<{
@@ -43,8 +44,8 @@ function sanitize(raw: string): string {
   return v
 }
 
-function onInput(e: { detail: { value: string } }): void {
-  const raw = e.detail.value
+function onInput(e: Event | UniInputEvent): void {
+  const raw = inputValue(e)
   const clean = sanitize(raw)
   text.value = raw
   // 先写入原值再写入清洗后的值，确保小程序输入框内容被替换

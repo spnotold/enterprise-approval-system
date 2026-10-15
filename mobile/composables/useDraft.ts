@@ -6,6 +6,7 @@
 import { reactive, watch, type WatchSource } from 'vue'
 import { onUnload } from '@dcloudio/uni-app'
 import { api } from '@/lib/api'
+import { ApiError } from '@/lib/http'
 import type { TypePath } from '@/lib/api/applications'
 import { newIdemKey } from '@/lib/idem'
 import type {
@@ -48,13 +49,13 @@ function setLeaveAlert(on: boolean): void {
 export function pathPreviewText(p: PathPreview | null): string {
   if (!p || !p.nodes.length) return ''
   const lines = p.nodes
-    .filter((n) => n.effective)
     .map((n, i) => {
       const many = n.mode && n.mode !== 'SINGLE' && n.candidates?.length
       const who = many
         ? `${n.mode === 'COUNTERSIGN' ? '会签' : '或签'}：${n.candidates.map((c) => c.realName).join('、')}`
         : (n.assignee?.realName ?? '待定')
-      return `${i + 1}. ${n.name}（${who}）`
+      if (!n.effective) return `${i + 1}. ${n.name}（跳过${n.conditionText ? `：${n.conditionText}` : ''}）`
+      return `${i + 1}. ${n.name}（${who}）${n.resolveNote ? `\n${n.resolveNote}` : ''}`
     })
   return `审批路径：\n${lines.join('\n')}\n\n`
 }
@@ -69,6 +70,7 @@ export function useDraft<K extends TypePath>(type: K) {
   })
 
   let tracking = false
+  let revision = 0
 
   /** 监听表单数据，有修改时标记 dirty 并开启离开提示 */
   function trackDirty(source: WatchSource<unknown>): void {
@@ -76,12 +78,13 @@ export function useDraft<K extends TypePath>(type: K) {
       source,
       () => {
         if (!tracking) return
+        revision++
         if (!draft.dirty) {
           draft.dirty = true
           setLeaveAlert(true)
         }
       },
-      { deep: true },
+      { deep: true, flush: 'sync' },
     )
   }
 
@@ -102,6 +105,9 @@ export function useDraft<K extends TypePath>(type: K) {
   /** 编辑已有草稿：加载详情；不是本人可编辑的草稿时提示并转到详情页 */
   async function load(id: number): Promise<ApplicationDetail | null> {
     const d = await api.applications.detail(id)
+    if (d.type.toLowerCase() !== type) {
+      throw new ApiError({ code: 40000, message: '草稿类型与当前表单不匹配' }, 400)
+    }
     if (d.status !== 'DRAFT' || !d.allowedActions.includes('EDIT')) {
       await alert('无法编辑', '该申请已不是草稿，不能再修改。')
       goDetail(id, true)
@@ -113,9 +119,8 @@ export function useDraft<K extends TypePath>(type: K) {
     return d
   }
 
-  async function save(body: SaveBodyMap[K], opts: { silent?: boolean } = {}): Promise<DraftSaved> {
-    draft.busy = true
-    try {
+  async function persist(body: SaveBodyMap[K], opts: { silent?: boolean } = {}): Promise<DraftSaved> {
+      const sentRevision = revision
       let r: DraftSaved
       if (draft.id === null) {
         r = await api.applications.create(type, body)
@@ -125,26 +130,39 @@ export function useDraft<K extends TypePath>(type: K) {
       draft.id = r.id
       draft.version = r.version
       draft.appNo = r.appNo
-      markClean()
+      if (revision === sentRevision) markClean()
       if (!opts.silent) toast('草稿已保存', 'success')
       return r
-    } finally {
-      draft.busy = false
-    }
+  }
+
+  function lock(): void {
+    if (draft.busy) throw new ApiError({ code: 40903, message: '正在处理中，请稍候' }, 409)
+    draft.busy = true
+  }
+
+  async function save(body: SaveBodyMap[K], opts: { silent?: boolean } = {}): Promise<DraftSaved> {
+    lock()
+    try { return await persist(body, opts) }
+    finally { draft.busy = false }
   }
 
   /**
    * 保存并提交。业务校验失败（40000 / 42201 / 409 等）时抛出 ApiError，由页面映射字段错误；
    * 用户取消或放弃重试时返回 null。
    */
-  async function submit(body: SaveBodyMap[K]): Promise<ActionResult | null> {
-    loading('保存中')
+  async function submit(body: SaveBodyMap[K], opts: { afterSave?: (id: number) => Promise<string | void> } = {}): Promise<ActionResult | null> {
+    lock()
     try {
-      await save(body, { silent: true })
+    const sentRevision = revision
+    loading('保存中')
+    let saved: DraftSaved
+    try {
+      saved = await persist(body, { silent: true })
     } finally {
       hideLoading()
     }
-    const id = draft.id as number
+    const id = saved.id
+    const extra = await opts.afterSave?.(id)
     let preview: PathPreview | null = null
     loading('生成审批路径')
     try {
@@ -162,15 +180,16 @@ export function useDraft<K extends TypePath>(type: K) {
     const idemKey = newIdemKey()
     const ok = await confirm({
       title: '确认提交',
-      content: `${pathPreviewText(preview)}提交后进入审批流程，审批期间不能修改。`,
+      content: `${pathPreviewText(preview)}${extra ? `${extra}\n\n` : ''}提交后进入审批流程，审批期间不能修改。`,
       confirmText: '提交',
     })
     if (!ok) return null
-    const appVersion = draft.version as number
-    draft.busy = true
-    try {
-      const r = await runIdempotent(idemKey, (key) => api.applications.submit(id, { appVersion }, key), '提交中')
-      if (r) markClean()
+    if (revision !== sentRevision) {
+      toast('表单内容已变化，请检查后重新提交')
+      return null
+    }
+      const r = await runIdempotent(idemKey, (key) => api.applications.submit(id, { appVersion: saved.version }, key), '提交中')
+      if (r && revision === sentRevision) markClean()
       return r
     } finally {
       draft.busy = false
@@ -179,6 +198,7 @@ export function useDraft<K extends TypePath>(type: K) {
 
   /** 提交成功：提示当前审批人并转到详情页 */
   function finishSubmit(r: ActionResult): void {
+    draft.busy = true // 跳转前保持锁定，避免成功提示期间重复提交
     const who = r.currentNode?.assigneeName
     toast(who ? `提交成功，当前审批人：${who}` : '提交成功', 'none')
     setTimeout(() => goDetail(r.applicationId, true), 1200)

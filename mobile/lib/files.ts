@@ -7,6 +7,9 @@ import { API_BASE } from './config'
 import { ApiError, authFailed, authHeaders, currentAccessToken, parseResponse, refreshOnce, toApiError } from './http'
 import type { AttachmentMeta, AttachmentRefType } from './types'
 
+type CallbackUploadFileOption = UniApp.UploadFileOption &
+  Required<Pick<UniApp.UploadFileOption, 'success' | 'fail'>>
+
 export const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf']
 export const MAX_FILE_BYTES = 10 * 1024 * 1024
 
@@ -54,7 +57,7 @@ function uploadOnce(
   setTask: (t: UniApp.UploadTask) => void,
 ): Promise<AttachmentMeta> {
   return new Promise<AttachmentMeta>((resolve, reject) => {
-    const options: UniApp.UploadFileOption = {
+    const options: CallbackUploadFileOption = {
       url: `${API_BASE}/files`,
       name: 'file',
       formData: { refType },

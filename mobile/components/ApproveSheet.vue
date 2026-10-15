@@ -8,6 +8,7 @@ import { newIdemKey } from '@/lib/idem'
 import type { ActionResult } from '@/lib/types'
 import BottomSheet from '@/components/BottomSheet.vue'
 import { confirm, showError } from '@/utils/feedback'
+import { inputValue, type UniInputEvent } from '@/utils/uniEvent'
 
 const props = defineProps<{
   visible: boolean
@@ -42,8 +43,8 @@ watch(
 const isReject = computed(() => props.mode === 'reject')
 const length = computed(() => comment.value.trim().length)
 
-function onInput(e: { detail: { value: string } }): void {
-  comment.value = e.detail.value
+function onInput(e: Event | UniInputEvent): void {
+  comment.value = inputValue(e)
   error.value = ''
 }
 

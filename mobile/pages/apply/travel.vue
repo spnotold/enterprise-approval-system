@@ -14,6 +14,7 @@ import { auth, requireLogin } from '@/stores/auth'
 import { hideLoading, loading, showError, toast } from '@/utils/feedback'
 import { TRANSPORT_OPTIONS } from '@/utils/labels'
 import { cnToIso, durationTenths, fmtTenths, isoToCn, naturalDays, parseTime } from '@/utils/time'
+import { inputValue, pickerValue, type UniInputEvent, type UniPickerChangeEvent } from '@/utils/uniEvent'
 
 type Transport = NonNullable<TravelSaveRequest['transport']>
 
@@ -223,21 +224,22 @@ function removeCompanion(i: number): void {
 
 // ---------- 输入事件 ----------
 
-function onField(key: 'title' | 'origin' | 'destination' | 'purpose', e: { detail: { value: string } }): void {
-  form[key] = e.detail.value
+function onField(key: 'title' | 'origin' | 'destination' | 'purpose', e: Event | UniInputEvent): void {
+  form[key] = inputValue(e)
   fe.clearField(key)
 }
 
-function onPick(key: 'startDate' | 'startTime' | 'endDate' | 'endTime', e: { detail: { value: string } }): void {
-  form[key] = e.detail.value
+function onPick(key: 'startDate' | 'startTime' | 'endDate' | 'endTime', e: Event | UniPickerChangeEvent): void {
+  const value = String(pickerValue(e))
+  form[key] = value
   // 选完开始日期且结束日期为空时，默认同一天
-  if (key === 'startDate' && !form.endDate) form.endDate = e.detail.value
+  if (key === 'startDate' && !form.endDate) form.endDate = value
   fe.clearField('startTime')
   fe.clearField('endTime')
 }
 
-function onTransport(e: { detail: { value: number | string } }): void {
-  form.transport = TRANSPORT_OPTIONS[Number(e.detail.value)].value
+function onTransport(e: Event | UniPickerChangeEvent): void {
+  form.transport = TRANSPORT_OPTIONS[Number(pickerValue(e))].value
   fe.clearField('transport')
 }
 

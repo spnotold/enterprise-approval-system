@@ -19,13 +19,14 @@ const props = withDefaults(
 
 const uid = `uc${Math.random().toString(36).slice(2, 10)}`
 const instance = getCurrentInstance()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let chart: any = null
+let chart: uCharts | null = null
 let disposed = false
 
 function baseOptions(): Record<string, unknown> {
   // uCharts 会改写传入的 series（附加内部字段），传深拷贝，避免触发响应式监听而反复重绘
   const data = JSON.parse(JSON.stringify(props.data)) as ChartData
+  const extra = props.opts.extra
+  const extraOptions = extra && typeof extra === 'object' && !Array.isArray(extra) ? extra : {}
   return {
     type: props.type,
     categories: data.categories ?? [],
@@ -42,11 +43,14 @@ function baseOptions(): Record<string, unknown> {
     xAxis: { disableGrid: true, fontColor: '#646a73', fontSize: 10, axisLineColor: '#e5e6eb' },
     yAxis: { gridType: 'dash', gridColor: '#eeeeee', dashLength: 4, data: [{ min: 0, fontColor: '#8f959e', fontSize: 10 }] },
     ...props.opts,
+    // uCharts 构造器直接读取 extra.ring / extra.pie.labelWidth，必须初始化对应图形配置。
+    extra: { [props.type]: {}, ...extraOptions },
   }
 }
 
 function draw(): void {
   if (disposed || !instance) return
+  chart?.stopAnimation()
   // #ifdef MP-WEIXIN
   uni
     .createSelectorQuery()
@@ -108,6 +112,7 @@ watch(
 
 onUnmounted(() => {
   disposed = true
+  chart?.stopAnimation()
   chart = null
 })
 </script>

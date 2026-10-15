@@ -14,6 +14,7 @@ import { NOTICE_EVENT, notice, type IncomingNotice } from '@/stores/notice'
 import { APP_TYPE_LABEL, TASK_STATUS_LABEL } from '@/utils/labels'
 import { goDetail, goTaskHandle } from '@/utils/nav'
 import { fmtShort } from '@/utils/time'
+import { pickerValue, type UniPickerChangeEvent } from '@/utils/uniEvent'
 
 const tab = ref<'pending' | 'done'>('pending')
 const type = ref<AppType | null>(null)
@@ -50,8 +51,8 @@ function switchTab(t: 'pending' | 'done'): void {
   reload()
 }
 
-function onType(e: { detail: { value: number | string } }): void {
-  type.value = TYPE_OPTIONS[Number(e.detail.value)].value
+function onType(e: Event | UniPickerChangeEvent): void {
+  type.value = TYPE_OPTIONS[Number(pickerValue(e))].value
   reload()
 }
 

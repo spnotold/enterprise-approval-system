@@ -1,0 +1,197 @@
+<script setup lang="ts">
+import { computed, reactive, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import AttachmentPicker from '@/components/AttachmentPicker.vue'
+import FormItem from '@/components/FormItem.vue'
+import MoneyInput from '@/components/MoneyInput.vue'
+import StepBar from '@/components/StepBar.vue'
+import { useDraft } from '@/composables/useDraft'
+import { applyApiError, remapIndex, scrollToError, useFieldErrors } from '@/composables/useFieldErrors'
+import { formatCents, multiplyCents, sumCents } from '@/lib/money'
+import { requireLogin } from '@/stores/auth'
+import { emptyPurchase, emptyPurchaseItem, emptyQuote, lowestQuote, purchaseBody, rowKey, validatePurchase } from '@/utils/applyForms'
+import { hideLoading, loading, showError, toast } from '@/utils/feedback'
+import { todayCN } from '@/utils/time'
+
+const form = reactive(emptyPurchase())
+const fe = useFieldErrors()
+const { draft, trackDirty, startTracking, markClean, load, save, submit, finishSubmit } = useDraft('purchase')
+const ready = ref(false), loadError = ref(''), step = ref(0)
+const steps = ['基本信息', '采购明细', '报价比较', '采购选择', '附件', '确认']
+const busyUploads = reactive<Record<string, boolean>>({})
+const uploading = computed(() => Object.values(busyUploads).some(Boolean))
+const lowest = computed(() => lowestQuote(form.quotes))
+const selected = computed(() => form.selectedQuoteIndex === null ? null : form.quotes[form.selectedQuoteIndex] ?? null)
+const notLowest = computed(() => selected.value?.quoteAmountCents != null && lowest.value !== null && selected.value.quoteAmountCents > lowest.value)
+const total = computed(() => sumCents(form.items.map(i => multiplyCents(i.quantity, i.unitPriceCents))))
+const errorSteps = computed(() => [...new Set(Object.keys(fe.map).map(fieldStep))])
+let itemMap: number[] = [], quoteMap: number[] = [], initialId: number | null = null
+
+function fieldStep(path: string): number {
+  if (path.startsWith('items')) return 1
+  if (path.startsWith('quotes')) return 2
+  if (/^(selectedQuoteIndex|selectionReason|notLowestReason)/.test(path)) return 3
+  if (path.startsWith('attachmentIds')) return 4
+  return 0
+}
+function locate(): void {
+  const first = Object.keys(fe.map)[0]
+  if (first) step.value = fieldStep(first)
+  scrollToError()
+}
+function remap(field: string): string | null {
+  const item = remapIndex(field, 'items', itemMap)
+  return item === null ? null : remapIndex(item, 'quotes', quoteMap)
+}
+function changeStep(index: number): void {
+  if (draft.busy) return
+  step.value = index
+  uni.pageScrollTo({ scrollTop: 0, duration: 150 })
+}
+function removeItem(i: number): void {
+  if (draft.busy) return
+  form.items.splice(i, 1); fe.clearUnder('items')
+}
+function removeQuote(i: number): void {
+  if (draft.busy || busyUploads[`quote-${form.quotes[i].key}`]) return toast('请等待上传完成或取消上传')
+  delete busyUploads[`quote-${form.quotes[i].key}`]
+  form.quotes.splice(i, 1)
+  if (form.selectedQuoteIndex === i) form.selectedQuoteIndex = null
+  else if (form.selectedQuoteIndex !== null && form.selectedQuoteIndex > i) form.selectedQuoteIndex--
+  fe.clearUnder('quotes'); fe.clearField('selectedQuoteIndex')
+}
+function toggleSingle(): void { form.singleSource = !form.singleSource; fe.clearUnder('singleSourceReason') }
+
+async function fill(id: number): Promise<void> {
+  ready.value = false; loadError.value = ''; loading()
+  try {
+    const d = await load(id)
+    if (!d) return
+    if (!d.purchase) throw new Error('采购草稿内容不完整')
+    const p = d.purchase
+    Object.assign(form, {
+      title: d.title ?? '', reason: p.reason ?? '', budgetLimitCents: p.budgetLimitCents,
+      expectedArrivalDate: p.expectedArrivalDate ?? '', singleSource: p.singleSource, singleSourceReason: p.singleSourceReason ?? '',
+      singleSourceAttachments: [...p.singleSourceAttachments], selectedQuoteIndex: p.selectedQuoteIndex, selectionReason: p.selectionReason ?? '', notLowestReason: p.notLowestReason ?? '',
+      items: p.items.length ? p.items.map(i => ({ ...i, key: rowKey() })) : [emptyPurchaseItem()],
+      quotes: p.quotes.length ? p.quotes.map(q => ({ key: rowKey(), supplierName: q.supplierName ?? '', channel: q.channel, quoteAmountCents: q.quoteAmountCents, url: q.url ?? '', description: q.description ?? '', attachments: [...q.attachments] })) : [emptyQuote(), emptyQuote()],
+      attachments: [...p.attachments],
+    })
+    fe.clear(); markClean(); ready.value = true
+  } catch (e) { loadError.value = '草稿加载失败，请重试'; showError(e) }
+  finally { hideLoading() }
+}
+async function reloadDraft(): Promise<void> { if (draft.id) await fill(draft.id) }
+async function retry(): Promise<void> { if (initialId) await fill(initialId) }
+async function act(full: boolean): Promise<void> {
+  if (!ready.value || draft.busy) return
+  if (uploading.value) return toast('附件上传中，请稍候')
+  fe.setAll(validatePurchase(form, full))
+  if (fe.count.value) { toast('请完善标红的内容'); return locate() }
+  const data = purchaseBody(form)
+  itemMap = data.itemMap; quoteMap = data.quoteMap
+  try {
+    if (full) { const r = await submit(data.body); if (r) { ready.value = false; finishSubmit(r) } }
+    else { loading('保存中'); await save(data.body) }
+  } catch (e) { if (applyApiError(fe, e, { remap, onRefresh: reloadDraft })) locate() }
+  finally { hideLoading() }
+}
+
+onLoad(async q => {
+  if (!(await requireLogin())) return
+  trackDirty(() => form)
+  if (q?.id) {
+    initialId = Number(q.id)
+    if (!Number.isSafeInteger(initialId) || initialId <= 0) { loadError.value = '草稿编号无效'; return }
+    await fill(initialId)
+  } else ready.value = true
+  startTracking()
+})
+</script>
+
+<template>
+  <view class="page page--bar">
+    <view v-if="loadError" class="banner banner-danger">{{ loadError }}<view class="link-btn" @tap="retry">重试</view></view>
+    <template v-if="ready">
+      <view v-if="draft.appNo" class="muted mb">草稿 {{ draft.appNo }}{{ draft.dirty ? ' · 未保存' : '' }}</view>
+      <StepBar :steps="steps" :current="step" :error-steps="errorSteps" @change="changeStep" />
+      <view v-if="fe.general.value.length" class="banner banner-danger"><view v-for="m in fe.general.value" :key="m">{{ m }}</view></view>
+      <view :class="{ locked: draft.busy }">
+        <view v-show="step === 0" class="card">
+          <view class="card-title">申请信息</view>
+          <FormItem label="标题" required :error="fe.get('title')"><input v-model="form.title" class="input" maxlength="100" placeholder="简要说明本次采购" @input="fe.clearField('title')" /></FormItem>
+          <FormItem label="采购事由" required :error="fe.get('reason')"><textarea v-model="form.reason" class="textarea" maxlength="1000" auto-height placeholder="说明采购用途与必要性" @input="fe.clearField('reason')" /></FormItem>
+          <FormItem label="预算上限" required :error="fe.get('budgetLimitCents')"><MoneyInput v-model="form.budgetLimitCents" @update:model-value="fe.clearField('budgetLimitCents')" /></FormItem>
+          <FormItem label="期望到货日期" required :error="fe.get('expectedArrivalDate')"><picker mode="date" :value="form.expectedArrivalDate" :start="todayCN()" @change="form.expectedArrivalDate = $event.detail.value; fe.clearField('expectedArrivalDate')"><view class="picker-value">{{ form.expectedArrivalDate || '请选择日期' }}<uni-icons type="calendar" size="18" color="#8f959e" /></view></picker></FormItem>
+          <view class="row between"><text>单一来源采购</text><switch :checked="form.singleSource" color="#2f6bff" @change="toggleSingle" /></view>
+          <view v-show="form.singleSource">
+            <FormItem label="单一来源说明" required :error="fe.get('singleSourceReason')" help="至少 20 字，附说明材料或在说明中写明依据"><textarea v-model="form.singleSourceReason" class="textarea" maxlength="1000" auto-height placeholder="说明唯一供应商与采购依据" @input="fe.clearField('singleSourceReason')" /></FormItem>
+            <FormItem label="说明材料" :error="fe.first('singleSourceAttachmentIds')"><AttachmentPicker v-model="form.singleSourceAttachments" ref-type="SINGLE_SOURCE" @busy="busyUploads.single = $event" @update:model-value="fe.clearUnder('singleSourceAttachmentIds')" /></FormItem>
+          </view>
+        </view>
+        <view v-show="step === 1">
+          <view class="section-title">采购明细 · 即时合计 ¥{{ formatCents(total) }}</view>
+          <view v-if="fe.get('items')" class="field-err">{{ fe.get('items') }}</view>
+          <view v-for="(it, i) in form.items" :key="it.key" class="card">
+            <view class="card-title">明细 {{ i + 1 }}<view class="link-btn danger" @tap="removeItem(i)">删除</view></view>
+            <FormItem label="名称" required :error="fe.get(`items[${i}].name`)"><input v-model="it.name" class="input" maxlength="100" placeholder="物品名称" @input="fe.clearField(`items[${i}].name`)" /></FormItem>
+            <FormItem label="规格型号" :error="fe.get(`items[${i}].spec`)"><input v-model="it.spec" class="input" maxlength="200" placeholder="选填" /></FormItem>
+            <view class="row two"><FormItem class="flex1" label="数量" required :error="fe.get(`items[${i}].quantity`)"><input v-model="it.quantity" class="input" type="digit" maxlength="13" placeholder="最多 3 位小数" @input="fe.clearField(`items[${i}].quantity`)" /></FormItem><FormItem class="flex1" label="单位" required :error="fe.get(`items[${i}].unit`)"><input v-model="it.unit" class="input" maxlength="20" placeholder="如 台、件" @input="fe.clearField(`items[${i}].unit`)" /></FormItem></view>
+            <FormItem label="单价" required :error="fe.get(`items[${i}].unitPriceCents`)"><MoneyInput v-model="it.unitPriceCents" @update:model-value="fe.clearField(`items[${i}].unitPriceCents`)" /></FormItem>
+            <view class="amount">金额 ¥{{ formatCents(multiplyCents(it.quantity, it.unitPriceCents)) }}</view>
+            <FormItem label="备注" :error="fe.get(`items[${i}].remark`)"><input v-model="it.remark" class="input" maxlength="200" placeholder="选填" /></FormItem>
+          </view>
+          <button class="btn btn-block" :disabled="form.items.length >= 50" @tap="form.items.push(emptyPurchaseItem()); fe.clearUnder('items')">添加明细</button>
+        </view>
+        <view v-show="step === 2">
+          <view class="banner banner-info">非单一来源至少 2 家供应商；线上报价需链接及截图，线下需报价单或说明。</view>
+          <view v-if="fe.get('quotes')" class="field-err">{{ fe.get('quotes') }}</view>
+          <view v-for="(q, i) in form.quotes" :key="q.key" class="card" :class="{ lowest: q.quoteAmountCents !== null && q.quoteAmountCents === lowest }">
+            <view class="card-title">报价 {{ i + 1 }}<text v-if="q.quoteAmountCents !== null && q.quoteAmountCents === lowest" class="tag tag-green">最低价</text><view class="link-btn danger" @tap="removeQuote(i)">删除</view></view>
+            <FormItem label="供应商" required :error="fe.get(`quotes[${i}].supplierName`)"><input v-model="q.supplierName" class="input" maxlength="200" placeholder="供应商名称" @input="fe.clearField(`quotes[${i}].supplierName`)" /></FormItem>
+            <view class="row modes"><view class="link-btn" :class="{ chosen: q.channel === 'OFFLINE' }" @tap="q.channel = 'OFFLINE'; fe.clearUnder(`quotes[${i}]`)">线下报价</view><view class="link-btn" :class="{ chosen: q.channel === 'ONLINE' }" @tap="q.channel = 'ONLINE'; fe.clearUnder(`quotes[${i}]`)">线上报价</view></view>
+            <FormItem label="报价金额" required :error="fe.get(`quotes[${i}].quoteAmountCents`)"><MoneyInput v-model="q.quoteAmountCents" @update:model-value="fe.clearField(`quotes[${i}].quoteAmountCents`)" /></FormItem>
+            <FormItem label="购买链接" :required="q.channel === 'ONLINE'" :error="fe.get(`quotes[${i}].url`)"><input v-model="q.url" class="input" maxlength="1000" placeholder="http:// 或 https://" @input="fe.clearField(`quotes[${i}].url`)" /></FormItem>
+            <FormItem label="报价明细说明" :error="fe.get(`quotes[${i}].description`)"><textarea v-model="q.description" class="textarea" maxlength="1000" auto-height placeholder="配置、交付与售后等" /></FormItem>
+            <FormItem label="报价单 / 截图" :required="q.channel === 'ONLINE'" :error="fe.first(`quotes[${i}].attachmentIds`)"><AttachmentPicker v-model="q.attachments" ref-type="PURCHASE_QUOTE" @busy="busyUploads[`quote-${q.key}`] = $event" @update:model-value="fe.clearUnder(`quotes[${i}].attachmentIds`)" /></FormItem>
+          </view>
+          <button class="btn btn-block" :disabled="form.quotes.length >= 50" @tap="form.quotes.push(emptyQuote()); fe.clearUnder('quotes')">添加报价</button>
+        </view>
+        <view v-show="step === 3" class="card">
+          <view class="card-title">采购选择</view>
+          <FormItem label="拟选供应商" required :error="fe.get('selectedQuoteIndex')">
+            <view v-for="(q, i) in form.quotes" :key="q.key" class="quote-option" :class="{ chosen: form.selectedQuoteIndex === i }" @tap="form.selectedQuoteIndex = i; fe.clearField('selectedQuoteIndex')"><text>{{ q.supplierName || `报价 ${i + 1}` }}</text><text class="amount">¥{{ formatCents(q.quoteAmountCents) }}</text><text v-if="q.quoteAmountCents !== null && q.quoteAmountCents === lowest" class="tag tag-green">最低价</text></view>
+          </FormItem>
+          <FormItem label="选择理由" :error="fe.get('selectionReason')"><textarea v-model="form.selectionReason" class="textarea" maxlength="500" auto-height placeholder="说明供应商选择依据" @input="fe.clearField('selectionReason')" /></FormItem>
+          <FormItem v-if="notLowest" label="未选最低价理由" required :error="fe.get('notLowestReason')" help="至少 10 字"><textarea v-model="form.notLowestReason" class="textarea" maxlength="500" auto-height placeholder="说明价格之外的考虑" @input="fe.clearField('notLowestReason')" /></FormItem>
+        </view>
+        <view v-show="step === 4" class="card"><view class="card-title">其他附件（选填）</view><AttachmentPicker v-model="form.attachments" ref-type="PURCHASE_ATTACHMENT" :error="fe.first('attachmentIds')" @busy="busyUploads.other = $event" @update:model-value="fe.clearUnder('attachmentIds')" /></view>
+        <view v-show="step === 5" class="card">
+          <view class="card-title">确认申请</view>
+          <view class="kv"><text class="kv-label">标题</text><text class="kv-value">{{ form.title || '未填写' }}</text></view>
+          <view class="kv"><text class="kv-label">采购事由</text><text class="kv-value">{{ form.reason || '未填写' }}</text></view>
+          <view class="kv"><text class="kv-label">明细合计</text><text class="kv-value amount">¥{{ formatCents(total) }}</text></view>
+          <view class="kv"><text class="kv-label">预算上限</text><text class="kv-value amount">¥{{ formatCents(form.budgetLimitCents) }}</text></view>
+          <view class="kv"><text class="kv-label">拟选供应商</text><text class="kv-value">{{ selected?.supplierName || '未选择' }}</text></view>
+          <view class="kv"><text class="kv-label">拟选金额</text><text class="kv-value amount">¥{{ formatCents(selected?.quoteAmountCents) }}</text></view>
+          <view v-if="form.singleSource" class="banner banner-danger">单一来源：{{ form.singleSourceReason }}</view>
+          <view v-if="notLowest" class="banner banner-danger">未选最低价：{{ form.notLowestReason || '请填写理由' }}</view>
+          <view class="field-help">提交前会保存最新内容并预览审批路径，确认后进入审批。</view>
+        </view>
+      </view>
+      <view class="row between mt"><view v-if="step > 0" class="link-btn" @tap="changeStep(step - 1)">上一步</view><view v-if="step < 5" class="link-btn next" @tap="changeStep(step + 1)">下一步</view></view>
+    </template>
+    <view class="bottom-bar"><button class="btn" :disabled="!ready || draft.busy || uploading" @tap="act(false)">保存草稿</button><button class="btn btn-primary" :disabled="!ready || draft.busy || uploading" @tap="act(true)">提交</button></view>
+  </view>
+</template>
+
+<style scoped>
+.locked { pointer-events: none; opacity: .7; }
+.two > .flex1 + .flex1 { margin-left: 16rpx; }
+.modes { gap: 16rpx; }
+.chosen { background: #edf3ff; border: 2rpx solid #2f6bff; border-radius: 12rpx; }
+.quote-option { display: flex; flex-wrap: wrap; align-items: center; gap: 16rpx; min-height: 96rpx; padding: 16rpx; margin-bottom: 16rpx; border: 2rpx solid #eef0f3; border-radius: 12rpx; }
+.quote-option.chosen { border-color: #2f6bff; }
+.lowest { border-left: 6rpx solid #16a34a; }
+.next { margin-left: auto; }
+</style>

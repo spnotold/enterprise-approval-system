@@ -9,6 +9,7 @@ import type { LocalFile, UploadHandle } from '@/lib/files'
 import { toApiError } from '@/lib/http'
 import { chooseDocuments, chooseImages, type ChooseResult } from '@/utils/chooseFiles'
 import { confirm, showError, toast } from '@/utils/feedback'
+import { inputValue, type UniInputEvent } from '@/utils/uniEvent'
 
 const props = withDefaults(
   defineProps<{
@@ -170,9 +171,9 @@ async function remove(index: number): Promise<void> {
   commit()
 }
 
-function onInvoiceNo(index: number, e: { detail: { value: string } }): void {
+function onInvoiceNo(index: number, e: Event | UniInputEvent): void {
   while (nos.value.length < list.value.length) nos.value.push('')
-  nos.value[index] = e.detail.value
+  nos.value[index] = inputValue(e)
   emit('update:invoiceNos', [...nos.value])
 }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 自定义表单的移动端渲染：TEXT / TEXTAREA / NUMBER / AMOUNT / DATE / RADIO / ATTACHMENT 七种字段。
 // values、attachments 为父页面持有的响应式对象，这里直接按字段 key 写入。
-import { reactive } from 'vue'
+import { nextTick, reactive } from 'vue'
 import type { AttachmentMeta, FormField, FormSchema } from '@/lib/types'
 import AttachmentPicker from '@/components/AttachmentPicker.vue'
 import FormItem from '@/components/FormItem.vue'
@@ -9,6 +9,7 @@ import MoneyInput from '@/components/MoneyInput.vue'
 import type { FieldErrors } from '@/composables/useFieldErrors'
 import { dateRange } from '@/utils/customForm'
 import { sanitizeDecimalInput } from '@/utils/decimal'
+import { inputValue, pickerValue, type UniInputEvent, type UniPickerChangeEvent } from '@/utils/uniEvent'
 
 const props = defineProps<{
   schema: FormSchema
@@ -37,18 +38,20 @@ function cents(key: string): number | null {
   return typeof v === 'number' ? v : null
 }
 
-function onText(f: FormField, e: { detail: { value: string } }): void {
-  setValue(f.key, e.detail.value)
+function onText(f: FormField, e: Event | UniInputEvent): void {
+  setValue(f.key, inputValue(e))
 }
 
-function onNumber(f: FormField, e: { detail: { value: string } }): void {
-  const allowNeg = !!f.rules?.min && f.rules.min.trim().startsWith('-')
-  const v = sanitizeDecimalInput(e.detail.value, allowNeg, f.rules?.precision ?? 4)
-  setValue(f.key, v === '' ? null : v)
+function onNumber(f: FormField, e: Event | UniInputEvent): void {
+  const allowNeg = !f.rules?.min || f.rules.min.trim().startsWith('-')
+  const v = sanitizeDecimalInput(inputValue(e), allowNeg, f.rules?.precision ?? 0)
+  // 先回写原输入，下一帧归一化，保证多输入的小数位也会在原生输入框中清掉。
+  setValue(f.key, inputValue(e))
+  void nextTick(() => setValue(f.key, v === '' ? null : v))
 }
 
-function onDate(f: FormField, e: { detail: { value: string } }): void {
-  setValue(f.key, e.detail.value)
+function onDate(f: FormField, e: Event | UniPickerChangeEvent): void {
+  setValue(f.key, String(pickerValue(e)))
 }
 
 function onAttachments(f: FormField, list: AttachmentMeta[]): void {

@@ -9,6 +9,7 @@ import { useFieldErrors } from '@/composables/useFieldErrors'
 import { auth, requireLogin } from '@/stores/auth'
 import { alert, showError } from '@/utils/feedback'
 import { LOGIN_PAGE } from '@/utils/nav'
+import { inputValue, type UniInputEvent } from '@/utils/uniEvent'
 
 const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
 
@@ -20,8 +21,8 @@ onLoad(async () => {
   await requireLogin()
 })
 
-function onInput(key: keyof typeof form, e: { detail: { value: string } }): void {
-  form[key] = e.detail.value
+function onInput(key: keyof typeof form, e: Event | UniInputEvent): void {
+  form[key] = inputValue(e)
   fe.clearField(key)
 }
 

@@ -72,6 +72,13 @@ export function compareDate(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
+/** 严格日期检查，避免 2 月 30 日被 Date 自动归入下个月。 */
+export function isDateString(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
 /** 选择器的日期 + 时间（上海时区）转为 ISO 字符串 */
 export function cnToIso(date: string, time: string): string {
   return `${date}T${time}:00+08:00`
