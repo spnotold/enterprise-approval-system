@@ -1,0 +1,272 @@
+<script setup lang="ts">
+// 通知中心：全部 / 未读分页列表；点击先标记已读再跳转；支持单条与全部标为已读
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Refresh } from '@element-plus/icons-vue'
+import { api } from '@/lib/api'
+import { showError } from '@/lib/errors'
+import { NOTIFICATION_TYPE_LABEL } from '@/lib/labels'
+import { fmtDateTime, fromNow } from '@/lib/datetime'
+import { useListQuery } from '@/composables/useListQuery'
+import { useBreakpoint } from '@/composables/useBreakpoint'
+import { noticeTarget, useNoticeStore } from '@/stores/notice'
+import ListEmpty from '@/components/ListEmpty.vue'
+import type { NotificationItem, NotificationType } from '@/lib/types'
+
+const router = useRouter()
+const notice = useNoticeStore()
+const { isMobile } = useBreakpoint()
+
+const list = useListQuery<{ unreadOnly: boolean }, NotificationItem>({
+  defaults: { unreadOnly: false },
+  fetch: (q) => api.notifications.list(q),
+})
+const { filters, records, total, page, size, loading, loaded } = list
+
+const tab = computed({
+  get: () => (filters.unreadOnly ? 'unread' : 'all'),
+  set: (v: string) => {
+    filters.unreadOnly = v === 'unread'
+    void list.search()
+  },
+})
+
+const TYPE_TAG: Partial<Record<NotificationType, 'primary' | 'success' | 'warning' | 'danger' | 'info'>> = {
+  TASK_ASSIGNED: 'primary',
+  URGE: 'warning',
+  TASK_OVERDUE: 'warning',
+  APP_APPROVED: 'success',
+  NODE_APPROVED: 'success',
+  REGISTRATION_APPROVED: 'success',
+  APP_REJECTED: 'danger',
+}
+
+const busyId = ref<number | null>(null)
+const markingAll = ref(false)
+const hasUnread = computed(() => notice.unread > 0 || records.value.some((n) => !n.read))
+
+async function markOne(n: NotificationItem) {
+  if (n.read || busyId.value !== null) return
+  busyId.value = n.id
+  try {
+    await notice.markRead(n.id)
+    n.read = true
+    // 未读列表中已读的条目不再属于当前筛选
+    if (filters.unreadOnly) await list.load()
+  } catch (e) {
+    showError(e, '标记失败')
+  } finally {
+    busyId.value = null
+  }
+}
+
+async function open(n: NotificationItem) {
+  if (!n.read) {
+    try {
+      await notice.markRead(n.id)
+      n.read = true
+    } catch {
+      // 标记失败不影响跳转
+    }
+  }
+  const target = noticeTarget(n)
+  if (target) await router.push(target)
+  else if (filters.unreadOnly) await list.load()
+}
+
+async function markAll() {
+  markingAll.value = true
+  try {
+    await notice.markAllRead()
+    ElMessage.success('已全部标为已读')
+    await list.load()
+  } catch (e) {
+    showError(e, '操作失败')
+  } finally {
+    markingAll.value = false
+  }
+}
+
+onMounted(() => void notice.fetchUnread())
+
+// 收到实时推送时，第一页自动刷新
+watch(
+  () => notice.lastEventAt,
+  () => {
+    if (page.value === 1 && !loading.value) void list.load()
+  },
+)
+</script>
+
+<template>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">通知中心</h2>
+        <div class="page-subtitle">审批进度、新待办与系统消息；点击通知查看对应申请</div>
+      </div>
+      <div class="toolbar">
+        <el-button :icon="Refresh" :loading="loading" @click="list.load()">刷新</el-button>
+        <el-button type="primary" plain :loading="markingAll" :disabled="!hasUnread" @click="markAll">
+          全部已读
+        </el-button>
+      </div>
+    </div>
+
+    <el-card shadow="never" class="list-card">
+      <el-tabs v-model="tab" class="tabs">
+        <el-tab-pane name="all" label="全部" />
+        <el-tab-pane name="unread">
+          <template #label>
+            未读<el-badge v-if="notice.unread > 0" :value="notice.unread" :max="99" class="tab-badge" />
+          </template>
+        </el-tab-pane>
+      </el-tabs>
+
+      <el-skeleton v-if="!loaded" :rows="6" animated />
+      <div v-else v-loading="loading">
+        <ListEmpty v-if="!records.length" :description="filters.unreadOnly ? '没有未读通知' : '暂无通知'" />
+        <ul v-else class="notice-list">
+          <li v-for="n in records" :key="n.id" class="notice-row" :class="{ unread: !n.read }">
+            <button type="button" class="notice-main" @click="open(n)">
+              <span class="notice-head">
+                <i v-if="!n.read" class="unread-dot" aria-label="未读" />
+                <el-tag size="small" :type="TYPE_TAG[n.type] ?? 'info'" disable-transitions>
+                  {{ NOTIFICATION_TYPE_LABEL[n.type] ?? n.type }}
+                </el-tag>
+                <span class="notice-title">{{ n.title }}</span>
+              </span>
+              <span v-if="n.content" class="notice-content pre-wrap">{{ n.content }}</span>
+              <span class="muted small" :title="fmtDateTime(n.createdAt, true)">
+                {{ fmtDateTime(n.createdAt) }} · {{ fromNow(n.createdAt) }}
+              </span>
+            </button>
+            <div class="notice-actions">
+              <el-button
+                v-if="!n.read"
+                link
+                type="primary"
+                size="small"
+                :loading="busyId === n.id"
+                @click.stop="markOne(n)"
+              >
+                标为已读
+              </el-button>
+              <span v-else class="muted small">已读</span>
+            </div>
+          </li>
+        </ul>
+        <div v-if="total > 0" class="pager">
+          <el-pagination
+            :current-page="page"
+            :page-size="size"
+            :total="total"
+            :page-sizes="[10, 20, 50]"
+            :layout="isMobile ? 'prev, pager, next' : 'total, sizes, prev, pager, next'"
+            :pager-count="isMobile ? 5 : 7"
+            background
+            size="small"
+            @current-change="list.onPageChange"
+            @size-change="list.onSizeChange"
+          />
+        </div>
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<style scoped>
+.tabs :deep(.el-tabs__content) {
+  display: none;
+}
+.tab-badge {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.tab-badge :deep(.el-badge__content) {
+  position: static;
+  transform: none;
+}
+.notice-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid var(--el-border-color-extra-light);
+}
+.notice-row:last-child {
+  border-bottom: none;
+}
+.notice-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 8px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.notice-main:hover,
+.notice-main:focus-visible {
+  background: var(--el-fill-color-light);
+  outline: none;
+}
+.notice-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.notice-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--el-text-color-primary);
+}
+.unread .notice-title {
+  font-weight: 600;
+}
+.unread-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--el-color-danger);
+}
+.notice-content {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.notice-actions {
+  flex-shrink: 0;
+  padding-top: 14px;
+  min-width: 64px;
+  text-align: right;
+}
+@media (max-width: 768px) {
+  .notice-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .notice-actions {
+    padding: 0 8px 12px;
+    text-align: left;
+  }
+  .notice-title {
+    white-space: normal;
+  }
+}
+</style>

@@ -1,0 +1,203 @@
+<script setup lang="ts">
+// 自定义表单的移动端渲染：TEXT / TEXTAREA / NUMBER / AMOUNT / DATE / RADIO / ATTACHMENT 七种字段。
+// values、attachments 为父页面持有的响应式对象，这里直接按字段 key 写入。
+import { reactive } from 'vue'
+import type { AttachmentMeta, FormField, FormSchema } from '@/lib/types'
+import AttachmentPicker from '@/components/AttachmentPicker.vue'
+import FormItem from '@/components/FormItem.vue'
+import MoneyInput from '@/components/MoneyInput.vue'
+import type { FieldErrors } from '@/composables/useFieldErrors'
+import { dateRange } from '@/utils/customForm'
+import { sanitizeDecimalInput } from '@/utils/decimal'
+
+const props = defineProps<{
+  schema: FormSchema
+  values: Record<string, unknown>
+  attachments: Record<string, AttachmentMeta[]>
+  errors: FieldErrors
+}>()
+
+const emit = defineEmits<{ busy: [value: boolean] }>()
+
+const busyMap = reactive<Record<string, boolean>>({})
+
+function setValue(key: string, v: unknown): void {
+  // eslint-disable-next-line vue/no-mutating-props
+  props.values[key] = v
+  props.errors.clearField(key)
+}
+
+function str(key: string): string {
+  const v = props.values[key]
+  return v === null || v === undefined ? '' : String(v)
+}
+
+function cents(key: string): number | null {
+  const v = props.values[key]
+  return typeof v === 'number' ? v : null
+}
+
+function onText(f: FormField, e: { detail: { value: string } }): void {
+  setValue(f.key, e.detail.value)
+}
+
+function onNumber(f: FormField, e: { detail: { value: string } }): void {
+  const allowNeg = !!f.rules?.min && f.rules.min.trim().startsWith('-')
+  const v = sanitizeDecimalInput(e.detail.value, allowNeg, f.rules?.precision ?? 4)
+  setValue(f.key, v === '' ? null : v)
+}
+
+function onDate(f: FormField, e: { detail: { value: string } }): void {
+  setValue(f.key, e.detail.value)
+}
+
+function onAttachments(f: FormField, list: AttachmentMeta[]): void {
+  // eslint-disable-next-line vue/no-mutating-props
+  props.attachments[f.key] = list
+  setValue(
+    f.key,
+    list.map((m) => m.id),
+  )
+}
+
+function onBusy(key: string, v: boolean): void {
+  busyMap[key] = v
+  emit(
+    'busy',
+    Object.values(busyMap).some((x) => x),
+  )
+}
+
+function textMax(f: FormField): number {
+  return f.rules?.maxLength ?? (f.type === 'TEXTAREA' ? 2000 : 200)
+}
+</script>
+
+<template>
+  <view>
+    <FormItem
+      v-for="f in schema.fields"
+      :key="f.key"
+      :label="f.label"
+      :required="!!f.required"
+      :help="f.help"
+      :error="errors.get(f.key)"
+    >
+      <input
+        v-if="f.type === 'TEXT'"
+        class="input"
+        :class="{ 'is-error': !!errors.get(f.key) }"
+        :type="f.rules?.patternPreset === 'MOBILE' ? 'number' : 'text'"
+        :value="str(f.key)"
+        :placeholder="f.placeholder || '请输入' + f.label"
+        placeholder-class="placeholder"
+        :maxlength="textMax(f)"
+        @input="onText(f, $event)"
+      />
+      <textarea
+        v-else-if="f.type === 'TEXTAREA'"
+        class="textarea"
+        :class="{ 'is-error': !!errors.get(f.key) }"
+        :value="str(f.key)"
+        :placeholder="f.placeholder || '请输入' + f.label"
+        placeholder-class="placeholder"
+        :maxlength="textMax(f)"
+        :auto-height="true"
+        :show-confirm-bar="false"
+        @input="onText(f, $event)"
+      />
+      <input
+        v-else-if="f.type === 'NUMBER'"
+        class="input"
+        :class="{ 'is-error': !!errors.get(f.key) }"
+        type="digit"
+        :value="str(f.key)"
+        :placeholder="
+          f.placeholder ||
+          (f.rules?.min || f.rules?.max ? `范围 ${f.rules?.min ?? '不限'} ~ ${f.rules?.max ?? '不限'}` : '请输入数字')
+        "
+        placeholder-class="placeholder"
+        @input="onNumber(f, $event)"
+      />
+      <MoneyInput
+        v-else-if="f.type === 'AMOUNT'"
+        :model-value="cents(f.key)"
+        :error="!!errors.get(f.key)"
+        @update:model-value="setValue(f.key, $event)"
+      />
+      <picker
+        v-else-if="f.type === 'DATE'"
+        mode="date"
+        :value="str(f.key)"
+        :start="dateRange(f).start"
+        :end="dateRange(f).end"
+        @change="onDate(f, $event)"
+      >
+        <view class="picker-value" :class="{ 'is-error': !!errors.get(f.key) }">
+          <text :class="{ placeholder: !str(f.key) }">{{ str(f.key) || f.placeholder || '请选择日期' }}</text>
+          <uni-icons type="calendar" size="18" color="#8f959e" />
+        </view>
+      </picker>
+      <view v-else-if="f.type === 'RADIO'" class="radio-list">
+        <view
+          v-for="o in f.options || []"
+          :key="o.value"
+          class="radio-item"
+          :class="{ checked: values[f.key] === o.value }"
+          @tap="setValue(f.key, o.value)"
+        >
+          <view class="radio-dot" />
+          <text>{{ o.label }}</text>
+        </view>
+      </view>
+      <AttachmentPicker
+        v-else-if="f.type === 'ATTACHMENT'"
+        :model-value="attachments[f.key] || []"
+        ref-type="CUSTOM_FIELD"
+        :max-count="f.rules?.maxCount ?? 10"
+        :allowed-types="f.rules?.allowedTypes ?? []"
+        :max-size-mb="f.rules?.maxSizeMb ?? 10"
+        @update:model-value="onAttachments(f, $event)"
+        @busy="onBusy(f.key, $event)"
+      />
+    </FormItem>
+  </view>
+</template>
+
+<style scoped>
+.radio-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+  padding: 0 28rpx 0 20rpx;
+  margin: 0 16rpx 16rpx 0;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  border: 2rpx solid transparent;
+  font-size: 28rpx;
+}
+
+.radio-item.checked {
+  border-color: #2f6bff;
+  background: #f0f5ff;
+  color: #2f6bff;
+}
+
+.radio-dot {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  border: 2rpx solid #c0c4cc;
+  margin-right: 12rpx;
+  box-sizing: border-box;
+}
+
+.radio-item.checked .radio-dot {
+  border: 10rpx solid #2f6bff;
+}
+</style>

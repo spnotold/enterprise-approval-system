@@ -1,12 +1,148 @@
 {
   "pages": [
     {
-      "path": "pages/index/index",
+      "path": "pages/home/index",
       "style": {
-        "navigationBarTitleText": "企业审批系统"
+        "navigationBarTitleText": "工作台",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/apply/index",
+      "style": {
+        "navigationBarTitleText": "发起申请",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/task/list",
+      "style": {
+        "navigationBarTitleText": "待办",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/notice/list",
+      "style": {
+        "navigationBarTitleText": "消息",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/me/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/register/index",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
+    },
+    {
+      "path": "pages/apply/purchase",
+      "style": {
+        "navigationBarTitleText": "采购申请"
+      }
+    },
+    {
+      "path": "pages/apply/travel",
+      "style": {
+        "navigationBarTitleText": "差旅申请"
+      }
+    },
+    {
+      "path": "pages/apply/expense",
+      "style": {
+        "navigationBarTitleText": "报销申请"
+      }
+    },
+    {
+      "path": "pages/apply/custom",
+      "style": {
+        "navigationBarTitleText": "发起申请"
+      }
+    },
+    {
+      "path": "pages/app/list",
+      "style": {
+        "navigationBarTitleText": "我的申请",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/app/detail",
+      "style": {
+        "navigationBarTitleText": "申请详情",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/task/handle",
+      "style": {
+        "navigationBarTitleText": "审批",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/stats/index",
+      "style": {
+        "navigationBarTitleText": "统计",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/me/password",
+      "style": {
+        "navigationBarTitleText": "修改密码"
       }
     }
   ],
+  "tabBar": {
+    "color": "#8f959e",
+    "selectedColor": "#2f6bff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "工作台",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/apply/index",
+        "text": "发起",
+        "iconPath": "static/tabbar/apply.png",
+        "selectedIconPath": "static/tabbar/apply-active.png"
+      },
+      {
+        "pagePath": "pages/task/list",
+        "text": "待办",
+        "iconPath": "static/tabbar/task.png",
+        "selectedIconPath": "static/tabbar/task-active.png"
+      },
+      {
+        "pagePath": "pages/notice/list",
+        "text": "消息",
+        "iconPath": "static/tabbar/notice.png",
+        "selectedIconPath": "static/tabbar/notice-active.png"
+      },
+      {
+        "pagePath": "pages/me/index",
+        "text": "我的",
+        "iconPath": "static/tabbar/me.png",
+        "selectedIconPath": "static/tabbar/me-active.png"
+      }
+    ]
+  },
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "企业审批系统",
