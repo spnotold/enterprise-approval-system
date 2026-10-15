@@ -28,6 +28,10 @@ spring:
     time-zone: Asia/Shanghai
   web:
     locale: zh_CN
+  mvc:
+    format:                     # 查询参数中的日期统一按 ISO（YYYY-MM-DD）解析
+      date: iso
+      date-time: iso
 
 mybatis-plus:
   configuration:

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -35,6 +37,7 @@ public class IdempotencyService {
             var row = old.get(0);
             if (!fingerprint.equals(row.get("request_hash"))) throw new BizException(ErrorCode.IDEMPOTENCY_KEY_REUSED);
             if (!"COMPLETED".equals(row.get("status"))) throw new BizException(ErrorCode.REQUEST_IN_PROGRESS);
+            markReplayed();
             return Jsons.read((String)row.get("response_body"), JsonNode.class);
         }
         jdbc.update("INSERT INTO idempotency_record(user_id, idem_key, request_hash, endpoint) VALUES (?, ?, ?, ?)",
@@ -43,6 +46,13 @@ public class IdempotencyService {
         jdbc.update("UPDATE idempotency_record SET status='COMPLETED', response_code=200, response_body=?, completed_at=now() WHERE user_id=? AND idem_key=?",
             Jsons.write(response), user.id(), key);
         return response;
+    }
+
+    /** 重放的响应带 Idempotent-Replayed: true，便于客户端和测试区分 */
+    private static void markReplayed() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs && attrs.getResponse() != null) {
+            attrs.getResponse().setHeader("Idempotent-Replayed", "true");
+        }
     }
 
     private static String hash(String value) {

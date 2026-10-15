@@ -76,6 +76,9 @@ class CoreWorkflowIntegrationTest {
         assertEquals(404,call(get("/applications/"+id),head,null).getResponse().getStatus());
         MvcResult first=action("/applications/"+id+"/submit",employee,0,"submit-idem-key-"+id);assertEquals(200,first.getResponse().getStatus(),first.getResponse().getContentAsString());
         MvcResult replay=action("/applications/"+id+"/submit",employee,0,"submit-idem-key-"+id);assertEquals(first.getResponse().getContentAsString(),replay.getResponse().getContentAsString());
+        assertNull(first.getResponse().getHeader("Idempotent-Replayed"));assertEquals("true",replay.getResponse().getHeader("Idempotent-Replayed"));
+        assertTrue(data(call(get("/tasks/pending-count"),head,null)).path("count").asInt()>=1);
+        assertTrue(data(call(get("/applications?scope=mine&from=2000-01-01&to=2999-12-31"),employee,null)).path("total").asInt()>=1);
         assertEquals(409,action("/applications/"+id+"/submit",employee,1,"submit-idem-key-"+id).getResponse().getStatus());
         assertEquals(404,call(get("/applications/"+id),admin,null).getResponse().getStatus());
         long task=pending(id,head);

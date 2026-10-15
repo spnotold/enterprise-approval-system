@@ -1,5 +1,6 @@
 package edu.zju.eas.controller;
 
+import edu.zju.eas.repository.ApprovalTaskMapper;
 import edu.zju.eas.dto.flow.*;
 import edu.zju.eas.response.ApiResponse;
 import edu.zju.eas.security.CurrentUser;
@@ -20,8 +21,11 @@ public class TaskController {
     private final ApplicationService applications;
     private final FlowEngine engine;
     private final IdempotencyService idempotency;
+    private final ApprovalTaskMapper tasks;
     @GetMapping("/pending")
     public Object pending(@AuthenticationPrincipal CurrentUser u,@RequestParam(required=false) String type,@RequestParam(required=false) String keyword,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="20") int size){return ApiResponse.ok(applications.taskList(u,true,type,keyword,page,size));}
+    @GetMapping("/pending-count")
+    public Object pendingCount(@AuthenticationPrincipal CurrentUser u){return ApiResponse.ok(java.util.Map.of("count",tasks.countPendingOfUser(u.id())));}
     @GetMapping("/done")
     public Object done(@AuthenticationPrincipal CurrentUser u,@RequestParam(required=false) String type,@RequestParam(required=false) String keyword,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="20") int size){return ApiResponse.ok(applications.taskList(u,false,type,keyword,page,size));}
     @PostMapping("/{id}/approve")
