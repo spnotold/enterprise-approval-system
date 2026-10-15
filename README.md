@@ -27,7 +27,7 @@ enterprise-approval-system
 ├── frontend                # Web 前端（Vue 3）
 ├── mobile                  # 移动端（uni-app）
 ├── nginx                   # Nginx 配置与镜像构建
-└── docs                    # 设计文档
+└── docs                    # 设计文档（design_document.md / .docx）
 ```
 
 后端包结构位于 `backend/src/main/java/edu/zju/eas`：`config`、`controller`、`dto`、`model`、`repository`、`response`、`service`（含 `flow` 流程引擎、`notify` 通知、`job` 定时任务）。数据库脚本位于 `backend/src/main/resources/db`。
