@@ -1,5 +1,7 @@
 server:
   port: 8080
+  servlet:
+    context-path: /api          # 接口统一前缀
 
 spring:
   application:
@@ -15,8 +17,8 @@ spring:
     password: ${FLYWAY_PASSWORD:}
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 50MB
+      max-file-size: 10MB       # 单文件
+      max-request-size: 11MB    # 单次请求，含 multipart 开销
   mail:
     host: ${SMTP_HOST:localhost}
     port: ${SMTP_PORT:1025}

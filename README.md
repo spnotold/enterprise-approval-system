@@ -82,11 +82,11 @@ enterprise-approval-system
 ## 部署
 
 ```bash
-cp template.env .env    # 修改其中的密码与 JWT_SECRET
+cp template.env .env    # 填写数据库、MinIO 密码与 JWT_SECRET
 docker compose up -d --build
 ```
 
-启动后访问 `http://localhost`，演示邮件收件箱为 `http://localhost:8025`。数据库与 MinIO 仅在 compose 内部网络可见，后端启动时自动执行 Flyway 迁移。
+启动后访问 `http://localhost`，演示邮件收件箱为 `http://localhost:8025`。数据库与 MinIO 仅在 compose 内部网络可见。数据卷首次初始化时 `db/init` 脚本创建运行账号 `eas_app`；后端启动时用 `eas_owner` 执行 Flyway 迁移，运行时用 `eas_app` 连接，MinIO 使用只能读写 `eas-files` 桶的专用 key。接口统一以 `/api` 为前缀。
 
 ## 分支约定
 

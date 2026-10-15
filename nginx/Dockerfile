@@ -14,7 +14,7 @@ COPY mobile/ .
 RUN npm run build:h5
 
 FROM nginx:1.27-alpine
-COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=web /web/dist /usr/share/nginx/html
-COPY --from=h5 /mobile/dist/build/h5 /usr/share/nginx/html/m
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY --from=web /web/dist /usr/share/nginx/html/web
+COPY --from=h5 /mobile/dist/build/h5 /usr/share/nginx/html/h5
 EXPOSE 80
