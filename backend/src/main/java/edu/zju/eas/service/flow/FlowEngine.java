@@ -473,7 +473,7 @@ public class FlowEngine {
         candidates.replaceAll(id -> id.equals(task.getAssigneeId()) ? to.getId() : id);
         nodeMapper.update(null, Wrappers.<FlowNodeInstance>lambdaUpdate()
                 .set(task.getAssigneeId().equals(node.getAssigneeId()), FlowNodeInstance::getAssigneeId, to.getId())
-                .set(FlowNodeInstance::getCandidateIds, Jsons.write(candidates), "typeHandler=edu.zju.eas.common.mybatis.JsonbHandlers$LongListHandler")
+                .set(FlowNodeInstance::getCandidateIds, candidates, "typeHandler=edu.zju.eas.common.mybatis.JsonbHandlers$LongListHandler")
                 .eq(FlowNodeInstance::getId, node.getId()));
 
         AssigneeHistory h = new AssigneeHistory();

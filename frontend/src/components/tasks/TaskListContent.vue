@@ -101,7 +101,7 @@ function switchKind() {
           <template #default="{ row }"><router-link :to="target(row)" class="app-link">{{ row.appNo }}</router-link><el-tag v-if="pending && row.overdue" type="danger" size="small" class="overdue">已超时</el-tag></template>
         </el-table-column>
         <el-table-column label="类型 / 模板" min-width="150">
-          <template #default="{ row }"><div>{{ APP_TYPE_LABEL[row.type as AppType] }}</div><div class="muted small">{{ row.templateName }}</div></template>
+          <template #default="{ row }"><div>{{ APP_TYPE_LABEL[row.type as AppType] }}</div><div v-if="row.type === 'CUSTOM'" class="muted small">{{ row.templateName }}</div></template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="190" show-overflow-tooltip><template #default="{ row }">{{ row.title || '—' }}</template></el-table-column>
         <el-table-column label="申请人 / 部门" min-width="140"><template #default="{ row }"><div>{{ row.applicant.realName }}</div><div class="muted small">{{ row.deptName || '—' }}</div></template></el-table-column>

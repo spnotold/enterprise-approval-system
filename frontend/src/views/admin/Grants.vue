@@ -275,8 +275,7 @@ async function submit() {
         </el-table-column>
         <el-table-column label="范围" min-width="140">
           <template #default="{ row }">
-            {{ SCOPE_TYPE_LABEL[row.scopeType as ScopeType] ?? row.scopeType }}
-            <template v-if="row.scopeType === 'DEPT'">：{{ row.deptName ?? `#${row.deptId}` }}</template>
+            {{ (SCOPE_TYPE_LABEL[row.scopeType as ScopeType] ?? row.scopeType) + (row.scopeType === 'DEPT' ? `：${row.deptName ?? `#${row.deptId}`}` : '') }}
           </template>
         </el-table-column>
         <el-table-column label="有效期" min-width="190">

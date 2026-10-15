@@ -54,7 +54,7 @@ export function pathPreviewText(p: PathPreview | null): string {
       const who = many
         ? `${n.mode === 'COUNTERSIGN' ? '会签' : '或签'}：${n.candidates.map((c) => c.realName).join('、')}`
         : (n.assignee?.realName ?? '待定')
-      if (!n.effective) return `${i + 1}. ${n.name}（跳过${n.conditionText ? `：${n.conditionText}` : ''}）`
+      if (!n.effective) return `${i + 1}. ${n.name}（跳过${n.conditionText ? `，条件不满足：${n.conditionText}` : ''}）`
       return `${i + 1}. ${n.name}（${who}）${n.resolveNote ? `\n${n.resolveNote}` : ''}`
     })
   return `审批路径：\n${lines.join('\n')}\n\n`

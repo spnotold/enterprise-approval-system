@@ -171,7 +171,7 @@ function open(row: ApplicationSummary) {
         <el-table-column label="金额" width="130" align="right">
           <template #default="{ row }"><MoneyText :cents="row.amountCents" /></template>
         </el-table-column>
-        <el-table-column label="状态" min-width="200">
+        <el-table-column label="状态" min-width="260">
           <template #default="{ row }"><StatusTag :status="row.status" :current-node="row.currentNode" size="small" /></template>
         </el-table-column>
         <el-table-column label="提交时间" width="150">

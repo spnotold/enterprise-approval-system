@@ -14,6 +14,8 @@ public class MinioConfig {
         return MinioClient.builder()
                 .endpoint(m.getEndpoint())
                 .credentials(m.getAccessKey(), m.getSecretKey())
+                // 指定区域，避免客户端先发 GetBucketLocation：专用 key 的策略只允许读写对象和列桶，没有该权限会 Access Denied
+                .region(m.getRegion())
                 .build();
     }
 }

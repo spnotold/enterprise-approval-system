@@ -119,4 +119,22 @@ class FlowRulesTest extends IntegrationTestBase {
         assertThat(withdraw.getResponse().getStatus()).isEqualTo(409);
         assertThat(code(withdraw)).isEqualTo(40901);
     }
+
+    @Test
+    void adminTransferKeepsNodeReadableAndAuditsOnce() throws Exception {
+        long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
+        Long task = pendingTask(app, "rd_head_li");
+        MvcResult r = call(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/tasks/" + task + "/transfer"),
+                "admin", map("toUserId", uid("ceo_zhao"), "reason", "李研出差，转给赵总处理"));
+        assertThat(r.getResponse().getStatus()).as(r.getResponse().getContentAsString()).isEqualTo(200);
+        assertThat(jdbc.queryForObject(
+                "SELECT jsonb_typeof(candidate_ids) FROM flow_node_instance WHERE application_id = ? AND seq = 1", String.class, app))
+                .isEqualTo("array");
+        var get = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/tasks/pending");
+        assertThat(data(call(get, "ceo_zhao", null)).path("total").asInt()).isEqualTo(1);
+        assertThat(call(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/applications/" + app),
+                "rd_emp_wang", null).getResponse().getStatus()).isEqualTo(200);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE action = 'TASK_TRANSFER'", Long.class)).isEqualTo(1);
+        assertThat(approve(app, "ceo_zhao").getResponse().getStatus()).isEqualTo(200);
+    }
 }

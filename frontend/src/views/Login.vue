@@ -25,7 +25,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { username: 'mkt_emp_zhou', name: '周敏', desc: '市场部，员工' },
   { username: 'fin_head_qian', name: '钱会计', desc: '财务部，部门负责人、财务审批人' },
   { username: 'fin_auditor_wu', name: '吴审', desc: '财务部，财务审批人主办人' },
-  { username: 'pending_he', name: '何晓', desc: '申请加入市场部，待审核 → 登录提示待审核' },
+  { username: 'pending_he', name: '何晓', desc: '注册审核演示：申请加入市场部，审核通过前登录会提示待审核' },
 ]
 
 /** 需要在按钮上方提示的错误码；其余错误走统一提示 */

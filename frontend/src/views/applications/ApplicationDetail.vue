@@ -243,7 +243,7 @@ async function urge() {
           <el-table-column prop="operatorName" label="操作人" min-width="100" />
           <el-table-column prop="nodeName" label="节点" min-width="120"><template #default="{ row }">{{ row.nodeName ?? '—' }}</template></el-table-column>
           <el-table-column label="意见 / 原因" min-width="220"><template #default="{ row }"><span class="pre-wrap" :class="{ 'text-danger': row.action === 'REJECT' }">{{ row.comment || '—' }}</span></template></el-table-column>
-          <el-table-column label="状态变化" min-width="180"><template #default="{ row }">{{ row.fromStatus ? APP_STATUS_LABEL[row.fromStatus as keyof typeof APP_STATUS_LABEL] : '—' }} → {{ row.toStatus ? APP_STATUS_LABEL[row.toStatus as keyof typeof APP_STATUS_LABEL] : '—' }}</template></el-table-column>
+          <el-table-column label="状态变化" min-width="180"><template #default="{ row }"><template v-if="row.fromStatus && row.fromStatus === row.toStatus">{{ APP_STATUS_LABEL[row.toStatus as keyof typeof APP_STATUS_LABEL] }}（进入下一节点）</template><template v-else>{{ row.fromStatus ? APP_STATUS_LABEL[row.fromStatus as keyof typeof APP_STATUS_LABEL] : '—' }} → {{ row.toStatus ? APP_STATUS_LABEL[row.toStatus as keyof typeof APP_STATUS_LABEL] : '—' }}</template></template></el-table-column>
           <el-table-column label="申请 / 模板版本" width="140"><template #default="{ row }">v{{ row.appVersion }} / {{ row.templateVersionNo == null ? '—' : `v${row.templateVersionNo}` }}</template></el-table-column>
           <template #empty><el-empty description="暂无审批日志" :image-size="60" /></template>
         </el-table>

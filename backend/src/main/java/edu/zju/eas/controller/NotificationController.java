@@ -12,7 +12,9 @@ import edu.zju.eas.security.CurrentUser;
 import edu.zju.eas.service.notify.SseHub;
 import edu.zju.eas.service.notify.SseTicketService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -86,13 +88,13 @@ public class NotificationController {
         return ApiResponse.ok(Map.of("items", items, "unreadCount", notificationMapper.unreadCount(user.id())));
     }
 
-    /** SSE 连接：用一次性票据鉴权 */
+    /** SSE 连接：用一次性票据鉴权。票据无效时只回 401（事件流无法携带 JSON 错误体），客户端重新申请票据 */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@RequestParam String ticket) {
+    public ResponseEntity<SseEmitter> stream(@RequestParam String ticket) {
         Long userId = ticketService.consume(ticket);
         if (userId == null) {
-            throw new BizException(ErrorCode.UNAUTHORIZED, "SSE 票据无效或已过期");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return sseHub.register(userId);
+        return ResponseEntity.ok(sseHub.register(userId));
     }
 }

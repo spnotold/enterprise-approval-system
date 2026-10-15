@@ -29,6 +29,7 @@ public class EasProperties {
         private String accessKey;
         private String secretKey;
         private String bucket = "eas-files";
+        private String region = "us-east-1";
     }
 
     @Data
