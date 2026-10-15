@@ -88,11 +88,9 @@ const typeHint = computed(() => {
   return `支持 ${parts.join(' / ')}，单个不超过 ${props.maxSizeMb} MB，最多 ${props.maxCount} 个`
 })
 
+let docLabel = '聊天文件'
 // #ifdef H5
-const docLabel = '选择文件'
-// #endif
-// #ifndef H5
-const docLabel = '聊天文件'
+docLabel = '选择文件'
 // #endif
 
 watch(uploading, (v) => emit('busy', v))

@@ -81,8 +81,18 @@ export interface LoginRequest {
 export interface LoginResult {
   accessToken: string
   expiresIn: number // 秒
+  /** 令牌所属用户；刷新时前端据此确认身份未变化 */
+  userId: number
   /** 仅移动端（请求头 X-Client: mobile）返回；Web 端在 HttpOnly Cookie 中 */
   refreshToken?: string | null
+}
+
+/** 刷新令牌请求体 */
+export interface RefreshBody {
+  /** 仅移动端：刷新令牌放在请求体中；Web 端读 HttpOnly Cookie */
+  refreshToken?: string | null
+  /** 当前标签页认为的登录用户；Cookie 属于其他用户时服务端返回 40101 且不轮换 */
+  expectedUserId?: number | null
 }
 
 export interface RegisterRequest {
@@ -443,13 +453,16 @@ export interface ExpenseItemInput {
 export interface DupInvoiceWarning {
   attachmentId: number
   invoiceNo: string | null
-  otherApplicationId: number
-  otherAppNo: string
-  otherStatus: AppStatus
+  /** 查看者为申请人本人时以下三项为 null（只显示通用的黄色提示）；审批人 / 财务可见编号与状态 */
+  otherApplicationId: number | null
+  otherAppNo: string | null
+  otherStatus: AppStatus | null
 }
 
 export interface InvoiceView extends InvoiceInput {
   attachment: AttachmentMeta
+  /** 跨单疑似重复（申请人本人查看时 duplicates 中不含对方单号） */
+  suspectedDuplicate: boolean
   duplicates: DupInvoiceWarning[] // 跨单疑似重复（只提示）
 }
 
@@ -506,6 +519,9 @@ export interface ExpenseView extends Omit<ExpenseSaveRequest, 'version' | 'items
 export interface CustomSaveRequest {
   version?: number
   templateId?: number // 仅新建时需要
+  /** 表单渲染所用的模板版本（TemplateDetail.versionId）；新建和每次保存都带上。
+   *  40906 后按新版本重新渲染，用户确认后带新的 versionId 保存（只接受当前发布版本，否则仍返回 40906） */
+  templateVersionId?: number | null
   title: string | null
   formValues: Record<string, unknown>
 }
@@ -542,6 +558,11 @@ export interface FlowNodeView {
   conditionResult: boolean | null
   conditionText: string | null // 如 “金额 ≥ 10,000.00 元”
   assignee: UserBrief | null
+  /** 提交时确定的全部审批人；单人节点为 [assignee] */
+  candidates: UserBrief[]
+  /** 会签 / 或签：需要同意的人数与已同意人数（如“会签 1/3”） */
+  requiredCount: number
+  approvedCount: number
   resolveNote: string | null // 如 “申请人为本部门负责人，按替代规则由企业负责人审批”
   activatedAt: string | null
   finishedAt: string | null
@@ -592,6 +613,8 @@ export interface ApplicationDetail {
   followUps: AppLink[] // 由本单复制出的后续单
   /** FULL：完整内容；LINKED：作为报销关联单只读查看（摘要与流程结果，不含附件） */
   viewMode: 'FULL' | 'LINKED'
+  /** viewMode = LINKED 时的摘要；此时 purchase/travel/expense/custom 为 null、logs 为 []、待办不含意见 */
+  linked?: LinkableApplication | null
   canReadAttachments: boolean
   purchase?: PurchaseView | null
   travel?: TravelView | null
@@ -613,6 +636,8 @@ export interface ActionResult {
 export interface PathPreviewNode {
   seq: number
   name: string
+  mode: NodeMode
+  candidates: UserBrief[]
   effective: boolean
   conditionText: string | null
   assignee: UserBrief | null

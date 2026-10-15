@@ -44,6 +44,8 @@ export function sumCents(values: (number | null | undefined)[]): number {
  */
 export function multiplyCents(quantity: string | null, unitPriceCents: number | null): number | null {
   if (quantity === null || unitPriceCents === null) return null
+  // 单价必须是安全范围内的非负整数分
+  if (!Number.isSafeInteger(unitPriceCents) || unitPriceCents < 0) return null
   const m = /^(\d{1,9})(?:\.(\d{1,3}))?$/.exec(quantity.trim())
   if (!m) return null
   const frac = (m[2] ?? '').padEnd(3, '0')
@@ -51,5 +53,7 @@ export function multiplyCents(quantity: string | null, unitPriceCents: number | 
   const q = BigInt(m[1]) * 1000n + BigInt(frac)
   const product = q * BigInt(unitPriceCents)
   const result = (product + 500n) / 1000n
+  // 超出安全整数范围时 BigInt -> number 会丢精度，视为无效
+  if (result > BigInt(Number.MAX_SAFE_INTEGER)) return null
   return Number(result)
 }

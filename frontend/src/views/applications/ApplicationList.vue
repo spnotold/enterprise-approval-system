@@ -155,7 +155,7 @@ function open(row: ApplicationSummary) {
       <el-table v-loading="q.loading.value" :data="q.records.value" style="margin-top: 12px" @row-dblclick="open">
         <el-table-column label="编号" width="190" fixed="left">
           <template #default="{ row }">
-            <el-link type="primary" @click="open(row)">{{ row.appNo }}</el-link>
+            <el-link type="primary" @click="open(row as ApplicationSummary)">{{ row.appNo }}</el-link>
           </template>
         </el-table-column>
         <el-table-column label="标题" min-width="180" show-overflow-tooltip>
