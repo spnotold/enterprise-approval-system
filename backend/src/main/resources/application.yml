@@ -26,6 +26,8 @@ spring:
     password: ${SMTP_PASSWORD:}
   jackson:
     time-zone: Asia/Shanghai
+  web:
+    locale: zh_CN
 
 mybatis-plus:
   configuration:
@@ -37,12 +39,18 @@ mybatis-plus:
 eas:
   jwt:
     secret: ${JWT_SECRET:}
-    expire-minutes: 120
+    access-minutes: 30          # 访问令牌有效期
+    refresh-days: 7             # 刷新令牌有效期
   minio:
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:}
     bucket: ${MINIO_BUCKET:eas-files}
+  auth:
+    cookie-secure: ${COOKIE_SECURE:true}   # 以 http 局域网地址演示时设为 false
+  app:
+    base-url: ${APP_BASE_URL:http://localhost}
+    mail-from: ${MAIL_FROM:noreply@eas.local}
 
 management:
   endpoints:

@@ -1,7 +1,4 @@
+# 演示环境：额外加载 db/demo 下的演示账号、自定义模板与示例申请
 spring:
   flyway:
     locations: classpath:db/migration,classpath:db/demo
-
-logging:
-  level:
-    edu.zju.eas: debug

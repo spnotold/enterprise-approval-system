@@ -118,8 +118,8 @@ public class NotificationService {
                 URGE + ":" + nodeInstanceId + ":" + bucket + ":" + assigneeId, true);
     }
 
-    public void overdue(Application app, Long taskId, Long assigneeId, String day, long pendingHours) {
-        send(assigneeId, TASK_OVERDUE, "超时提醒：" + label(app), "已等待 " + pendingHours + " 小时，请尽快处理",
+    public boolean overdue(Application app, Long taskId, Long assigneeId, String day, long pendingHours) {
+        return send(assigneeId, TASK_OVERDUE, "超时提醒：" + label(app), "已等待 " + pendingHours + " 小时，请尽快处理",
                 app.getId(), link(app), TASK_OVERDUE + ":" + taskId + ":" + day, true);
     }
 
