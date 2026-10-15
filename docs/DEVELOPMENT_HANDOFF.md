@@ -1,53 +1,36 @@
-# 开发交接（2026-10-15）
+# 开发进度（2026-10-15 更新）
 
-本次按要求保存前一位开发者的进度，只做小范围收尾，剩余开发留给原开发者继续。当前不是可完整演示的版本。
+## 当前状态
 
-## 已保存的进度
-
-- 分支：`main`；原有改动已通过 `81dbf5f` 提交并推送到 `origin/main`。
-- 后端已有认证、权限、通知、文件服务、数据库 V1–V4 迁移和流程引擎代码；这些代码尚未完成整体编译与业务验收。
-- Web 已有申请表单、列表、管理界面和共享组件；申请详情、待办列表仍是占位页。
-- 移动端已有认证、工作台、通知、差旅申请及部分详情和审批界面；仍有缺失页面和类型问题。
-
-## 本次收尾
-
-- 为 Web 申请列表的表格槽位行补上局部类型断言，恢复 Web 构建。
-- 合并移动端附件选择器的重复变量声明，保留 H5“选择文件”、其他平台“聊天文件”的文案。
-- 执行 `mobile` 的 `npm run sync-lib`，同步共享认证接口、类型及金额函数，消除已过期的生成文件。
-
-## 验证结果
-
-以下均在本次收尾后的工作区执行；通过构建不代表业务已经完成。
+后端、Web、移动端均已可编译并联调运行；`demo` profile 启动后有 10 个演示账号、请假与用章模板和示例申请。
 
 | 检查 | 结果 |
 |---|---|
-| `frontend`: `npm run build` | 通过；有产物体积警告 |
-| `frontend`: `npm run test` | 通过，84 项金额测试 |
-| `frontend`: `npm run lint` | 通过 |
-| `mobile`: `npm run sync-lib -- --check` | 通过，11 个共享文件与 Web 一致 |
-| `backend`: `mvn -B test`（JDK 17） | 编译失败，尚未运行测试；缺少 `dto.app.ApplicationSummary`、`dto.app.ListQuery` |
-| `mobile`: `npm run typecheck` | 失败；剩余 uni-app 事件类型与上传任务类型错误 |
-| `mobile`: `npm run build:h5` | 失败，缺少下述四个页面 |
-| `mobile`: `npm run build:mp-weixin` | 命令退出码为 0，但同样提示四个页面不存在，不能视为可用构建 |
+| `backend`: `mvn test` | 43 个集成测试全部通过（真实 PostgreSQL，含 T01–T16，见 [测试报告](test_report.md)） |
+| `frontend`: `npm run build` / `lint` / `test` | 通过（84 项金额测试） |
+| `mobile`: `npm run typecheck` / `test` / `build:h5` / `build:mp-weixin` | 通过（20 项测试） |
+| 联调 | 后端以 `eas_app` 低权限账号运行；Web 登录、工作台、通知 SSE、统计等接口已在浏览器中验证 |
 
-本机 JDK/Maven 不在默认 PATH，后端实际使用以下命令：
+## 已完成
+
+- 后端：认证（JWT + 刷新令牌轮换）、权限与数据范围授权、流程引擎（条件节点、会签 / 或签、兜底审批人、并发控制、幂等）、四类申请（采购、差旅、报销、自定义表单）、附件（类型检测、PDF 主动内容检查）、通知（站内 + SSE + 邮件重试）、统计、管理端全部功能、定时任务（附件 / 幂等记录 / 软删草稿 / 刷新令牌清理，超时提醒）、演示数据。
+- Web：全部页面（申请表单、列表、详情、待办 / 已办、统计、通知、管理端）。
+- 移动端：16 个页面（工作台、四类申请、列表、详情、审批、通知、统计、我的）。
+
+## 进行中 / 待办
+
+1. 浏览器端到端走查 Web 与移动端各角色流程，修复发现的问题。
+2. 后端第二轮跨模型代码审查（业务层）并按意见修改。
+3. 文档：使用手册、总结、实验报告、演示视频说明、`git_log.txt` 导出。
+
+## 本机运行（无 Docker 环境）
+
+工具链和依赖服务见 `~/tools`：`source ~/tools/env.sh` 设置 JDK 17、Maven、PostgreSQL 16 客户端及数据库 / MinIO / SMTP 环境变量；`~/tools/start-services.sh` 启动 PostgreSQL、MinIO、Mailpit。
 
 ```bash
-cd backend
-JAVA_HOME=/home/liyuhang/tools/jdk17 /home/liyuhang/tools/maven/bin/mvn -B test
+source ~/tools/env.sh
+cd backend && mvn -B -q package -DskipTests
+COOKIE_SECURE=false SPRING_PROFILES_ACTIVE=demo java -jar target/eas.jar   # http://localhost:8080/api
+cd ../frontend && npx vite --port 5173                                    # Web
+cd ../mobile && npm run dev:h5                                            # 移动端 H5：http://localhost:5174/m/
 ```
-
-## 建议接续位置
-
-1. 先处理后端当前编译断点：`ApplicationMapper.java` 引用的两个申请 DTO 尚不存在；列表方法注释提到的 `ApplicationMapper.xml` 也尚未加入。补齐后重新编译，继续处理后续报错。
-2. 从 `service/flow/FlowEngine.java` 和 `BizHandler.java` 接回原开发工作：目前没有 `BizHandler` 实现类，申请与待办控制器也尚未加入。文件服务已有实现，但上传、下载控制器仍待接入。继续按照 `docs/design_document.md` 实现与验证。
-3. Web 的 `src/views/applications/ApplicationDetail.vue`、`src/views/tasks/TaskList.vue` 仍显示“待实现”。
-4. 移动端 `pages.json` 注册了以下尚不存在的页面，需要补齐实际页面：
-   - `pages/apply/purchase.vue`
-   - `pages/apply/expense.vue`
-   - `pages/apply/custom.vue`
-   - `pages/stats/index.vue`
-5. 移动端剩余类型问题主要位于 `ApproveSheet.vue`、`AttachmentPicker.vue`、`CustomFormRenderer.vue`、`MoneyInput.vue` 和多个页面的 `e.detail.value` 事件处理，以及 `lib/files.ts` 的 `uni.uploadFile` 返回值。不要通过关闭严格检查来掩盖问题。
-6. 后续还需完成接口联调、数据库迁移验证、流程并发及权限测试、完整业务验收和报告。本次没有执行运行中服务的业务验收。
-
-跨模型审查已尝试调用 Claude Opus 5.5（xhigh，关闭 fast），但因 API 限流未能执行；本次有限改动已由 GPT-6.1-Sol Max 标准模式独立复核，未发现本轮新增问题或阻塞项。

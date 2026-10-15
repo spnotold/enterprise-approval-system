@@ -4,7 +4,7 @@
 
 作者：李宇航
 
-当前为开发中的进度快照，尚未完成端到端验收；已知编译断点与接续位置见[开发交接](docs/DEVELOPMENT_HANDOFF.md)。
+当前进度与本机运行方式见[开发进度](docs/DEVELOPMENT_HANDOFF.md)，测试结果见[测试报告](docs/test_report.md)。
 
 ## 技术栈
 
