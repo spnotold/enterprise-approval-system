@@ -149,7 +149,7 @@ public class BusinessDataService {
             ProcessTemplateVersion v=versions.selectById(d.getTemplateVersionId());
             for(FormField f:v.getFormSchema().getFields()) {
                 labels.put(f.getKey(),f.getLabel());JsonNode value=d.getFormValues().get(f.getKey());
-                variables.put(f.getKey(),value==null||value.isNull()?null:Jsons.MAPPER.convertValue(value,Object.class));
+                variables.put(f.getKey(),conditionValue(f,value));
             }
         }
         variables.put("amountCents",amount);return new BizHandler.SubmitData(amount,variables,labels);
@@ -243,4 +243,17 @@ public class BusinessDataService {
     static long add(long a,Long b){try{long result=Math.addExact(a,b==null?0:b);if(result>9007199254740991L)throw new ArithmeticException();return result;}catch(ArithmeticException e){throw BizException.rule("amountCents","AMOUNT_RANGE","合计金额超出范围");}}
     public static Map<String,Object> map(Object... pairs){Map<String,Object> out=new LinkedHashMap<>();for(int i=0;i<pairs.length;i+=2)out.put((String)pairs[i],pairs[i+1]);return out;}
     static Map<String,Object> object(Object v){return Jsons.MAPPER.convertValue(v,new TypeReference<LinkedHashMap<String,Object>>(){});}
+
+    /** 条件求值按字段类型取值：数字为 BigDecimal、金额为 Long、日期为 LocalDate，其余为原始 JSON 值；否则 "10" 会按字符串小于 "3" */
+    static Object conditionValue(FormField f,JsonNode value){
+        if(value==null||value.isNull())return null;
+        try{
+            return switch(f.getType()){
+                case "NUMBER"->new java.math.BigDecimal(value.asText());
+                case "AMOUNT"->value.asLong();
+                case "DATE"->java.time.LocalDate.parse(value.asText());
+                default->Jsons.MAPPER.convertValue(value,Object.class);
+            };
+        }catch(RuntimeException e){return Jsons.MAPPER.convertValue(value,Object.class);}
+    }
 }
