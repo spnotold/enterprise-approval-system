@@ -1,161 +1,199 @@
+commit d8690698427728e8cb50974f41e9a8a0c0aa747a
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 17:54:12 -0400
+
+    fix: harden copy validation, attachment privacy and live refresh
+
+commit 7f55323d8fb29be5d380679d496263d82b1e2ca0
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 09:48:11 -0400
+
+    docs: user guide
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit c9aafcdc861f04dcbdef94c1722c65a85429a6ec
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 09:46:37 -0400
+
+    fix: issues found in browser QA
+
+    - flow: transfer stored candidate_ids as a JSON string (double encoding), which
+      broke task lists and detail with 500; transfer is audited once
+    - file: set MinIO region so the client skips GetBucketLocation, which the
+      bucket-scoped key may not call (every upload failed with Access Denied)
+    - notify: invalid SSE ticket returns 401 instead of 500
+    - web: grants scope text, task list type/template column, status column width,
+      log status text for node-to-node moves, stale demo hint
+    - mobile: clearer wording for skipped nodes in the path preview
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit 6bce9fc8b7b50c73c65e8a2bc89076d1a58a34c3
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 09:11:13 -0400
+
+    docs: test report and updated development status
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit 17cbfc508ef5a13c9ae232a8272e708bf6e59673
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 09:09:19 -0400
+
+    test: key scenarios T01-T16 against real PostgreSQL
+
+    IntegrationTestBase boots the demo profile on a throwaway database and resets
+    seed data before each test. Covers access isolation, current-approver and admin
+    checks, self-approval fallback, withdraw/approve race (20 rounds), concurrent
+    approve, idempotent replay, terminal immutability, tamper-proof totals, cent
+    arithmetic, duplicate invoices, file type sniffing, notification isolation and
+    template version snapshots.
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit b36570305834aadbe66f8c693fc562af7275ab2b
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 09:04:29 -0400
+
+    feat(demo): demo accounts, custom templates and sample applications
+
+    - db/demo/R__seed_demo.sql: 10 demo accounts (Demo@2026), roles and primary
+      handlers, department heads, data-scope grants, LEAVE and SEAL templates
+    - DemoDataInitializer (demo profile) creates the sample applications through
+      the real save/submit/approve/reject flow, once
+    - fix(auth): register UUID type handler globally; login failed with 500 when
+      inserting refresh_token.family_id
+    - fix(flow): custom NUMBER/AMOUNT/DATE fields are compared by value in node
+      conditions ("10" > "3" was false as strings)
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit e2995d288bfee06f6b61ef7cbc3a62c959316993
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 08:59:49 -0400
+
+    fix(api): pending-count route, Idempotent-Replayed header, ISO date query params
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit 76c33eace7253333efaa2520d400f78b6fbfe2d6
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 08:58:24 -0400
+
+    feat(job): cleanup and overdue reminder jobs; align application config
+
+    - purge TEMP attachments after 24h, idempotency records after 7 days,
+      soft-deleted drafts after 30 days, expired refresh tokens
+    - remind assignees of overdue tasks every 30 min (once per task per day)
+    - application.yml: jwt access-minutes/refresh-days, cookie-secure, app base-url,
+      zh_CN locale; add demo profile loading db/demo
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit 7d20093de48d74a9c33aea09a430b0e9c721b80c
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 08:55:16 -0400
+
+    feat(mobile): purchase/expense/custom forms, stats page, strict typecheck fixes
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit 22a689991a3bdb79d7007cdbd2e49e556f330ff7
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 08:55:16 -0400
+
+    feat(web): application detail and task list pages
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit 1a914b92d128a39c7da9abcb2da7cb5e40117735
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 08:55:16 -0400
+
+    feat(backend): application, task, file, template, admin and stats APIs
+
+    Business save/submit validation for purchase/travel/expense/custom, access policy,
+    idempotent submit/approve, admin services and stats queries, V5 draft constraint
+    relaxation, and integration tests against a real PostgreSQL.
+    Fix: stats monthly alias needs AS (month is a keyword); test fixture columns.
+
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+commit 7212793a5844872a78311b2e257993abc283676f
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 06:46:17 -0400
+
+    fix: wrap up frontend build issues and document development handoff
+
+commit 81dbf5f484df3ea963baafcb20be1f843e7dc773
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 06:42:33 -0400
+
+    chore: checkpoint approval system implementation in progress
+
+commit 52f30fa6950c55e4d561215555a7726eb3c5018e
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   2026-10-15 15:05:17 +0800
+
+    chore: add package lock files
+
+commit 131e142a63c95bd7f6f819829b9caf5cf8d9bfcb
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   2026-10-15 15:03:06 +0800
+
+    docs: update git log
+
 commit dbb1ebff7b0de57421f6ee8e65e90996fa0d5977
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 15:03:06 2026 +0800
+Date:   2026-10-15 15:03:06 +0800
 
     chore: add test skeleton and build placeholders
 
- backend/pom.xml                                      | 20 ++++++++++++++++++++
- .../test/java/edu/zju/eas/IntegrationTestBase.java   |  4 ++++
- .../src/test/java/edu/zju/eas/biz}/.gitkeep          |  0
- .../src/test/java/edu/zju/eas/flow}/.gitkeep         |  0
- backend/src/test/java/edu/zju/eas/notify/.gitkeep    |  0
- backend/src/test/java/edu/zju/eas/security/.gitkeep  |  0
- backend/src/test/java/edu/zju/eas/template/.gitkeep  |  0
- backend/src/test/resources/application-test.yml      |  7 +++++++
- frontend/.gitignore                                  |  1 +
- frontend/src/env.d.ts                                |  7 +++++++
- frontend/src/main.ts                                 |  7 +------
- frontend/src/router/index.ts                         | 14 ++++++++++++++
- frontend/src/views/HomeView.vue                      |  5 +++++
- mobile/.gitignore                                    |  5 +++++
- mobile/App.vue                                       |  7 +++++++
- mobile/index.html                                    | 12 ++++++++++++
- mobile/main.ts                                       |  7 +++++++
- mobile/package.json                                  | 11 ++++++-----
- mobile/pages.json                                    |  9 ++++++++-
- mobile/pages/index/index.vue                         |  5 +++++
- mobile/tsconfig.json                                 | 14 ++++++++++++++
- mobile/vite.config.ts                                |  6 ++++++
- 22 files changed, 129 insertions(+), 12 deletions(-)
-
 commit 53d47125ee653708ffb1fd4fdd5d197c6399f82c
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 15:01:51 2026 +0800
+Date:   2026-10-15 15:01:51 +0800
 
     chore: add db init script and align deploy config
 
- README.md                                  |  4 +--
- backend/src/main/resources/application.yml |  6 ++--
- db/init/01_create_app_user.sh              | 16 ++++++++++
- docker-compose.yml                         | 47 ++++++++++++++++++++----------
- nginx/Dockerfile                           |  6 ++--
- nginx/default.conf                         | 28 ++++++++++++++++++
- nginx/nginx.conf                           | 35 ----------------------
- template.env                               | 12 ++++----
- 8 files changed, 91 insertions(+), 63 deletions(-)
-
 commit c614040b4e7beed4de912cea2a24cffac87f18de
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 15:01:27 2026 +0800
+Date:   2026-10-15 15:01:27 +0800
 
     docs: sync design document and add report placeholders
 
- README.md                        |  15 +-
- docs/demo_video.md               |   3 +
- docs/design_document.docx        | Bin 10214458 -> 11888488 bytes
- docs/design_document.md          | 545 ++++++++++++++++++++++++++++-----------
- docs/experiment_report/README.md |   8 +
- docs/git_log.txt                 |  98 +++++++
- docs/summary.md                  |   3 +
- docs/test_report.md              |   3 +
- docs/user_guide.md               |   3 +
- 9 files changed, 530 insertions(+), 148 deletions(-)
-
 commit 0512c54ffadf2b71655ef6d6349262232e92b1b4
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 14:35:30 2026 +0800
+Date:   2026-10-15 14:35:30 +0800
 
     docs: replace pdf with markdown version
 
- README.md                |    2 +-
- docs/design_document.md  | 2044 ++++++++++++++++++++++++++++++++++++++++++++++
- docs/design_document.pdf |  Bin 10354056 -> 0 bytes
- 3 files changed, 2045 insertions(+), 1 deletion(-)
-
 commit 350c8c2980a9d5a1ba26fb9b6965d04ff0f8b2f0
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 14:32:17 2026 +0800
+Date:   2026-10-15 14:32:17 +0800
 
     chore: add docker compose skeleton
 
- docker-compose.yml | 83 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
- nginx/Dockerfile   | 20 +++++++++++++
- nginx/nginx.conf   | 35 +++++++++++++++++++++++
- 3 files changed, 138 insertions(+)
-
 commit d75c37857d52353b3abc8922e197d8729fbacb59
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 14:31:59 2026 +0800
+Date:   2026-10-15 14:31:59 +0800
 
     chore: add frontend and mobile skeleton
 
- frontend/.gitignore         |  6 ++++++
- frontend/Dockerfile         | 10 ++++++++++
- frontend/index.html         | 12 ++++++++++++
- frontend/package.json       | 26 ++++++++++++++++++++++++++
- frontend/src/App.vue        |  5 +++++
- frontend/src/main.ts        | 13 +++++++++++++
- frontend/template.env.local |  2 ++
- frontend/tsconfig.json      | 21 +++++++++++++++++++++
- frontend/vite.config.ts     | 24 ++++++++++++++++++++++++
- mobile/manifest.json        | 31 +++++++++++++++++++++++++++++++
- mobile/package.json         | 27 +++++++++++++++++++++++++++
- mobile/pages.json           | 15 +++++++++++++++
- 12 files changed, 192 insertions(+)
-
 commit 6c098cb6878cd8e25bf3b4f354859887021f1943
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 14:31:36 2026 +0800
+Date:   2026-10-15 14:31:36 +0800
 
     chore: add backend skeleton
 
- backend/.gitignore                                 |   6 +
- backend/Dockerfile                                 |  13 ++
- backend/pom.xml                                    | 137 +++++++++++++++++++++
- .../src/main/java/edu/zju/eas/EasApplication.java  |  12 ++
- backend/src/main/resources/application-demo.yml    |   7 ++
- backend/src/main/resources/application.yml         |  49 ++++++++
- 6 files changed, 224 insertions(+)
-
 commit 43ad3a6d958da78d4f9f578f1a5fabdab57d39b7
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 14:31:12 2026 +0800
+Date:   2026-10-15 14:31:12 +0800
 
     docs: add design document
 
- docs/design_document.docx | Bin 0 -> 10214458 bytes
- docs/design_document.pdf  | Bin 0 -> 10354056 bytes
- 2 files changed, 0 insertions(+), 0 deletions(-)
-
 commit 548b2536e5b81b8f6c208186faaddf62ba87a5f5
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   Thu Oct 15 14:31:12 2026 +0800
+Date:   2026-10-15 14:31:12 +0800
 
     chore: init project structure
-
- .gitignore                                         |  9 +++
- README.md                                          | 86 ++++++++++++++++++++++
- backend/src/main/java/edu/zju/eas/config/.gitkeep  |  0
- .../src/main/java/edu/zju/eas/controller/.gitkeep  |  0
- backend/src/main/java/edu/zju/eas/dto/.gitkeep     |  0
- backend/src/main/java/edu/zju/eas/model/.gitkeep   |  0
- .../src/main/java/edu/zju/eas/repository/.gitkeep  |  0
- .../src/main/java/edu/zju/eas/response/.gitkeep    |  0
- .../main/java/edu/zju/eas/service/flow/.gitkeep    |  0
- .../src/main/java/edu/zju/eas/service/job/.gitkeep |  0
- .../main/java/edu/zju/eas/service/notify/.gitkeep  |  0
- backend/src/main/resources/db/demo/.gitkeep        |  0
- backend/src/main/resources/db/migration/.gitkeep   |  0
- frontend/public/.gitkeep                           |  0
- frontend/src/components/.gitkeep                   |  0
- frontend/src/composables/.gitkeep                  |  0
- frontend/src/lib/.gitkeep                          |  0
- frontend/src/router/.gitkeep                       |  0
- frontend/src/stores/.gitkeep                       |  0
- frontend/src/views/admin/.gitkeep                  |  0
- mobile/components/.gitkeep                         |  0
- mobile/lib/.gitkeep                                |  0
- mobile/pages/.gitkeep                              |  0
- mobile/static/.gitkeep                             |  0
- template.env                                       | 17 +++++
- 25 files changed, 112 insertions(+)
