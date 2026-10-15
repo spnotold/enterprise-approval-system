@@ -1,3 +1,66 @@
+commit dbb1ebff7b0de57421f6ee8e65e90996fa0d5977
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 15:03:06 2026 +0800
+
+    chore: add test skeleton and build placeholders
+
+ backend/pom.xml                                      | 20 ++++++++++++++++++++
+ .../test/java/edu/zju/eas/IntegrationTestBase.java   |  4 ++++
+ .../src/test/java/edu/zju/eas/biz}/.gitkeep          |  0
+ .../src/test/java/edu/zju/eas/flow}/.gitkeep         |  0
+ backend/src/test/java/edu/zju/eas/notify/.gitkeep    |  0
+ backend/src/test/java/edu/zju/eas/security/.gitkeep  |  0
+ backend/src/test/java/edu/zju/eas/template/.gitkeep  |  0
+ backend/src/test/resources/application-test.yml      |  7 +++++++
+ frontend/.gitignore                                  |  1 +
+ frontend/src/env.d.ts                                |  7 +++++++
+ frontend/src/main.ts                                 |  7 +------
+ frontend/src/router/index.ts                         | 14 ++++++++++++++
+ frontend/src/views/HomeView.vue                      |  5 +++++
+ mobile/.gitignore                                    |  5 +++++
+ mobile/App.vue                                       |  7 +++++++
+ mobile/index.html                                    | 12 ++++++++++++
+ mobile/main.ts                                       |  7 +++++++
+ mobile/package.json                                  | 11 ++++++-----
+ mobile/pages.json                                    |  9 ++++++++-
+ mobile/pages/index/index.vue                         |  5 +++++
+ mobile/tsconfig.json                                 | 14 ++++++++++++++
+ mobile/vite.config.ts                                |  6 ++++++
+ 22 files changed, 129 insertions(+), 12 deletions(-)
+
+commit 53d47125ee653708ffb1fd4fdd5d197c6399f82c
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 15:01:51 2026 +0800
+
+    chore: add db init script and align deploy config
+
+ README.md                                  |  4 +--
+ backend/src/main/resources/application.yml |  6 ++--
+ db/init/01_create_app_user.sh              | 16 ++++++++++
+ docker-compose.yml                         | 47 ++++++++++++++++++++----------
+ nginx/Dockerfile                           |  6 ++--
+ nginx/default.conf                         | 28 ++++++++++++++++++
+ nginx/nginx.conf                           | 35 ----------------------
+ template.env                               | 12 ++++----
+ 8 files changed, 91 insertions(+), 63 deletions(-)
+
+commit c614040b4e7beed4de912cea2a24cffac87f18de
+Author: Yuhang Li <3240105750@zju.edu.cn>
+Date:   Thu Oct 15 15:01:27 2026 +0800
+
+    docs: sync design document and add report placeholders
+
+ README.md                        |  15 +-
+ docs/demo_video.md               |   3 +
+ docs/design_document.docx        | Bin 10214458 -> 11888488 bytes
+ docs/design_document.md          | 545 ++++++++++++++++++++++++++++-----------
+ docs/experiment_report/README.md |   8 +
+ docs/git_log.txt                 |  98 +++++++
+ docs/summary.md                  |   3 +
+ docs/test_report.md              |   3 +
+ docs/user_guide.md               |   3 +
+ 9 files changed, 530 insertions(+), 148 deletions(-)
+
 commit 0512c54ffadf2b71655ef6d6349262232e92b1b4
 Author: Yuhang Li <3240105750@zju.edu.cn>
 Date:   Thu Oct 15 14:35:30 2026 +0800
