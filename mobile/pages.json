@@ -106,10 +106,10 @@
     }
   ],
   "tabBar": {
-    "color": "#8f959e",
-    "selectedColor": "#2f6bff",
-    "backgroundColor": "#ffffff",
-    "borderStyle": "white",
+    "color": "#6C777E",
+    "selectedColor": "#3E5C76",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
     "list": [
       {
         "pagePath": "pages/home/index",
@@ -146,8 +146,8 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "企业审批系统",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "backgroundColor": "#F5F6F7"
+    "navigationBarBackgroundColor": "#F2F3F0",
+    "backgroundColor": "#F2F3F0"
   },
   "easycom": {
     "autoscan": true,

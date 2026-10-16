@@ -15,6 +15,8 @@ const me = computed(() => auth.state.me)
 const adminOnly = computed(() => auth.isAdminOnly)
 const canDept = computed(() => auth.can('APP_READ_DEPT'))
 const savingPref = ref(false)
+// 原生 switch 的 color 属性读不到 CSS 变量，值与 --eas-primary 保持一致
+const SWITCH_COLOR = '#3e5c76'
 
 onLoad(async () => {
   await requireLogin()
@@ -46,15 +48,18 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <view class="page">
-    <view class="card profile">
+  <view class="me">
+    <view class="panel profile">
       <view class="avatar">{{ (me?.realName ?? '?').slice(0, 1) }}</view>
       <view class="flex1">
         <view class="name">{{ me?.realName ?? '—' }}</view>
-        <view class="muted">{{ me?.username }} · {{ me?.deptName ?? '未分配部门' }}</view>
-        <view class="muted ellipsis">{{ me?.email }}</view>
-        <view class="roles">
-          <text v-for="r in me?.roles ?? []" :key="r.code" class="tag tag-blue">
+        <view class="sub">
+          <text>{{ me?.username }}</text>
+          <text class="sub-gap">{{ me?.deptName ?? '未分配部门' }}</text>
+        </view>
+        <view class="sub ellipsis">{{ me?.email }}</view>
+        <view v-if="me?.roles?.length" class="roles">
+          <text v-for="r in me?.roles ?? []" :key="r.code" class="role">
             {{ ROLE_LABEL[r.code] ?? r.name }}<text v-if="r.primaryHandler">（主办）</text>
           </text>
         </view>
@@ -63,95 +68,143 @@ async function logout(): Promise<void> {
 
     <AdminNotice v-if="adminOnly" />
 
-    <view class="card menu">
-      <view v-if="!adminOnly" class="menu-item" @tap="goAppList()">
-        <uni-icons type="list" size="20" color="#2f6bff" />
+    <view class="panel menu">
+      <view v-if="!adminOnly" class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="goAppList()">
         <text class="flex1">我的申请</text>
-        <uni-icons type="right" size="16" color="#c0c4cc" />
       </view>
-      <view v-if="!adminOnly && canDept" class="menu-item" @tap="goAppList({ scope: 'dept' })">
-        <uni-icons type="staff" size="20" color="#2f6bff" />
+      <view
+        v-if="!adminOnly && canDept"
+        class="row-item"
+        hover-class="is-pressed"
+        :hover-stay-time="60"
+        @tap="goAppList({ scope: 'dept' })"
+      >
         <text class="flex1">本部门申请</text>
-        <uni-icons type="right" size="16" color="#c0c4cc" />
       </view>
-      <view v-if="!adminOnly" class="menu-item" @tap="go('/pages/stats/index')">
-        <uni-icons type="tune" size="20" color="#2f6bff" />
+      <view v-if="!adminOnly" class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="go('/pages/stats/index')">
         <text class="flex1">统计报表</text>
-        <uni-icons type="right" size="16" color="#c0c4cc" />
       </view>
-      <view class="menu-item" @tap="go('/pages/me/password')">
-        <uni-icons type="locked" size="20" color="#2f6bff" />
+      <view class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="go('/pages/me/password')">
         <text class="flex1">修改密码</text>
-        <uni-icons type="right" size="16" color="#c0c4cc" />
       </view>
-      <view class="menu-item">
-        <uni-icons type="email" size="20" color="#2f6bff" />
+      <view class="row-item">
         <view class="flex1">
           <view>邮件提醒</view>
-          <view class="muted">关闭后仍可在“消息”中查看站内通知</view>
+          <view class="sub">关闭后仍可在“消息”中查看站内通知</view>
         </view>
-        <switch :checked="!!me?.emailNotify" :disabled="savingPref || !me" color="#2f6bff" @change="toggleEmail" />
+        <switch :checked="!!me?.emailNotify" :disabled="savingPref || !me" :color="SWITCH_COLOR" @change="toggleEmail" />
       </view>
     </view>
 
-    <button class="btn btn-block btn-ghost-danger" @tap="logout">退出登录</button>
+    <button class="logout" hover-class="is-pressed" :hover-stay-time="60" @tap="logout">退出登录</button>
   </view>
 </template>
 
 <style scoped>
+.me {
+  min-height: 100vh;
+  padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+  background: var(--eas-paper);
+  color: var(--eas-ink);
+  font-family: var(--eas-font-sans);
+}
+
+.panel {
+  margin-bottom: 24rpx;
+  background: var(--eas-surface);
+  border: 1rpx solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  overflow: hidden;
+}
+
 .profile {
   display: flex;
   align-items: center;
+  padding: 32rpx;
 }
 
 .avatar {
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: 50%;
-  background: #2f6bff;
-  color: #fff;
-  font-size: 48rpx;
-  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 24rpx;
   flex-shrink: 0;
+  width: 112rpx;
+  height: 112rpx;
+  margin-right: 24rpx;
+  border-radius: 50%;
+  background: var(--eas-primary-tint);
+  border: 1rpx solid var(--eas-rule-strong);
+  color: var(--eas-primary);
+  font-size: var(--eas-fs-lg);
+  font-weight: 600;
 }
 
 .name {
-  font-size: 36rpx;
-  font-weight: 700;
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.sub {
+  font-size: var(--eas-fs-xs);
+  line-height: 1.6;
+  color: var(--eas-ink-3);
+}
+
+.sub-gap {
+  margin-left: 20rpx;
 }
 
 .roles {
-  margin-top: 8rpx;
   display: flex;
   flex-wrap: wrap;
+  margin-top: 8rpx;
 }
 
-.roles .tag {
-  margin-bottom: 8rpx;
+.role {
+  margin: 0 12rpx 8rpx 0;
+  padding: 0 12rpx;
+  font-size: var(--eas-fs-xs);
+  line-height: 40rpx;
+  color: var(--eas-primary);
+  border: 1rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-tag);
 }
 
 .menu {
-  padding-top: 0;
-  padding-bottom: 0;
+  padding: 0;
 }
 
-.menu-item {
+.row-item {
   display: flex;
   align-items: center;
   min-height: 104rpx;
-  border-bottom: 1rpx solid #f0f1f2;
+  padding: 16rpx 32rpx;
+  font-size: var(--eas-fs-sm);
+  border-top: 1rpx solid var(--eas-rule);
 }
 
-.menu-item:last-child {
-  border-bottom: none;
+.row-item:first-child {
+  border-top: none;
 }
 
-.menu-item > text,
-.menu-item > view.flex1 {
-  margin-left: 20rpx;
+.logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 88rpx;
+  margin: 0;
+  padding: 0;
+  line-height: 88rpx;
+  font-size: var(--eas-fs-md);
+  color: var(--eas-danger);
+  background: var(--eas-surface);
+  border: 2rpx solid var(--eas-danger);
+  border-radius: var(--eas-radius-control);
+}
+
+.logout::after {
+  border: none;
 }
 </style>
