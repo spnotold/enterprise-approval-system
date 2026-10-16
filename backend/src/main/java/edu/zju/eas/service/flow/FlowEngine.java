@@ -458,8 +458,8 @@ public class FlowEngine {
         if (to.getId().equals(task.getAssigneeId())) {
             throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "新审批人与原审批人相同");
         }
-        if (flowQueryMapper.isSysAdmin(to.getId())) {
-            throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "不能转给系统管理员");
+        if (!flowQueryMapper.eligibleApprover(to.getId())) {
+            throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "新审批人不具备审批资格");
         }
         if (appMapper.lockInApproval(app.getId()) == 0) {
             throw BizException.stateChanged();
