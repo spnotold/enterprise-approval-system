@@ -30,13 +30,28 @@ public class TokenService {
 
     public TokenService(EasProperties props, Clock clock) {
         String s = props.getJwt().getSecret();
-        if (s == null || s.getBytes(StandardCharsets.UTF_8).length < 32) {
-            throw new IllegalStateException("JWT_SECRET 未设置或不足 32 字节");
+        byte[] bytes = s == null ? new byte[0] : s.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET 未设置或不足 32 字节。请用 `openssl rand -base64 48` 生成并写入 .env");
         }
-        this.secret = s.getBytes(StandardCharsets.UTF_8);
+        if (isPlaceholderSecret(s)) {
+            throw new IllegalStateException(
+                    "JWT_SECRET 仍是 template.env 中的占位值，任何人都能用它签发令牌冒充管理员。"
+                            + "请用 `openssl rand -base64 48` 生成随机值并写入 .env");
+        }
+        this.secret = bytes;
         this.clock = clock;
         this.accessMinutes = props.getJwt().getAccessMinutes();
         this.refreshDays = props.getJwt().getRefreshDays();
+    }
+
+    /** 拒收模板里的示例值和其他明显占位（包含 `change_me` 的串），引导用户自行生成。 */
+    static boolean isPlaceholderSecret(String s) {
+        if (s == null) return true;
+        String trimmed = s.trim();
+        if (trimmed.isEmpty()) return true;
+        return trimmed.toLowerCase().contains("change_me");
     }
 
     public record AccessClaims(Long userId, int tokenVersion) {

@@ -96,7 +96,7 @@ enterprise-approval-system
 ## 部署
 
 ```bash
-cp template.env .env    # 填写数据库、MinIO 密码与 JWT_SECRET
+cp template.env .env    # 填写数据库、MinIO 密码与 JWT_SECRET（用 `openssl rand -base64 48` 生成；保留模板占位值将无法启动）
 docker compose up -d --build
 ```
 
