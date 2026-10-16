@@ -52,8 +52,10 @@ public class AuthInfoService {
         Set<String> roles = Set.copyOf(authQueryMapper.roleCodes(userId));
         Set<String> perms = new HashSet<>(authQueryMapper.permissionCodes(userId));
         // 系统管理员即使另有业务角色也不能审批（审批权与管理权分离），
-        // 兼任部门负责人也不获得本部门查询与统计，读业务内容只能凭 BIZ_CONTENT_READ 授权
+        // 也不能新建、编辑、提交、撤回本人申请；兼任部门负责人也不获得本部门查询与统计，
+        // 读业务内容只能凭 BIZ_CONTENT_READ 授权
         if (roles.contains(Perms.ROLE_SYS_ADMIN)) {
+            perms.remove(Perms.APP_CREATE);
             perms.remove(Perms.TASK_HANDLE);
             perms.remove(Perms.APP_READ_DEPT);
             perms.remove(Perms.STATS_DEPT);
