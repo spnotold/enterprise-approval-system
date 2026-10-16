@@ -2123,6 +2123,11 @@ backend:
     MINIO_BUCKET: eas-files
     SMTP_HOST: ${SMTP_HOST:-mailpit}
     SMTP_PORT: ${SMTP_PORT:-1025}
+    SMTP_USER: ${SMTP_USER:-}
+    SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    SMTP_AUTH: ${SMTP_AUTH:-false}
+    SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+    SMTP_SSL: ${SMTP_SSL:-false}
     TZ: Asia/Shanghai
   healthcheck:
     test: ["CMD-SHELL", "wget -qO- localhost:8080/api/actuator/health"]

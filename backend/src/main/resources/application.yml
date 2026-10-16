@@ -25,6 +25,17 @@ spring:
     port: ${SMTP_PORT:1025}
     username: ${SMTP_USER:}
     password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}                       # 真实 SMTP 通常为 true；Mailpit 演示场景保持 false
+          starttls:
+            enable: ${SMTP_STARTTLS:false}               # 587/25 用 STARTTLS；Mailpit 演示场景保持 false
+          ssl:
+            enable: ${SMTP_SSL:false}                    # 465 用隐式 SSL；Mailpit 演示场景保持 false
+          connectiontimeout: 10000                       # TCP 建连超时（毫秒），避免 SMTP 故障时阻塞调度线程
+          timeout: 10000                                 # 读写超时（毫秒）
+          writetimeout: 10000
   jackson:
     time-zone: Asia/Shanghai
   web:

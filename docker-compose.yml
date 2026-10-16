@@ -80,6 +80,11 @@ services:
       MINIO_BUCKET: eas-files
       SMTP_HOST: ${SMTP_HOST:-mailpit}
       SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}                          # 真实 SMTP 用户名；Mailpit 演示场景留空
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}                  # 真实 SMTP 密码；Mailpit 演示场景留空
+      SMTP_AUTH: ${SMTP_AUTH:-false}                     # SMTP_AUTH=true 时启用 SMTP AUTH
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}             # SMTP_STARTTLS=true 时启用 STARTTLS（587/25）
+      SMTP_SSL: ${SMTP_SSL:-false}                       # SMTP_SSL=true 时启用隐式 SSL（465）
       COOKIE_SECURE: ${COOKIE_SECURE:-true}     # 通过 http 访问时设为 false，否则浏览器不保存刷新令牌 Cookie
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
       EAS_ADMIN_PASSWORD: ${EAS_ADMIN_PASSWORD:-}  # 非 demo 部署：首次启动创建 admin 账号
