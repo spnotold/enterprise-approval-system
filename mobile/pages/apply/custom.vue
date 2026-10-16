@@ -17,6 +17,8 @@ const schema = ref<FormSchema | null>(null), templateId = ref<number | null>(nul
 const templateName = ref('自定义申请'), versionNo = ref<number | null>(null)
 const ready = ref(false), loadError = ref(''), uploading = ref(false), refreshing = ref(false), outdated = ref(false), reviewRequired = ref(false)
 const fe = useFieldErrors()
+// 标题输入框聚焦状态；小程序没有 :focus，用 @focus / @blur 切换 .is-focus
+const titleFocus = ref(false)
 const { draft, trackDirty, startTracking, markClean, load, save, submit, finishSubmit } = useDraft('custom')
 let initialId: number | null = null
 
@@ -118,23 +120,70 @@ onLoad(async q => {
 
 <template>
   <view class="page page--bar">
-    <view v-if="loadError" class="banner banner-danger">{{ loadError }}<view class="link-btn" @tap="initialize">重试</view></view>
+    <view v-if="loadError" class="banner banner-danger">
+      {{ loadError }}
+      <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="initialize">重试</view>
+    </view>
     <template v-if="ready && schema">
-      <view class="row between mb"><text class="muted">{{ draft.appNo ? `草稿 ${draft.appNo}` : templateName }}{{ draft.dirty ? ' · 未保存' : '' }}</text><text class="tag tag-blue">v{{ versionNo }}</text></view>
-      <view v-if="outdated" class="banner banner-warning">模板已更新。切换后保留同名同类型字段，请重新核对。<view class="link-btn" @tap="upgrade">加载最新模板</view></view>
-      <view v-if="reviewRequired" class="banner banner-warning">已切换到新版模板，请核对字段与附件。<view class="link-btn" @tap="reviewRequired = false">已核对内容，允许提交</view></view>
-      <view v-if="fe.general.value.length" class="banner banner-danger"><view v-for="m in fe.general.value" :key="m">{{ m }}</view></view>
+      <view class="row between mb">
+        <view class="head-meta">
+          <text>{{ draft.appNo ? `草稿 ${draft.appNo}` : templateName }}</text>
+          <text v-if="draft.dirty" class="head-dirty">未保存</text>
+        </view>
+        <text class="tag tag-blue">v{{ versionNo }}</text>
+      </view>
+      <view v-if="outdated" class="banner banner-warning">
+        模板已更新。切换后保留同名同类型字段，请重新核对。
+        <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="upgrade">加载最新模板</view>
+      </view>
+      <view v-if="reviewRequired" class="banner banner-warning">
+        已切换到新版模板，请核对字段与附件。
+        <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="reviewRequired = false">已核对内容，允许提交</view>
+      </view>
+      <view v-if="fe.general.value.length" class="banner banner-danger">
+        <view v-for="m in fe.general.value" :key="m">{{ m }}</view>
+      </view>
       <view class="card" :class="{ locked: draft.busy || refreshing }">
         <view class="card-title">{{ templateName }}</view>
-        <FormItem label="标题" required :error="fe.get('title')"><input v-model="form.title" class="input" maxlength="100" placeholder="简要说明本次申请" @input="fe.clearField('title')" /></FormItem>
+        <FormItem label="标题" required :error="fe.get('title')">
+          <input
+            v-model="form.title"
+            class="input"
+            :class="{ 'is-error': !!fe.get('title'), 'is-focus': titleFocus }"
+            maxlength="100"
+            placeholder="简要说明本次申请"
+            @input="fe.clearField('title')"
+            @focus="titleFocus = true"
+            @blur="titleFocus = false"
+          />
+        </FormItem>
         <CustomFormRenderer :key="templateVersionId ?? 0" :schema="schema" :values="form.values" :attachments="form.attachments" :errors="fe" @busy="uploading = $event" />
       </view>
       <view class="field-help">提交前会保存最新内容并预览审批路径，确认后进入审批。</view>
     </template>
-    <view class="bottom-bar"><button class="btn" :disabled="!ready || draft.busy || refreshing || uploading" @tap="act(false)">保存草稿</button><button class="btn btn-primary" :disabled="!ready || draft.busy || refreshing || uploading" @tap="act(true)">提交</button></view>
+    <view class="bottom-bar">
+      <button class="btn" :disabled="!ready || draft.busy || refreshing || uploading" hover-class="is-pressed" :hover-stay-time="60" @tap="act(false)">保存草稿</button>
+      <button class="btn btn-primary" :disabled="!ready || draft.busy || refreshing || uploading" hover-class="press-primary" :hover-stay-time="60" @tap="act(true)">提交</button>
+    </view>
   </view>
 </template>
 
 <style scoped>
-.locked { pointer-events: none; opacity: .7; }
+@import '../../styles/form.css';
+
+.locked {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.head-meta {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.head-dirty {
+  margin-left: 20rpx;
+  color: var(--eas-warning-text);
+}
 </style>

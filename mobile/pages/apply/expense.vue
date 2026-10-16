@@ -26,6 +26,9 @@ const linkable = ref<LinkableApplication[]>([]), savedRelated = ref<LinkableAppl
 const duplicates = ref<DupInvoiceWarning[]>([]), duplicateFailed = ref(false)
 const busyUploads = reactive<Record<number, boolean>>({})
 const uploading = computed(() => Object.values(busyUploads).some(Boolean))
+// 聚焦中的输入框 key；小程序没有 :focus，用 @focus / @blur 切换 .is-focus
+const foc = ref('')
+const ic = (k: string, path = k) => ({ 'is-focus': foc.value === k, 'is-error': !!fe.get(path) })
 const types = computed(() => dict.state.expenseTypes)
 const total = computed(() => sumCents(form.items.map(r => r.amountCents)))
 const noInvoiceRows = computed(() => form.items.filter(r => r.noInvoice))
@@ -136,59 +139,261 @@ onLoad(async q => {
 
 <template>
   <view class="page page--bar expense-page">
-    <view v-if="loadError" class="banner banner-danger">{{ loadError }}<view class="link-btn" @tap="initialize">重试</view></view>
+    <view v-if="loadError" class="banner banner-danger">
+      {{ loadError }}
+      <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="initialize">重试</view>
+    </view>
     <template v-if="ready">
-      <view v-if="draft.appNo" class="muted mb">草稿 {{ draft.appNo }}{{ draft.dirty ? ' · 未保存' : '' }}</view>
-      <view v-if="fe.general.value.length" class="banner banner-danger"><view v-for="m in fe.general.value" :key="m">{{ m }}</view></view>
+      <view v-if="draft.appNo" class="draft-no">
+        <text>草稿 {{ draft.appNo }}</text>
+        <text v-if="draft.dirty" class="draft-dirty">未保存</text>
+      </view>
+      <view v-if="fe.general.value.length" class="banner banner-danger">
+        <view v-for="m in fe.general.value" :key="m">{{ m }}</view>
+      </view>
       <view v-if="duplicates.length" class="banner banner-warning">该票据疑似已在其他报销单中使用，请核对；仍可提交。</view>
       <view v-if="duplicateFailed" class="banner banner-warning">跨单重复票据核对暂不可用，保存或提交时会重试。</view>
       <view v-if="noInvoiceRows.length" class="banner banner-warning">含 {{ noInvoiceRows.length }} 条无票支出，合计 ¥{{ formatCents(noInvoiceTotal) }}</view>
       <view :class="{ locked: draft.busy }">
         <view class="card">
           <view class="card-title">报销信息</view>
-          <FormItem label="标题" required :error="fe.get('title')"><input v-model="form.title" class="input" maxlength="100" placeholder="如 本月出差报销" @input="fe.clearField('title')" /></FormItem>
-          <FormItem label="报销说明" :error="fe.get('description')"><textarea v-model="form.description" class="textarea" maxlength="1000" auto-height placeholder="选填，说明报销背景" @input="fe.clearField('description')" /></FormItem>
-          <view class="row modes"><view class="link-btn" :class="{ chosen: form.linkMode === 'RELATED' }" @tap="form.linkMode = 'RELATED'; fe.clearField('independentReason')">关联申请</view><view class="link-btn" :class="{ chosen: form.linkMode === 'INDEPENDENT' }" @tap="form.linkMode = 'INDEPENDENT'; fe.clearField('relatedApplicationIds')">独立报销</view></view>
-          <FormItem v-if="form.linkMode === 'RELATED'" label="关联申请" required :error="fe.first('relatedApplicationIds')">
-            <button class="btn btn-block" @tap="choosing = true">选择本人已通过的差旅 / 采购单</button>
-            <view v-for="a in selectedLinks" :key="a.id" class="mt"><LinkedAppCard :app="a" selected /><view class="row between"><view class="link-btn" @tap="goDetail(a.id)">查看详情</view><view class="link-btn danger" @tap="toggleLink(a.id)">取消关联</view></view></view>
+          <FormItem label="标题" required :error="fe.get('title')">
+            <input
+              v-model="form.title"
+              class="input"
+              :class="ic('title')"
+              maxlength="100"
+              placeholder="如 本月出差报销"
+              @input="fe.clearField('title')"
+              @focus="foc = 'title'"
+              @blur="foc = ''"
+            />
           </FormItem>
-          <FormItem v-else label="独立报销说明" required :error="fe.get('independentReason')"><textarea v-model="form.independentReason" class="textarea" maxlength="500" auto-height placeholder="说明未关联申请的原因" @input="fe.clearField('independentReason')" /></FormItem>
+          <FormItem label="报销说明" :error="fe.get('description')">
+            <textarea
+              v-model="form.description"
+              class="textarea"
+              :class="ic('description')"
+              maxlength="1000"
+              auto-height
+              placeholder="选填，说明报销背景"
+              @input="fe.clearField('description')"
+              @focus="foc = 'description'"
+              @blur="foc = ''"
+            />
+          </FormItem>
+          <view class="modes">
+            <view
+              class="mode"
+              :class="{ chosen: form.linkMode === 'RELATED' }"
+              hover-class="is-pressed"
+              :hover-stay-time="60"
+              @tap="form.linkMode = 'RELATED'; fe.clearField('independentReason')"
+            >关联申请</view>
+            <view
+              class="mode"
+              :class="{ chosen: form.linkMode === 'INDEPENDENT' }"
+              hover-class="is-pressed"
+              :hover-stay-time="60"
+              @tap="form.linkMode = 'INDEPENDENT'; fe.clearField('relatedApplicationIds')"
+            >独立报销</view>
+          </view>
+          <FormItem v-if="form.linkMode === 'RELATED'" label="关联申请" required :error="fe.first('relatedApplicationIds')">
+            <button class="btn btn-block" hover-class="is-pressed" :hover-stay-time="60" @tap="choosing = true">选择本人已通过的差旅 / 采购单</button>
+            <view v-for="a in selectedLinks" :key="a.id" class="mt">
+              <LinkedAppCard :app="a" selected />
+              <view class="row between">
+                <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="goDetail(a.id)">查看详情</view>
+                <view class="link-btn danger" hover-class="is-pressed" :hover-stay-time="60" @tap="toggleLink(a.id)">取消关联</view>
+              </view>
+            </view>
+          </FormItem>
+          <FormItem v-else label="独立报销说明" required :error="fe.get('independentReason')">
+            <textarea
+              v-model="form.independentReason"
+              class="textarea"
+              :class="ic('independentReason')"
+              maxlength="500"
+              auto-height
+              placeholder="说明未关联申请的原因"
+              @input="fe.clearField('independentReason')"
+              @focus="foc = 'independentReason'"
+              @blur="foc = ''"
+            />
+          </FormItem>
         </view>
-        <view v-if="fe.get('items')" class="field-err">{{ fe.get('items') }}</view>
+        <view v-if="fe.get('items')" class="field-err page-err">{{ fe.get('items') }}</view>
         <view v-for="(row, i) in form.items" :key="row.key" class="card" :class="{ 'no-invoice': row.noInvoice }">
-          <view class="card-title">费用明细 {{ i + 1 }}<view class="link-btn danger" @tap="removeRow(i)">删除</view></view>
-          <FormItem label="费用类型" required :error="fe.get(`items[${i}].expenseTypeCode`)"><picker :range="types" range-key="name" :value="Math.max(0, types.findIndex(t => t.code === row.expenseTypeCode))" @change="pickType(row, $event)"><view class="picker-value">{{ typeName(row) }}<uni-icons type="right" size="16" color="#8f959e" /></view></picker></FormItem>
-          <FormItem label="发生日期" required :error="fe.get(`items[${i}].occurDate`)"><picker mode="date" :value="row.occurDate" :start="addDays(todayCN(), -365)" :end="todayCN()" @change="row.occurDate = $event.detail.value; fe.clearField(`items[${i}].occurDate`)"><view class="picker-value">{{ row.occurDate || '请选择日期' }}<uni-icons type="calendar" size="18" color="#8f959e" /></view></picker></FormItem>
-          <FormItem label="用途说明" required :error="fe.get(`items[${i}].purpose`)"><input v-model="row.purpose" class="input" maxlength="200" placeholder="说明费用用途" @input="fe.clearField(`items[${i}].purpose`)" /></FormItem>
-          <FormItem label="金额" required :error="fe.get(`items[${i}].amountCents`)"><MoneyInput v-model="row.amountCents" @update:model-value="fe.clearField(`items[${i}].amountCents`)" /></FormItem>
-          <view class="row between"><text>无票支出</text><view class="link-btn" :class="{ chosen: row.noInvoice }" @tap="toggleNoInvoice(row)">{{ row.noInvoice ? '已勾选 · 取消' : '勾选无票' }}</view></view>
-          <FormItem v-if="row.noInvoice" label="无票原因" required :error="fe.get(`items[${i}].noInvoiceReason`)" help="至少 10 字"><textarea v-model="row.noInvoiceReason" class="textarea" maxlength="300" auto-height placeholder="说明无法提供票据的原因" @input="fe.clearField(`items[${i}].noInvoiceReason`)" /></FormItem>
-          <FormItem v-else label="票据" required :error="fe.first(`items[${i}].invoices`)"><AttachmentPicker v-model="row.attachments" v-model:invoice-nos="row.invoiceNos" ref-type="EXPENSE_INVOICE" with-invoice-no :warnings="warnings" @busy="busyUploads[row.key] = $event" @update:model-value="fe.clearUnder(`items[${i}].invoices`)" @update:invoice-nos="fe.clearUnder(`items[${i}].invoices`)" /></FormItem>
+          <view class="card-title row between">
+            <text>费用明细 {{ i + 1 }}</text>
+            <view class="link-btn danger" hover-class="is-pressed" :hover-stay-time="60" @tap="removeRow(i)">删除</view>
+          </view>
+          <FormItem label="费用类型" required :error="fe.get(`items[${i}].expenseTypeCode`)">
+            <picker :range="types" range-key="name" :value="Math.max(0, types.findIndex(t => t.code === row.expenseTypeCode))" @change="pickType(row, $event)">
+              <view class="picker-value" :class="ic(`t${i}`, `items[${i}].expenseTypeCode`)" hover-class="is-pressed" :hover-stay-time="60">
+                <text :class="{ placeholder: !row.expenseTypeCode }">{{ typeName(row) }}</text>
+                <uni-icons type="right" size="16" color="var(--eas-ink-3)" />
+              </view>
+            </picker>
+          </FormItem>
+          <FormItem label="发生日期" required :error="fe.get(`items[${i}].occurDate`)">
+            <picker
+              mode="date"
+              :value="row.occurDate"
+              :start="addDays(todayCN(), -365)"
+              :end="todayCN()"
+              @change="row.occurDate = $event.detail.value; fe.clearField(`items[${i}].occurDate`)"
+            >
+              <view class="picker-value" :class="ic(`d${i}`, `items[${i}].occurDate`)" hover-class="is-pressed" :hover-stay-time="60">
+                <text :class="{ placeholder: !row.occurDate }">{{ row.occurDate || '请选择日期' }}</text>
+                <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
+              </view>
+            </picker>
+          </FormItem>
+          <FormItem label="用途说明" required :error="fe.get(`items[${i}].purpose`)">
+            <input
+              v-model="row.purpose"
+              class="input"
+              :class="ic(`p${i}`, `items[${i}].purpose`)"
+              maxlength="200"
+              placeholder="说明费用用途"
+              @input="fe.clearField(`items[${i}].purpose`)"
+              @focus="foc = `p${i}`"
+              @blur="foc = ''"
+            />
+          </FormItem>
+          <FormItem label="金额" required :error="fe.get(`items[${i}].amountCents`)">
+            <MoneyInput v-model="row.amountCents" :error="!!fe.get(`items[${i}].amountCents`)" @update:model-value="fe.clearField(`items[${i}].amountCents`)" />
+          </FormItem>
+          <view class="row between invoice-row">
+            <text>无票支出</text>
+            <view
+              class="mode mode-auto"
+              :class="{ chosen: row.noInvoice }"
+              hover-class="is-pressed"
+              :hover-stay-time="60"
+              @tap="toggleNoInvoice(row)"
+            >{{ row.noInvoice ? '取消勾选' : '勾选无票' }}</view>
+          </view>
+          <FormItem v-if="row.noInvoice" label="无票原因" required :error="fe.get(`items[${i}].noInvoiceReason`)" help="至少 10 字">
+            <textarea
+              v-model="row.noInvoiceReason"
+              class="textarea"
+              :class="ic(`r${i}`, `items[${i}].noInvoiceReason`)"
+              maxlength="300"
+              auto-height
+              placeholder="说明无法提供票据的原因"
+              @input="fe.clearField(`items[${i}].noInvoiceReason`)"
+              @focus="foc = `r${i}`"
+              @blur="foc = ''"
+            />
+          </FormItem>
+          <FormItem v-else label="票据" required :error="fe.first(`items[${i}].invoices`)">
+            <AttachmentPicker
+              v-model="row.attachments"
+              v-model:invoice-nos="row.invoiceNos"
+              ref-type="EXPENSE_INVOICE"
+              with-invoice-no
+              :warnings="warnings"
+              @busy="busyUploads[row.key] = $event"
+              @update:model-value="fe.clearUnder(`items[${i}].invoices`)"
+              @update:invoice-nos="fe.clearUnder(`items[${i}].invoices`)"
+            />
+          </FormItem>
         </view>
-        <button class="btn btn-block" :disabled="form.items.length >= 50" @tap="form.items.push(emptyExpenseRow()); fe.clearUnder('items')">添加费用明细</button>
+        <button
+          class="btn btn-block"
+          :disabled="form.items.length >= 50"
+          hover-class="is-pressed"
+          :hover-stay-time="60"
+          @tap="form.items.push(emptyExpenseRow()); fe.clearUnder('items')"
+        >添加费用明细</button>
         <view class="field-help mt">全空明细不会保存。提交前会保存最新内容并预览审批路径。</view>
       </view>
     </template>
-    <view class="bottom-bar expense-bar"><view class="bar-total"><text class="muted">报销合计（以服务端为准）</text><text class="amount">¥{{ formatCents(total) }}</text></view><view class="row"><button class="btn" :disabled="!ready || draft.busy || uploading" @tap="act(false)">保存草稿</button><button class="btn btn-primary" :disabled="!ready || draft.busy || uploading" @tap="act(true)">提交</button></view></view>
+    <view class="bottom-bar expense-bar">
+      <view class="bar-total">
+        <text class="bar-label">报销合计（以服务端为准）</text>
+        <text class="amount bar-amount">¥{{ formatCents(total) }}</text>
+      </view>
+      <view class="row">
+        <button class="btn" :disabled="!ready || draft.busy || uploading" hover-class="is-pressed" :hover-stay-time="60" @tap="act(false)">保存草稿</button>
+        <button class="btn btn-primary" :disabled="!ready || draft.busy || uploading" hover-class="press-primary" :hover-stay-time="60" @tap="act(true)">提交</button>
+      </view>
+    </view>
     <BottomSheet :visible="choosing" title="选择关联申请" @close="choosing = false">
       <view class="muted mb">可多选本人已通过的差旅与采购申请。</view>
       <view v-if="linkLoading" class="muted">加载中…</view>
-      <view v-else-if="linkFailed" class="banner banner-danger">关联申请加载失败<view class="link-btn" @tap="loadLinks">重试</view></view>
+      <view v-else-if="linkFailed" class="banner banner-danger">
+        关联申请加载失败
+        <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="loadLinks">重试</view>
+      </view>
       <view v-else-if="!linkOptions.length" class="muted">暂无可关联的申请，可选择独立报销。</view>
-      <view v-for="a in linkOptions" :key="a.id" @tap="toggleLink(a.id)"><LinkedAppCard :app="a" :selected="form.relatedApplicationIds.includes(a.id)" /></view>
-      <button class="btn btn-primary btn-block" @tap="choosing = false">完成选择（{{ form.relatedApplicationIds.length }}）</button>
+      <view v-for="a in linkOptions" :key="a.id" hover-class="is-pressed" :hover-stay-time="60" @tap="toggleLink(a.id)">
+        <LinkedAppCard :app="a" :selected="form.relatedApplicationIds.includes(a.id)" />
+      </view>
+      <button class="btn btn-primary btn-block" hover-class="press-primary" :hover-stay-time="60" @tap="choosing = false">完成选择（{{ form.relatedApplicationIds.length }}）</button>
     </BottomSheet>
   </view>
 </template>
 
 <style scoped>
-.expense-page { padding-bottom: calc(240rpx + env(safe-area-inset-bottom)); }
-.locked { pointer-events: none; opacity: .7; }
-.modes { gap: 16rpx; margin: 12rpx 0; }
-.chosen { background: #edf3ff; border: 2rpx solid #2f6bff; border-radius: 12rpx; }
-.no-invoice { border-left: 6rpx solid #d97706; }
-.expense-bar { display: block; }
-.bar-total { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx; }
-.expense-bar .row .btn { flex: 1; }
+@import '../../styles/form.css';
+
+.expense-page {
+  padding-bottom: calc(240rpx + env(safe-area-inset-bottom));
+}
+
+.locked {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.draft-no {
+  margin: 0 8rpx 16rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-dirty {
+  margin-left: 20rpx;
+  color: var(--eas-warning-text);
+}
+
+.invoice-row {
+  min-height: 88rpx;
+}
+
+.no-invoice {
+  border-left: 6rpx solid var(--eas-warning);
+}
+
+.expense-bar {
+  display: block;
+}
+
+.bar-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.bar-label {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+
+.bar-amount {
+  font-size: var(--eas-fs-md);
+  color: var(--eas-ink);
+}
+
+.expense-bar .row .btn {
+  flex: 1;
+}
+.page-err {
+  margin: 0 8rpx 16rpx;
+}
 </style>
