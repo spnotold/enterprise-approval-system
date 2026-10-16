@@ -24,6 +24,8 @@
         <tika.version>2.9.2</tika.version>
         <pdfbox.version>3.0.3</pdfbox.version>
         <bucket4j.version>8.10.1</bucket4j.version>
+        <!-- Boot 3.3 自带的 1.19.x 使用 Docker API 1.32，Docker 29 起最低要求 1.40 -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
