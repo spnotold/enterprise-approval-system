@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { toApiError } from '@/lib/http'
 import { showError } from '@/lib/errors'
 import { useFieldErrors } from '@/composables/useFieldErrors'
+import AuthShell from '@/components/AuthShell.vue'
 import { useDictStore } from '@/stores/dict'
 import type { DeptOption } from '@/lib/types'
 
@@ -106,10 +107,10 @@ const strength = computed(() => {
   const p = form.password
   if (!p) return null
   const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((re) => re.test(p)).length
-  if (p.length < 8 || classes < 2) return { level: 1, text: '弱', color: 'var(--el-color-danger)' }
+  if (p.length < 8 || classes < 2) return { level: 1, text: '弱', color: 'var(--eas-danger)' }
   if ((p.length >= 12 && classes >= 3) || (p.length >= 10 && classes === 4))
-    return { level: 3, text: '强', color: 'var(--el-color-success)' }
-  return { level: 2, text: '中', color: 'var(--el-color-warning)' }
+    return { level: 3, text: '强', color: 'var(--eas-success)' }
+  return { level: 2, text: '中', color: 'var(--eas-warning-text)' }
 })
 
 // ---------- 校验规则 ----------
@@ -211,195 +212,153 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="brand">
-        <span class="logo">审</span>
-        <div>
-          <h1 class="brand-title">注册账号</h1>
-          <div class="muted small">提交后由管理员审核，审核通过即可登录</div>
-        </div>
-      </div>
+  <AuthShell>
+    <h1 class="auth-title">注册账号</h1>
+    <p class="auth-sub">提交后由管理员审核，审核通过即可登录</p>
 
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        label-position="top"
-        class="auth-form"
-        @submit.prevent="onSubmit"
-      >
-        <el-form-item label="用户名" prop="username" :error="fe.get('username')">
-          <el-input
-            v-model="form.username"
-            placeholder="字母开头，4-32 位字母、数字或下划线"
-            autocomplete="username"
-            maxlength="32"
-            @input="touch('username')"
-          >
-            <template #suffix>
-              <span v-if="avail.username === 'checking'" class="avail muted">
-                <el-icon class="is-loading"><Loading /></el-icon>检查中
-              </span>
-              <span v-else-if="avail.username === 'available'" class="avail ok">
-                <el-icon><CircleCheckFilled /></el-icon>可以使用
-              </span>
-              <span v-else-if="avail.username === 'taken'" class="avail bad">
-                <el-icon><CircleCloseFilled /></el-icon>已被占用
-              </span>
-            </template>
-          </el-input>
-        </el-form-item>
+    <el-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      label-position="top"
+      class="auth-form"
+      @submit.prevent="onSubmit"
+    >
+      <el-form-item label="用户名" prop="username" :error="fe.get('username')">
+        <el-input
+          v-model="form.username"
+          placeholder="字母开头，4-32 位字母、数字或下划线"
+          autocomplete="username"
+          maxlength="32"
+          @input="touch('username')"
+        >
+          <template #suffix>
+            <span v-if="avail.username === 'checking'" class="avail muted">
+              <el-icon class="is-loading"><Loading /></el-icon>检查中
+            </span>
+            <span v-else-if="avail.username === 'available'" class="avail ok">
+              <el-icon><CircleCheckFilled /></el-icon>可以使用
+            </span>
+            <span v-else-if="avail.username === 'taken'" class="avail bad">
+              <el-icon><CircleCloseFilled /></el-icon>已被占用
+            </span>
+          </template>
+        </el-input>
+      </el-form-item>
 
-        <el-form-item label="姓名" prop="realName" :error="fe.get('realName')">
-          <el-input
-            v-model="form.realName"
-            placeholder="真实姓名"
-            autocomplete="name"
-            maxlength="50"
-            @input="touch('realName')"
-          />
-        </el-form-item>
-
-        <el-form-item label="邮箱" prop="email" :error="fe.get('email')">
-          <el-input
-            v-model="form.email"
-            placeholder="用于接收审批提醒，也可用于登录"
-            autocomplete="email"
-            maxlength="100"
-            @input="touch('email')"
-          >
-            <template #suffix>
-              <span v-if="avail.email === 'checking'" class="avail muted">
-                <el-icon class="is-loading"><Loading /></el-icon>检查中
-              </span>
-              <span v-else-if="avail.email === 'available'" class="avail ok">
-                <el-icon><CircleCheckFilled /></el-icon>可以使用
-              </span>
-              <span v-else-if="avail.email === 'taken'" class="avail bad">
-                <el-icon><CircleCloseFilled /></el-icon>已被占用
-              </span>
-            </template>
-          </el-input>
-        </el-form-item>
-
-        <el-form-item label="密码" prop="password" :error="fe.get('password')">
-          <el-input
-            v-model="form.password"
-            type="password"
-            placeholder="8-64 位，至少包含字母和数字"
-            autocomplete="new-password"
-            maxlength="64"
-            show-password
-            @input="touch('password')"
-          />
-          <div v-if="strength" class="strength" aria-live="polite">
-            <div class="strength-bar">
-              <span
-                v-for="i in 3"
-                :key="i"
-                class="seg"
-                :style="i <= strength.level ? { background: strength.color } : undefined"
-              />
-            </div>
-            <span class="small" :style="{ color: strength.color }">密码强度：{{ strength.text }}</span>
-          </div>
-        </el-form-item>
-
-        <el-form-item label="确认密码" prop="confirm">
-          <el-input
-            v-model="form.confirm"
-            type="password"
-            placeholder="再次输入密码"
-            autocomplete="new-password"
-            maxlength="64"
-            show-password
-            @input="touch('confirm')"
-          />
-        </el-form-item>
-
-        <el-form-item label="申请加入的部门" prop="requestedDeptId" :error="fe.get('requestedDeptId')">
-          <el-select
-            v-model="form.requestedDeptId"
-            placeholder="请选择部门"
-            filterable
-            :loading="deptsLoading"
-            class="full"
-            @change="touch('requestedDeptId')"
-          >
-            <el-option v-for="d in depts" :key="d.id" :label="d.name" :value="d.id" />
-          </el-select>
-          <div v-if="deptsFailed" class="small text-danger">
-            部门列表加载失败，<el-button link type="primary" size="small" @click="loadDepts">重试</el-button>
-          </div>
-        </el-form-item>
-
-        <el-alert
-          v-if="formError"
-          :title="formError"
-          type="error"
-          show-icon
-          :closable="false"
-          class="form-alert"
+      <el-form-item label="姓名" prop="realName" :error="fe.get('realName')">
+        <el-input
+          v-model="form.realName"
+          placeholder="真实姓名"
+          autocomplete="name"
+          maxlength="50"
+          @input="touch('realName')"
         />
+      </el-form-item>
 
-        <el-button type="primary" size="large" native-type="submit" :loading="submitting" class="submit">
-          注 册
-        </el-button>
-      </el-form>
+      <el-form-item label="邮箱" prop="email" :error="fe.get('email')">
+        <el-input
+          v-model="form.email"
+          placeholder="用于接收审批提醒，也可用于登录"
+          autocomplete="email"
+          maxlength="100"
+          @input="touch('email')"
+        >
+          <template #suffix>
+            <span v-if="avail.email === 'checking'" class="avail muted">
+              <el-icon class="is-loading"><Loading /></el-icon>检查中
+            </span>
+            <span v-else-if="avail.email === 'available'" class="avail ok">
+              <el-icon><CircleCheckFilled /></el-icon>可以使用
+            </span>
+            <span v-else-if="avail.email === 'taken'" class="avail bad">
+              <el-icon><CircleCloseFilled /></el-icon>已被占用
+            </span>
+          </template>
+        </el-input>
+      </el-form-item>
 
-      <div class="switch-line">
-        已有账号？<router-link to="/login" class="link">返回登录</router-link>
-      </div>
+      <el-form-item label="密码" prop="password" :error="fe.get('password')">
+        <el-input
+          v-model="form.password"
+          type="password"
+          placeholder="8-64 位，至少包含字母和数字"
+          autocomplete="new-password"
+          maxlength="64"
+          show-password
+          @input="touch('password')"
+        />
+        <div v-if="strength" class="strength" aria-live="polite">
+          <div class="strength-bar">
+            <span
+              v-for="i in 3"
+              :key="i"
+              class="seg"
+              :style="i <= strength.level ? { background: strength.color } : undefined"
+            />
+          </div>
+          <span class="small" :style="{ color: strength.color }">密码强度：{{ strength.text }}</span>
+        </div>
+      </el-form-item>
+
+      <el-form-item label="确认密码" prop="confirm">
+        <el-input
+          v-model="form.confirm"
+          type="password"
+          placeholder="再次输入密码"
+          autocomplete="new-password"
+          maxlength="64"
+          show-password
+          @input="touch('confirm')"
+        />
+      </el-form-item>
+
+      <el-form-item label="申请加入的部门" prop="requestedDeptId" :error="fe.get('requestedDeptId')">
+        <el-select
+          v-model="form.requestedDeptId"
+          placeholder="请选择部门"
+          filterable
+          :loading="deptsLoading"
+          class="full"
+          @change="touch('requestedDeptId')"
+        >
+          <el-option v-for="d in depts" :key="d.id" :label="d.name" :value="d.id" />
+        </el-select>
+        <div v-if="deptsFailed" class="small text-danger">
+          部门列表加载失败，<el-button link type="primary" size="small" @click="loadDepts">重试</el-button>
+        </div>
+      </el-form-item>
+
+      <el-alert
+        v-if="formError"
+        :title="formError"
+        type="error"
+        show-icon
+        :closable="false"
+        class="form-alert"
+      />
+
+      <el-button type="primary" size="large" native-type="submit" :loading="submitting" class="submit">
+        注 册
+      </el-button>
+    </el-form>
+
+    <div class="switch-line">
+      已有账号？<router-link to="/login" class="link">返回登录</router-link>
     </div>
-  </div>
+  </AuthShell>
 </template>
 
 <style scoped>
-.auth-page {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-  box-sizing: border-box;
-  background:
-    radial-gradient(circle at 15% 20%, var(--el-color-primary-light-8), transparent 45%),
-    radial-gradient(circle at 85% 80%, var(--el-color-primary-light-9), transparent 50%),
-    var(--el-bg-color-page);
-}
-.auth-card {
-  width: 100%;
-  max-width: 460px;
-  padding: 32px 28px 24px;
-  box-sizing: border-box;
-  background: var(--el-bg-color);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--el-color-primary);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.brand-title {
-  margin: 0 0 2px;
-  font-size: 22px;
+.auth-title {
+  margin: 0;
+  font-size: var(--eas-fs-lg);
   font-weight: 600;
+  line-height: 1.4;
+}
+.auth-sub {
+  margin: 4px 0 24px;
+  color: var(--eas-ink-2);
 }
 .full {
   width: 100%;
@@ -408,14 +367,14 @@ async function onSubmit() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 12px;
+  font-size: var(--eas-fs-xs);
   white-space: nowrap;
 }
 .avail.ok {
-  color: var(--el-color-success);
+  color: var(--eas-success);
 }
 .avail.bad {
-  color: var(--el-color-danger);
+  color: var(--eas-danger);
 }
 .strength {
   display: flex;
@@ -434,9 +393,9 @@ async function onSubmit() {
 .seg {
   flex: 1;
   height: 4px;
-  border-radius: 2px;
-  background: var(--el-fill-color-dark);
-  transition: background 0.2s;
+  border-radius: var(--eas-radius-tag);
+  background: var(--eas-rule);
+  transition: background var(--eas-dur) var(--eas-ease);
 }
 .form-alert {
   margin-bottom: 16px;
@@ -446,20 +405,14 @@ async function onSubmit() {
 }
 .switch-line {
   margin-top: 16px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--el-text-color-regular);
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink-2);
 }
 .link {
-  color: var(--el-color-primary);
+  color: var(--eas-primary);
   text-decoration: none;
 }
 .link:hover {
   text-decoration: underline;
-}
-@media (max-width: 480px) {
-  .auth-card {
-    padding: 24px 18px 16px;
-  }
 }
 </style>
