@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // 登录：用户名或邮箱 + 密码；失败原因在按钮上方提示，演示账号点击即可填入
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Lock, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { api } from '@/lib/api'
 import { toApiError } from '@/lib/http'
 import { showError } from '@/lib/errors'
 
@@ -52,6 +53,16 @@ const rules: FormRules = {
 const loading = ref(false)
 const inlineError = ref<{ text: string; type: 'error' | 'warning' } | null>(null)
 const demoOpen = ref<string[]>([])
+// 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
+const demoMode = ref(false)
+
+onMounted(async () => {
+  try {
+    demoMode.value = (await api.dict.publicConfig()).demo === true
+  } catch {
+    demoMode.value = false
+  }
+})
 
 /** 只接受站内路径，防止开放重定向 */
 function redirectTarget(): string {
@@ -149,7 +160,7 @@ function fillDemo(a: DemoAccount) {
         还没有账号？<router-link to="/register" class="link">注册新账号</router-link>
       </div>
 
-      <el-collapse v-model="demoOpen" class="demo">
+      <el-collapse v-if="demoMode" v-model="demoOpen" class="demo">
         <el-collapse-item name="demo">
           <template #title>
             <span class="demo-title">演示账号</span>

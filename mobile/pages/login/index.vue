@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { api } from '@/lib/api'
 import { toApiError } from '@/lib/http'
 import { auth } from '@/stores/auth'
 import { showError, toast } from '@/utils/feedback'
@@ -12,6 +13,8 @@ const showPwd = ref(false)
 const busy = ref(false)
 const error = ref('')
 const showDemo = ref(false)
+// 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
+const demoMode = ref(false)
 let redirect = ''
 
 const DEMO_ACCOUNTS = [
@@ -25,9 +28,17 @@ const DEMO_ACCOUNTS = [
   { username: 'admin', name: '系统管理员', desc: '仅管理权限（请用 Web 端）' },
 ]
 
-onLoad((q) => {
+onLoad(async (q) => {
   redirect = q?.redirect ? decodeURIComponent(q.redirect) : ''
-  if (auth.isLoggedIn) leave()
+  if (auth.isLoggedIn) {
+    leave()
+    return
+  }
+  try {
+    demoMode.value = (await api.dict.publicConfig()).demo === true
+  } catch {
+    demoMode.value = false
+  }
 })
 
 function leave(): void {
@@ -118,11 +129,11 @@ function goRegister(): void {
       <button class="btn btn-primary btn-block login-btn" :loading="busy" :disabled="busy" @tap="submit">登录</button>
       <view class="row between">
         <view class="link-btn" @tap="goRegister">注册新账号</view>
-        <view class="link-btn" @tap="showDemo = !showDemo">{{ showDemo ? '收起演示账号' : '演示账号' }}</view>
+        <view v-if="demoMode" class="link-btn" @tap="showDemo = !showDemo">{{ showDemo ? '收起演示账号' : '演示账号' }}</view>
       </view>
     </view>
 
-    <view v-if="showDemo" class="card">
+    <view v-if="demoMode && showDemo" class="card">
       <view class="card-title">演示账号 <text class="muted">密码均为 Demo@2026</text></view>
       <view v-for="d in DEMO_ACCOUNTS" :key="d.username" class="demo" @tap="fillDemo(d.username)">
         <view class="flex1">
