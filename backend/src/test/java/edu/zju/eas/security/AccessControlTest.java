@@ -56,6 +56,20 @@ class AccessControlTest extends IntegrationTestBase {
     }
 
     @Test
+    void adminAsDeptHeadGainsNoDepartmentBusinessScope() throws Exception {
+        long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
+        MvcResult head = call(put("/admin/departments/1/head"), "admin", map("userId", uid("admin"), "reason", "管理员兼任研发部负责人"));
+        assertThat(code(head)).isEqualTo(0);
+        // 负责人角色照常同步，但管理员不因此获得本部门查询与统计（设计文档权限矩阵：系统管理员此项为 —）
+        assertThat(data(call(get("/me"), "admin", null)).path("permissions").toString())
+                .doesNotContain("APP_READ_DEPT").doesNotContain("STATS_DEPT");
+        assertThat(call(get("/applications?scope=dept"), "admin", null).getResponse().getStatus()).isEqualTo(403);
+        assertThat(call(get("/stats/dept"), "admin", null).getResponse().getStatus()).isEqualTo(403);
+        // 与详情口径一致
+        assertThat(call(get("/applications/" + app), "admin", null).getResponse().getStatus()).isEqualTo(404);
+    }
+
+    @Test
     void t15_pendingRegistrationCannotLogIn() throws Exception {
         MvcResult r = call(post("/auth/login"), null, map("account", "pending_he", "password", PASSWORD));
         assertThat(r.getResponse().getStatus()).isEqualTo(403);
