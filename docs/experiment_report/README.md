@@ -123,5 +123,5 @@ Compose 配置包括 PostgreSQL、MinIO 初始化、Mailpit、后端和 Nginx。
 - [系统设计文档](../design_document.md)
 - [测试报告](../test_report.md)
 - [使用手册](../user_guide.md)
-- [开发交接与当前进度](../DEVELOPMENT_HANDOFF.md)
+- [开发交接记录（归档）](../archive/DEVELOPMENT_HANDOFF.md)
 - 后端实现：[FlowEngine.java](../../backend/src/main/java/edu/zju/eas/service/flow/FlowEngine.java)、[IdempotencyService.java](../../backend/src/main/java/edu/zju/eas/service/IdempotencyService.java)、[AccessPolicy.java](../../backend/src/main/java/edu/zju/eas/service/AccessPolicy.java)、[FileService.java](../../backend/src/main/java/edu/zju/eas/service/file/FileService.java)；数据库迁移位于 `backend/src/main/resources/db/migration/`。

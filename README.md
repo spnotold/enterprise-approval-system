@@ -4,7 +4,7 @@
 
 作者：李宇航
 
-当前进度与本机运行方式见[开发进度](docs/DEVELOPMENT_HANDOFF.md)，测试结果见[测试报告](docs/test_report.md)。
+使用说明见[使用手册](docs/user_guide.md)，测试结果见[测试报告](docs/test_report.md)。
 
 ## 技术栈
 
@@ -34,13 +34,13 @@ enterprise-approval-system
 │       └── 01_create_app_user.sh   # 创建运行账号 eas_app，设置默认权限
 └── docs
     ├── design_document.md  # 设计文档
-    ├── design_document.docx
     ├── user_guide.md       # 使用手册
     ├── test_report.md      # 测试报告
     ├── summary.md          # 总结
     ├── git_log.txt         # git log 导出
-    ├── demo_video.md       # 演示视频链接与说明
-    └── experiment_report   # 实验报告（含封面）
+    ├── demo_video.md       # 演示视频说明（录像在 demo/）
+    ├── experiment_report   # 实验报告（含封面）
+    └── archive             # 归档：开发过程交接记录、设计文档 Word 原稿
 ```
 
 后端包结构位于 `backend/src/main/java/edu/zju/eas`：`config`、`controller`、`dto`、`model`、`repository`、`response`、`service`（含 `flow` 流程引擎、`notify` 通知、`job` 定时任务）。数据库脚本位于 `backend/src/main/resources/db`。
