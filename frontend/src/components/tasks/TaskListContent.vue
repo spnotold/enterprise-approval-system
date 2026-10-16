@@ -108,7 +108,7 @@ function switchKind() {
         @row-click="onRowClick"
       >
         <el-table-column label="申请编号" min-width="190">
-          <template #default="{ row }"><router-link :to="target(row)" class="app-link eas-tnum">{{ row.appNo }}</router-link><el-tag v-if="pending && row.overdue" type="danger" size="small" class="overdue">已超时</el-tag></template>
+          <template #default="{ row }"><router-link :to="target(row as TaskItem)" class="app-link eas-tnum">{{ row.appNo }}</router-link><el-tag v-if="pending && row.overdue" type="danger" size="small" class="overdue">已超时</el-tag></template>
         </el-table-column>
         <el-table-column label="类型 / 模板" min-width="150">
           <template #default="{ row }"><div>{{ APP_TYPE_LABEL[row.type as AppType] }}</div><div v-if="row.type === 'CUSTOM'" class="muted small">{{ row.templateName }}</div></template>
@@ -129,7 +129,7 @@ function switchKind() {
         <el-table-column v-if="!pending" label="处理意见" min-width="200" show-overflow-tooltip><template #default="{ row }"><span :class="{ 'text-danger': row.status === 'REJECTED' }">{{ row.comment || '—' }}</span></template></el-table-column>
         <el-table-column label="操作" width="105" :fixed="isMobile ? false : 'right'">
           <template #default="{ row }">
-            <div class="row-actions"><el-button link type="primary" :disabled="loading" @click.stop="open(row)">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</el-button></div>
+            <div class="row-actions"><el-button link type="primary" :disabled="loading" @click.stop="open(row as TaskItem)">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</el-button></div>
           </template>
         </el-table-column>
         <template #empty>
