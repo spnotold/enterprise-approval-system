@@ -496,9 +496,10 @@ public class FlowEngine {
         historyMapper.insert(h);
 
         String fromName = users.name(task.getAssigneeId());
-        // 日志 comment 只存转办原因：转办双方（from/to）已完整记录在 assignee_history 与审计日志中，
-        // 若继续拼接“由 X 转给 Y：”前缀，500 字原因会超出 approval_log.comment VARCHAR(500) 导致 500 与事务回滚。
-        appendLog(app, node, task, admin, "TRANSFER", req.reason(),
+        // 前缀加 500 字原因可能超出 approval_log.comment VARCHAR(500)，超长时截断原因部分
+        String comment = "由 " + fromName + " 转给 " + to.getRealName() + "：" + req.reason();
+        if (comment.length() > 500) comment = comment.substring(0, 499) + "…";
+        appendLog(app, node, task, admin, "TRANSFER", comment,
                 "IN_APPROVAL", "IN_APPROVAL", versionNo(node));
         AuditTrail.record(taskId, Map.of("assigneeId", task.getAssigneeId(), "assigneeName", fromName),
                 Map.of("assigneeId", to.getId(), "assigneeName", to.getRealName(), "newTaskId", newTask.getId(),

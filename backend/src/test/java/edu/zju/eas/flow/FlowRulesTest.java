@@ -131,10 +131,10 @@ class FlowRulesTest extends IntegrationTestBase {
         // 原待办已转办，新待办派给 ceo_zhao
         assertThat(pendingTask(app, "rd_head_li")).isNull();
         assertThat(pendingTask(app, "ceo_zhao")).isNotNull();
-        // 日志 comment 完整保存转办原因，且不因拼接前缀超长回滚
-        assertThat(jdbc.queryForObject(
-                "SELECT comment FROM approval_log WHERE application_id = ? AND action = 'TRANSFER'", String.class, app))
-                .isEqualTo(reason);
+        // 日志保留转办双方，超长部分截断，不因拼接前缀超长回滚
+        String comment = jdbc.queryForObject(
+                "SELECT comment FROM approval_log WHERE application_id = ? AND action = 'TRANSFER'", String.class, app);
+        assertThat(comment).startsWith("由 李研 转给 ").endsWith("…").hasSize(500);
     }
 
     @Test
