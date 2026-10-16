@@ -70,6 +70,20 @@ class AccessControlTest extends IntegrationTestBase {
     }
 
     @Test
+    void adminAsDeptHeadGainsNoAppCreate() throws Exception {
+        MvcResult head = call(put("/admin/departments/1/head"), "admin", map("userId", uid("admin"), "reason", "管理员兼任研发部负责人"));
+        assertThat(code(head)).isEqualTo(0);
+        // 设计文档权限矩阵：系统管理员「新建、编辑、提交、撤回本人申请」为 —，兼任负责人也不获得 APP_CREATE
+        assertThat(data(call(get("/me"), "admin", null)).path("permissions").toString())
+                .doesNotContain("APP_CREATE");
+        assertThat(call(post("/applications/travel"), "admin", travelBody(100_000)).getResponse().getStatus()).isEqualTo(403);
+        // 提交接口同样拒绝（用员工的单子验证 submit 的 @PreAuthorize）
+        long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
+        MvcResult r = action("/applications/" + app + "/submit", "admin", map("appVersion", version(app)), key());
+        assertThat(r.getResponse().getStatus()).isEqualTo(403);
+    }
+
+    @Test
     void t15_pendingRegistrationCannotLogIn() throws Exception {
         MvcResult r = call(post("/auth/login"), null, map("account", "pending_he", "password", PASSWORD));
         assertThat(r.getResponse().getStatus()).isEqualTo(403);
