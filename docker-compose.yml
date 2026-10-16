@@ -59,7 +59,7 @@ services:
   mailpit:
     image: axllent/mailpit
     ports:
-      - "${MAILPIT_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"   # 演示收件箱仅本机可访问，远程用 ssh -L 转发
 
   backend:
     build: ./backend

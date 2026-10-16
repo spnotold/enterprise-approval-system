@@ -57,7 +57,9 @@ function onNumber(f: FormField, v: number | null | undefined) {
     setValue(f.key, null)
     return
   }
-  setValue(f.key, v.toFixed(f.rules?.precision ?? 0))
+  const precision = f.rules?.precision
+  // 未配置精度时最多 4 位小数，但不补尾随零（5 存为 "5" 而不是 "5.0000"）
+  setValue(f.key, precision === undefined ? String(Number(v.toFixed(4))) : v.toFixed(precision))
 }
 
 function pad(n: number) {
@@ -150,7 +152,7 @@ function maxLength(f: FormField): number {
           <el-input-number
             v-else-if="f.type === 'NUMBER'"
             :model-value="numberValue(f.key)"
-            :precision="f.rules?.precision ?? 0"
+            :precision="f.rules?.precision"
             :step="f.rules?.step ? Number(f.rules.step) : 1"
             controls-position="right"
             :value-on-clear="null"

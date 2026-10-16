@@ -2184,7 +2184,7 @@ server {
 }
 ```
 
-只有 nginx（80）和 mailpit 的 Web 界面（8025）对宿主机开放端口，数据库与 MinIO 只在 compose 内部网络可见。`.env` 中需要填写 `DB_OWNER_PASSWORD`、`DB_PASSWORD`、`MINIO_ROOT_USER`、`MINIO_ROOT_PASSWORD`、`MINIO_APP_ACCESS_KEY`、`MINIO_APP_SECRET_KEY`、`JWT_SECRET`。`.env` 不进 git，仓库只提供 `template.env`。
+只有 nginx（80）对外开放端口；mailpit 的 Web 界面（8025）只绑定宿主机 `127.0.0.1`，仅本机可访问；数据库与 MinIO 只在 compose 内部网络可见。`.env` 中需要填写 `DB_OWNER_PASSWORD`、`DB_PASSWORD`、`MINIO_ROOT_USER`、`MINIO_ROOT_PASSWORD`、`MINIO_APP_ACCESS_KEY`、`MINIO_APP_SECRET_KEY`、`JWT_SECRET`。`.env` 不进 git，仓库只提供 `template.env`。
 
 Flyway 脚本：
 
