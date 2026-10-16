@@ -153,10 +153,31 @@ function draw(): void {
   paint()
 }
 
-function onTap(e: unknown): void {
-  if (!chart) return
-  chart.touchLegend?.(e)
-  chart.showToolTip?.(e)
+interface ChartTouchEvent {
+  changedTouches?: ArrayLike<{ x?: number; y?: number; clientX?: number; clientY?: number }>
+}
+
+function showTooltip(x: number, y: number): void {
+  if (!chart || disposed) return
+  // uCharts prefers clientX when present, even though uni canvas supplies local x/y.
+  // Pass only canvas coordinates so a chart nested in a scrolled panel hits the right item.
+  const event = { changedTouches: [{ x, y }] }
+  chart.touchLegend?.(event)
+  chart.showToolTip?.(event)
+}
+
+function onTap(e: ChartTouchEvent): void {
+  const point = e.changedTouches?.[0]
+  if (!chart || !point) return
+  if (typeof point.x === 'number' && typeof point.y === 'number') {
+    showTooltip(point.x, point.y)
+  } else if (typeof point.clientX === 'number' && typeof point.clientY === 'number' && instance) {
+    const { clientX, clientY } = point
+    uni.createSelectorQuery().in(instance.proxy).select(`#${uid}`).boundingClientRect((rect) => {
+      const box = rect as UniApp.NodeInfo | null
+      if (box && typeof box.left === 'number' && typeof box.top === 'number') showTooltip(clientX - box.left, clientY - box.top)
+    }).exec()
+  }
 }
 
 onMounted(() => {

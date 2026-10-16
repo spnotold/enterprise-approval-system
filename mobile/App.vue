@@ -456,8 +456,8 @@ textarea {
 .filter-chip {
   display: flex;
   align-items: center;
-  height: 72rpx;
-  min-height: 72rpx;
+  height: 88rpx;
+  min-height: 88rpx;
   padding: 0 24rpx;
   margin-right: 16rpx;
   background: var(--eas-surface);

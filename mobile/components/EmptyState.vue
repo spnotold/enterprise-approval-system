@@ -11,7 +11,7 @@ const emit = defineEmits<{ action: [] }>()
   <view class="empty">
     <uni-icons type="info" size="36" color="var(--eas-rule-strong)" />
     <view class="empty-text">{{ text || '暂无数据' }}</view>
-    <view v-if="actionText" class="link-btn" @tap="emit('action')">{{ actionText }}</view>
+    <view v-if="actionText" class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="emit('action')">{{ actionText }}</view>
   </view>
 </template>
 
