@@ -31,7 +31,7 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
     <div class="page-header">
       <div>
         <h2 class="page-title">邮件投递</h2>
-        <div class="page-subtitle">通知邮件的发送记录。邮件只含标题、编号、状态等摘要，不含金额明细和票据。</div>
+        <div class="page-subtitle">通知邮件的发送记录。邮件只含标题、编号、状态等摘要，不含金额明细和票据；无业务正文读取授权时标题脱敏为「审批通知 #编号」。</div>
       </div>
     </div>
 
