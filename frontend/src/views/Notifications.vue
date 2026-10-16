@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
-import { showError } from '@/lib/errors'
+import { errorText, showError } from '@/lib/errors'
 import { NOTIFICATION_TYPE_LABEL } from '@/lib/labels'
 import { fmtDateTime, fromNow } from '@/lib/datetime'
 import { useListQuery } from '@/composables/useListQuery'
@@ -22,7 +22,7 @@ const list = useListQuery<{ unreadOnly: boolean }, NotificationItem>({
   defaults: { unreadOnly: false },
   fetch: (q) => api.notifications.list(q),
 })
-const { filters, records, total, page, size, loading, loaded } = list
+const { filters, records, total, page, size, loading, loaded, error } = list
 
 const tab = computed({
   get: () => (filters.unreadOnly ? 'unread' : 'all'),
@@ -75,6 +75,29 @@ async function open(n: NotificationItem) {
   else if (filters.unreadOnly) await list.load()
 }
 
+/** Ctrl / ⌘ 点击或中键点击：在新标签页打开（不标记已读） */
+function openInNewTab(n: NotificationItem) {
+  const target = noticeTarget(n)
+  if (target) window.open(router.resolve(target).href, '_blank', 'noopener')
+}
+
+function activate(n: NotificationItem, e: MouseEvent) {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault()
+    openInNewTab(n)
+    return
+  }
+  void open(n)
+}
+
+function onAuxClick(n: NotificationItem, e: MouseEvent) {
+  if (e.button !== 1) return
+  // 中键点在行尾操作按钮上时不触发
+  if ((e.target as HTMLElement | null)?.closest?.('.notice-actions')) return
+  e.preventDefault()
+  openInNewTab(n)
+}
+
 async function markAll() {
   markingAll.value = true
   try {
@@ -109,7 +132,7 @@ watch(
       <div class="toolbar">
         <el-button :icon="Refresh" :loading="loading" @click="list.load()">刷新</el-button>
         <el-button type="primary" plain :loading="markingAll" :disabled="!hasUnread" @click="markAll">
-          全部已读
+          全部标为已读
         </el-button>
       </div>
     </div>
@@ -124,22 +147,37 @@ watch(
         </el-tab-pane>
       </el-tabs>
 
-      <el-skeleton v-if="!loaded" :rows="6" animated />
+      <el-result v-if="error" icon="warning" :title="errorText(error, '通知加载失败')">
+        <template #extra><el-button type="primary" :loading="loading" @click="list.load()">重新加载</el-button></template>
+      </el-result>
+      <el-skeleton v-else-if="!loaded" :rows="6" animated />
       <div v-else v-loading="loading">
-        <ListEmpty v-if="!records.length" :description="filters.unreadOnly ? '没有未读通知' : '暂无通知'" />
+        <ListEmpty
+          v-if="!records.length"
+          :description="filters.unreadOnly ? '没有未读通知。新的审批通知到达时会出现在这里。' : '暂无通知。新的审批通知到达时会出现在这里。'"
+        />
         <ul v-else class="notice-list">
-          <li v-for="n in records" :key="n.id" class="notice-row" :class="{ unread: !n.read }">
-            <button type="button" class="notice-main" @click="open(n)">
+          <li
+            v-for="n in records"
+            :key="n.id"
+            class="notice-row"
+            :class="{ unread: !n.read }"
+            @click="activate(n, $event)"
+            @auxclick="onAuxClick(n, $event)"
+            @mousedown.middle.prevent
+          >
+            <span class="notice-marker"><i v-if="!n.read" class="unread-dot" aria-label="未读" /></span>
+            <button type="button" class="notice-main" @click.stop="activate(n, $event)">
               <span class="notice-head">
-                <i v-if="!n.read" class="unread-dot" aria-label="未读" />
                 <el-tag size="small" :type="TYPE_TAG[n.type] ?? 'info'" disable-transitions>
                   {{ NOTIFICATION_TYPE_LABEL[n.type] ?? n.type }}
                 </el-tag>
                 <span class="notice-title">{{ n.title }}</span>
               </span>
               <span v-if="n.content" class="notice-content pre-wrap">{{ n.content }}</span>
-              <span class="muted small" :title="fmtDateTime(n.createdAt, true)">
-                {{ fmtDateTime(n.createdAt) }} · {{ fromNow(n.createdAt) }}
+              <span class="notice-meta muted small" :title="fmtDateTime(n.createdAt, true)">
+                <span>{{ fmtDateTime(n.createdAt) }}</span>
+                <span>{{ fromNow(n.createdAt) }}</span>
               </span>
             </button>
             <div class="notice-actions">
@@ -147,13 +185,12 @@ watch(
                 v-if="!n.read"
                 link
                 type="primary"
-                size="small"
                 :loading="busyId === n.id"
                 @click.stop="markOne(n)"
               >
                 标为已读
               </el-button>
-              <span v-else class="muted small">已读</span>
+              <span v-else class="muted small read-label">已读</span>
             </div>
           </li>
         </ul>
@@ -197,10 +234,17 @@ watch(
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  padding: 0 8px;
+  cursor: pointer;
   border-bottom: 1px solid var(--el-border-color-extra-light);
+  transition: background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .notice-row:last-child {
   border-bottom: none;
+}
+.notice-row:hover,
+.notice-row:focus-within {
+  background: var(--eas-paper);
 }
 .notice-main {
   flex: 1;
@@ -209,19 +253,18 @@ watch(
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  padding: 14px 8px;
+  padding: 14px 0;
   border: none;
   background: transparent;
   text-align: left;
   font: inherit;
   color: var(--el-text-color-regular);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--eas-radius-panel);
 }
-.notice-main:hover,
 .notice-main:focus-visible {
-  background: var(--el-fill-color-light);
-  outline: none;
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .notice-head {
   display: flex;
@@ -236,34 +279,71 @@ watch(
   white-space: nowrap;
   color: var(--el-text-color-primary);
 }
-.unread .notice-title {
-  font-weight: 600;
+.notice-marker {
+  width: 6px;
+  flex: 0 0 6px;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  margin-top: 14px;
 }
 .unread-dot {
   flex-shrink: 0;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--el-color-danger);
+  background: var(--eas-primary);
 }
 .notice-content {
-  font-size: 13px;
+  font-size: var(--eas-fs-sm);
   line-height: 1.6;
+}
+.notice-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-variant-numeric: tabular-nums;
 }
 .notice-actions {
   flex-shrink: 0;
   padding-top: 14px;
+  min-height: 32px;
   min-width: 64px;
   text-align: right;
 }
+/* “标为已读”默认透明，行悬停 / 行内聚焦时显示；触屏与窄屏常显 */
+.notice-actions:has(.el-button) {
+  opacity: 0;
+  transition: opacity var(--eas-dur-fast) var(--eas-ease);
+}
+.notice-row:hover .notice-actions,
+.notice-row:focus-within .notice-actions {
+  opacity: 1;
+}
+@media (hover: none), (max-width: 768px) {
+  .notice-actions:has(.el-button) {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notice-row,
+  .notice-actions:has(.el-button) {
+    transition: none;
+  }
+}
 @media (max-width: 768px) {
   .notice-row {
-    flex-direction: column;
-    gap: 0;
+    flex-wrap: wrap;
+    gap: 0 12px;
   }
   .notice-actions {
-    padding: 0 8px 12px;
+    width: 100%;
+    padding: 0 0 12px 18px;
+    box-sizing: border-box;
     text-align: left;
+  }
+  .notice-head {
+    flex-wrap: wrap;
   }
   .notice-title {
     white-space: normal;

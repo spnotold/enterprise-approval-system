@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
 import type { AppType, TaskItem } from '@/lib/types'
-import { APP_TYPE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TAG, toOptions } from '@/lib/labels'
+import { APP_TYPE_LABEL, TASK_STATUS_LABEL, toOptions } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { errorText } from '@/lib/errors'
 import { useListQuery } from '@/composables/useListQuery'
 import { useBreakpoint } from '@/composables/useBreakpoint'
+import { useRowNavigation } from '@/composables/useRowNavigation'
 import { useNoticeStore } from '@/stores/notice'
 import ListEmpty from '@/components/ListEmpty.vue'
 import MoneyText from '@/components/MoneyText.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import '@/styles/listRows.css'
 
 const props = defineProps<{ kind: 'pending' | 'done' }>()
 const route = useRoute()
@@ -54,13 +56,14 @@ const { filters, page, size, records, total, loading, loaded, error, hasFilters 
 void list.load()
 watch(() => notice.lastAppEvent, (event) => { if (event) hasUpdates.value = true })
 
-function target(value: object) {
-  const row = value as TaskItem
+function target(row: TaskItem): RouteLocationRaw {
   return { path: `/applications/${row.applicationId}`, query: pending.value && row.status === 'PENDING' ? { from: 'pending' } : undefined }
 }
-function open(row: object) {
-  if (!loading.value) void router.push(target(row))
-}
+const { wrap: navWrap, open, onRowClick } = useRowNavigation<TaskItem>({
+  target,
+  rows: records,
+  enabled: () => !loading.value,
+})
 function switchKind() {
   // 只保留当前已经查询的筛选；切换待办 / 已办时从第一页开始。
   const { page: _page, ...query } = route.query
@@ -69,7 +72,7 @@ function switchKind() {
 </script>
 
 <template>
-  <div class="page">
+  <div ref="navWrap" class="page">
     <div class="page-header">
       <div>
         <h2 class="page-title">{{ title }}</h2>
@@ -84,21 +87,28 @@ function switchKind() {
       <el-button link type="primary" :disabled="loading" @click="list.load()">刷新列表</el-button>
     </el-alert>
     <el-card shadow="never">
-      <el-form class="toolbar" @submit.prevent="list.search()">
+      <el-form class="toolbar list-filters" @submit.prevent="list.search()">
         <el-input v-model="filters.keyword" placeholder="编号或标题" aria-label="编号或标题" :prefix-icon="Search" maxlength="100" clearable @clear="list.search()" />
         <el-select v-model="filters.type" placeholder="全部申请类型" aria-label="申请类型" clearable @change="list.search()">
           <el-option v-for="option in typeOptions" :key="option.value" :value="option.value" :label="option.label" />
         </el-select>
         <el-button native-type="submit" type="primary" :disabled="loading">查询</el-button>
-        <el-button v-if="hasFilters" :disabled="loading" @click="list.reset()">清空筛选</el-button>
+        <el-button v-if="hasFilters" link type="primary" :disabled="loading" @click="list.reset()">重置</el-button>
       </el-form>
       <el-skeleton v-if="!loaded && loading" class="list-body" :rows="8" animated />
       <el-result v-else-if="error" icon="warning" :title="errorText(error, '列表加载失败')">
         <template #extra><el-button type="primary" :loading="loading" @click="list.load()">重新加载</el-button></template>
       </el-result>
-      <el-table v-else v-loading="loading" :data="records" row-key="taskId" class="list-body" @row-dblclick="open">
+      <el-table
+        v-else
+        v-loading="loading"
+        :data="records"
+        row-key="taskId"
+        class="list-body eas-row-table eas-row-clickable"
+        @row-click="onRowClick"
+      >
         <el-table-column label="申请编号" min-width="190">
-          <template #default="{ row }"><router-link :to="target(row)" class="app-link">{{ row.appNo }}</router-link><el-tag v-if="pending && row.overdue" type="danger" size="small" class="overdue">已超时</el-tag></template>
+          <template #default="{ row }"><router-link :to="target(row)" class="app-link eas-tnum">{{ row.appNo }}</router-link><el-tag v-if="pending && row.overdue" type="danger" size="small" class="overdue">已超时</el-tag></template>
         </el-table-column>
         <el-table-column label="类型 / 模板" min-width="150">
           <template #default="{ row }"><div>{{ APP_TYPE_LABEL[row.type as AppType] }}</div><div v-if="row.type === 'CUSTOM'" class="muted small">{{ row.templateName }}</div></template>
@@ -107,14 +117,28 @@ function switchKind() {
         <el-table-column label="申请人 / 部门" min-width="140"><template #default="{ row }"><div>{{ row.applicant.realName }}</div><div class="muted small">{{ row.deptName || '—' }}</div></template></el-table-column>
         <el-table-column label="金额" width="145" align="right"><template #default="{ row }"><MoneyText :cents="row.amountCents" /></template></el-table-column>
         <el-table-column prop="nodeName" label="审批节点" min-width="140" />
-        <el-table-column label="任务状态" width="100"><template #default="{ row }"><el-tag :type="TASK_STATUS_TAG[row.status as keyof typeof TASK_STATUS_TAG]" size="small">{{ TASK_STATUS_LABEL[row.status as keyof typeof TASK_STATUS_LABEL] }}</el-tag></template></el-table-column>
+        <el-table-column label="任务状态" width="100">
+          <template #default="{ row }">
+            <span class="dot-status"><i class="dot" :class="`st-${String(row.status).toLowerCase()}`" />{{ TASK_STATUS_LABEL[row.status as keyof typeof TASK_STATUS_LABEL] ?? row.status }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="申请状态" width="105"><template #default="{ row }"><StatusTag :status="row.appStatus" size="small" :show-node="false" /></template></el-table-column>
         <el-table-column label="提交时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.submittedAt) }}</template></el-table-column>
         <el-table-column v-if="pending" label="分配时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template></el-table-column>
         <el-table-column v-else label="处理时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.actedAt) }}</template></el-table-column>
         <el-table-column v-if="!pending" label="处理意见" min-width="200" show-overflow-tooltip><template #default="{ row }"><span :class="{ 'text-danger': row.status === 'REJECTED' }">{{ row.comment || '—' }}</span></template></el-table-column>
-        <el-table-column label="操作" width="105" fixed="right"><template #default="{ row }"><el-button link type="primary" :disabled="loading" @click="open(row)">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</el-button></template></el-table-column>
-        <template #empty><ListEmpty :filtered="hasFilters" :description="hasFilters ? undefined : pending ? '暂无待办' : '暂无已办记录'" @reset="list.reset()" /></template>
+        <el-table-column label="操作" width="105" :fixed="isMobile ? false : 'right'">
+          <template #default="{ row }">
+            <div class="row-actions"><el-button link type="primary" :disabled="loading" @click.stop="open(row)">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</el-button></div>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <ListEmpty
+            :filtered="hasFilters"
+            :description="hasFilters ? undefined : pending ? '暂无待办。新的审批到达时会出现在这里。' : '暂无已办记录。处理过的审批会出现在这里。'"
+            @reset="list.reset()"
+          />
+        </template>
       </el-table>
       <div v-if="total > 0 && !error" class="pager">
         <el-pagination :current-page="page" :page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" :disabled="loading" :layout="isMobile ? 'prev, pager, next' : 'total, sizes, prev, pager, next, jumper'" @current-change="list.onPageChange" @size-change="list.onSizeChange" />
@@ -127,4 +151,12 @@ function switchKind() {
 .list-body { margin-top: 16px; }
 .app-link { color: var(--el-color-primary); text-decoration: none; }
 .overdue { margin-left: 6px; }
+/* 任务状态：6px 圆点 + 文字 */
+.dot-status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dot-status .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; }
+.st-pending { background: var(--eas-primary); }
+.st-approved { background: var(--eas-success); }
+.st-rejected { background: var(--eas-danger); }
+.st-canceled { background: var(--eas-muted); }
+.st-transferred { background: var(--eas-warning); }
 </style>
