@@ -1,3 +1,69 @@
+commit 4b44931d1b0174d1a3d5e68ced0c31d1fbc85398
+Merge: d5ac0d4 058029a
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 05:46:22 2026 -0400
+
+    Merge branch 'feature/docker-dev' into dev
+
+commit 058029addf869f8e5563636d9586a311cf846184
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 05:46:22 2026 -0400
+
+    docs: correct statements that this machine has no Docker
+    
+    Docker 29.8 is installed here and the deployment stack runs on it. The
+    test report now records that both the Testcontainers and the configured
+    PostgreSQL modes were run on this machine.
+
+ docs/archive/DEVELOPMENT_HANDOFF.md           |   4 +++-
+ docs/archive/README.md                        |   2 +-
+ docs/design_document.docx                     | Bin 12303001 -> 12323374 bytes
+ docs/design_document.md                       |   1 +
+ docs/experiment_report/README.md              |   2 +-
+ docs/experiment_report/experiment_report.docx | Bin 18024 -> 18054 bytes
+ docs/experiment_report/experiment_report.pdf  | Bin 327839 -> 328496 bytes
+ docs/test_report.md                           |   6 ++++--
+ 8 files changed, 10 insertions(+), 5 deletions(-)
+
+commit 77ea4602c74696f1d2cdc083f2213891ed705b5d
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 05:46:22 2026 -0400
+
+    feat(dev): publish dependency ports for local development
+    
+    docker-compose.dev.yml exposes PostgreSQL, MinIO and Mailpit SMTP on
+    127.0.0.1 so `mvn spring-boot:run` can reach them, and the README now
+    loads .env and maps its variables to the names the backend reads.
+    Verified end to end in an isolated compose project.
+
+ .gitignore             |  1 +
+ README.md              | 17 ++++++++++++++---
+ docker-compose.dev.yml | 12 ++++++++++++
+ 3 files changed, 27 insertions(+), 3 deletions(-)
+
+commit 09bf5eec208f6e2aeaf0a0f175b528c4b539b7a4
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 05:46:22 2026 -0400
+
+    build(test): upgrade Testcontainers to 1.21.4
+    
+    Spring Boot 3.3 manages Testcontainers 1.19.8, which speaks Docker API
+    1.32; Docker 29 rejects anything below 1.40, so the Testcontainers path
+    could not start. Verified with Docker 29.8: 62 tests pass without any
+    EAS_TEST_PG_* variables.
+
+ backend/pom.xml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+commit d5ac0d47ffd1adfb4a0f4d0478797600ab60e0c1
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 04:55:53 2026 -0400
+
+    docs: export git log with file statistics
+
+ docs/git_log.txt | 1012 ++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 976 insertions(+), 36 deletions(-)
+
 commit 54bddef0ba921fe41497be383077131a9486f823
 Merge: 91a74c2 64b205a
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
