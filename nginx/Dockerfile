@@ -16,6 +16,8 @@ RUN npm run build:h5
 
 FROM nginx:1.27-alpine
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+# 启动时按 TRUSTED_PROXY_CIDR 生成 realip 配置；未设置时不生成，行为与不加此脚本相同
+COPY --chmod=755 nginx/trusted-proxy.sh /docker-entrypoint.d/25-trusted-proxy.sh
 COPY --from=web /web/dist /usr/share/nginx/html/web
 COPY --from=h5 /mobile/dist/build/h5 /usr/share/nginx/html/h5
 EXPOSE 80
