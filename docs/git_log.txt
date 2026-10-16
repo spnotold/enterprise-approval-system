@@ -1,3 +1,21 @@
+commit 6700f004abc063bc1a0f84bae6c5652a7ef1bcaa
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-16 01:36:27 -0400
+
+    fix(deploy): make docker compose deployment work end to end
+
+commit d0caf931b6d89cb7cca895641ad5a8d756cc6838
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-16 01:36:27 -0400
+
+    feat(auth): bootstrap first system admin for non-demo deployments
+
+commit ffa00ecf2d13f415303653118dd1d1238f68261f
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 21:04:28 -0400
+
+    docs: refresh git log export
+
 commit 262b101b21070412dd13150431900e9c2d82549a
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 21:04:13 -0400
