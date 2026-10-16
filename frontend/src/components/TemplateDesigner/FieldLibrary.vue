@@ -67,7 +67,7 @@ const ICONS: Record<FieldType, Component> = {
   border-radius: var(--eas-radius-panel);
   background: var(--el-bg-color);
   color: var(--el-text-color-regular);
-  font-size: 13px;
+  font-size: var(--eas-fs-sm);
   cursor: pointer;
   text-align: left;
   transition:

@@ -187,7 +187,7 @@ async function resetPassword(u: AdminUser) {
       ),
       h(
         'p',
-        { style: 'margin:8px 0 0;color:var(--el-color-warning);font-size:13px' },
+        { style: 'margin:8px 0 0;color:var(--eas-warning-text);font-size:var(--eas-fs-sm)' },
         '请通过安全渠道告知用户，仅显示一次。',
       ),
     ]),

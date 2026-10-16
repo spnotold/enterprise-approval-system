@@ -75,10 +75,16 @@ async function open(n: NotificationItem) {
   else if (filters.unreadOnly) await list.load()
 }
 
-/** Ctrl / ⌘ 点击或中键点击：在新标签页打开（不标记已读） */
+/** Ctrl / ⌘ 点击或中键点击：同步打开新标签页，并在后台标记已读。 */
 function openInNewTab(n: NotificationItem) {
   const target = noticeTarget(n)
   if (target) window.open(router.resolve(target).href, '_blank', 'noopener')
+  if (!n.read) {
+    void notice.markRead(n.id).then(async () => {
+      n.read = true
+      if (filters.unreadOnly) await list.load()
+    }).catch(() => undefined)
+  }
 }
 
 function activate(n: NotificationItem, e: MouseEvent) {
@@ -166,7 +172,7 @@ watch(
             @auxclick="onAuxClick(n, $event)"
             @mousedown.middle.prevent
           >
-            <span class="notice-marker"><i v-if="!n.read" class="unread-dot" aria-label="未读" /></span>
+            <span class="notice-marker"><i v-if="!n.read" class="unread-dot" role="img" aria-label="未读" /></span>
             <button type="button" class="notice-main" @click.stop="activate(n, $event)">
               <span class="notice-head">
                 <el-tag size="small" :type="TYPE_TAG[n.type] ?? 'info'" disable-transitions>
@@ -180,7 +186,7 @@ watch(
                 <span>{{ fromNow(n.createdAt) }}</span>
               </span>
             </button>
-            <div class="notice-actions">
+            <div class="notice-actions" @click.stop @auxclick.stop>
               <el-button
                 v-if="!n.read"
                 link

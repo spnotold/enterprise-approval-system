@@ -271,7 +271,7 @@ const text = computed(() => conditionText(condition.value, props.vars))
   gap: 12px;
 }
 .cond-text {
-  font-size: 13px;
+  font-size: var(--eas-fs-sm);
   color: var(--el-text-color-regular);
   word-break: break-all;
 }

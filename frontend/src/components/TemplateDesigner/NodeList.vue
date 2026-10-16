@@ -171,7 +171,7 @@ const names = inject(USER_NAMES_KEY, undefined)
   word-break: break-all;
 }
 .line {
-  font-size: 13px;
+  font-size: var(--eas-fs-sm);
   line-height: 1.5;
   word-break: break-all;
 }

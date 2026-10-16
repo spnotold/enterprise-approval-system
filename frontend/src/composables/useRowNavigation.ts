@@ -35,7 +35,8 @@ export function useRowNavigation<T>(options: RowNavigationOptions<T>) {
   function onRowClick(row: T, _column: unknown, event: Event) {
     const e = event as MouseEvent
     const el = e.target as HTMLElement | null
-    if (e.button !== 0 || el?.closest?.(INTERACTIVE)) return
+    // 用户拖选编号、标题等文字时不应在松开鼠标后离开列表。
+    if (e.button !== 0 || el?.closest?.(INTERACTIVE) || window.getSelection()?.toString()) return
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault()
       openInNewTab(row)

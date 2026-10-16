@@ -146,7 +146,7 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 }
 .role-name {
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--eas-fs-md);
 }
 .role-body {
   display: flex;
@@ -162,7 +162,7 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 .section-label {
   margin-top: 4px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--eas-fs-sm);
 }
 .perm-tags {
   display: flex;
@@ -172,6 +172,6 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 .perm-code {
   margin-left: 6px;
   opacity: 0.7;
-  font-size: 11px;
+  font-size: var(--eas-fs-xs);
 }
 </style>

@@ -153,7 +153,7 @@ function switchKind() {
 .overdue { margin-left: 6px; }
 /* 任务状态：6px 圆点 + 文字 */
 .dot-status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.dot-status .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; }
+.dot-status .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--eas-muted); }
 .st-pending { background: var(--eas-primary); }
 .st-approved { background: var(--eas-success); }
 .st-rejected { background: var(--eas-danger); }
