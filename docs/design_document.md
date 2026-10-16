@@ -9,8 +9,8 @@
 | 学生姓名 | 李宇航 |
 | 学　　号 | 3240105750 |
 | 学　　院 | 人工智能学院 |
-| 系 | ________________ |
-| 专　　业 | ________________ |
+| 系 | 人工智能系 |
+| 专　　业 | 人工智能 |
 | 指导教师 | 胡晓军 |
 | 提交日期 | 2026 年 11 月 16 日前 |
 
@@ -65,7 +65,10 @@ enterprise-approval-system
 ├─frontend                    # Web 前端
 ├─mobile                      # 移动端（uni-app）
 ├─nginx                       # Nginx 配置与镜像构建
+├─minio
+│     Dockerfile              # 从固定提交的源码编译 minio 与 mc
 ├─db
+│  │  Dockerfile              # postgres:16-alpine + 初始化脚本
 │  └─init
 │        01_create_app_user.sh    # 创建运行账号 eas_app，设置默认权限
 └─docs
@@ -77,10 +80,12 @@ enterprise-approval-system
    │  git_log.txt             # git log 导出
    │  demo_video.md           # 演示视频链接与说明
    │
-   └─experiment_report        # 实验报告（含封面）
+   ├─demo                     # 演示录像
+   ├─experiment_report        # 实验报告（含封面）
+   └─archive                  # 开发过程交接记录
 ```
 
-`db/init` 挂载到 postgres 容器的 `/docker-entrypoint-initdb.d`，只在数据卷首次初始化时执行（见 Q16）。
+`db/Dockerfile` 把 `db/init` 复制进 postgres 镜像的 `/docker-entrypoint-initdb.d`，只在数据卷首次初始化时执行（见 Q16）。
 
 ## 2.1 后端
 
@@ -113,13 +118,18 @@ backend
 │
 └─src/test
    ├─java/edu/zju/eas
-   │  │  IntegrationTestBase.java  # Testcontainers 启动 PostgreSQL 16
+   │  │  TestDatabase.java         # 测试数据库：Testcontainers 或环境变量指定
+   │  │  IntegrationTestBase.java  # 集成测试基类：临时库 + 演示数据
    │  │
-   │  ├─security      # 越权、自审、管理员不能审批
+   │  ├─security      # 越权、自审、管理员不能审批、首个管理员引导
    │  ├─flow          # 状态流转、并发审批与撤回、幂等
    │  ├─biz           # 采购 / 差旅 / 报销规则、金额重算、票据去重
    │  ├─template      # 发布前校验、版本快照
-   │  └─notify        # 通知去重与隔离
+   │  ├─notify        # 通知去重与隔离
+   │  ├─admin         # 管理端、模板与统计
+   │  ├─demo          # 演示数据初始化
+   │  ├─job           # 定时清理任务
+   │  └─review        # 代码审查问题的回归用例
    │
    └─resources
          application-test.yml   # 测试配置
@@ -244,10 +254,10 @@ erDiagram
 | process_template_dept | 模板适用部门 | PK(template_id, dept_id) |
 | process_template_version | 模板版本 | UK(template_id, version_no)；status ∈ DRAFT / PUBLISHED / ARCHIVED；form_schema、node_config 为 JSONB；每个模板至多一个 DRAFT、一个 PUBLISHED（部分唯一索引）；触发器禁止修改已发布版本 |
 | application | 申请主表 | app_no UK；type；status；applicant_id、dept_id（提交时固化）；amount_cents；current_node_seq；source_application_id（复制来源）；version（乐观锁）；deleted_at 只允许草稿 |
-| purchase_detail / purchase_item / purchase_quote | 采购 | 报价 UK(application_id, lower(supplier_name))；线上报价必须有链接（CHECK）；单一来源必须有说明（CHECK） |
+| purchase_detail / purchase_item / purchase_quote | 采购 | 报价 UK(application_id, lower(supplier_name))；线上报价必须有链接、单一来源必须有说明（提交时校验，见 Q5） |
 | travel_detail / travel_companion | 差旅 | CHECK(end_time ≥ start_time)；natural_days、duration_hours 由服务端写入；同行人为系统用户或文本姓名二选一 |
 | expense_type | 费用类型 | 被引用后只能停用 |
-| expense_detail / expense_item | 报销单与费用明细 | total_amount_cents；无票明细必须有原因（CHECK）；UK(application_id, seq) |
+| expense_detail / expense_item | 报销单与费用明细 | total_amount_cents；无票明细必须有原因（提交时校验，见 Q7）；UK(application_id, seq) |
 | expense_invoice | 票据 | UK(application_id, file_sha256)；部分唯一 (application_id, invoice_no_norm) 防止同单重复票据 |
 | expense_relation | 报销关联申请 | PK(报销单, 被关联单) |
 | custom_form_data | 自定义表单值 | form_values JSONB |
@@ -371,8 +381,7 @@ public class ProcessTemplateVersion {
 3. `FlowNodeInstanceMapper`：节点激活与结束
 4. `ExpenseInvoiceMapper`：同单 / 跨单票据查询
 5. `NotificationMapper`：未读数、标记已读、去重插入
-6. `StatsMapper`：统计聚合查询
-7. `SysUserMapper`、`DepartmentMapper`、`ProcessTemplateMapper` 等
+6. `SysUserMapper`、`DepartmentMapper`、`ProcessTemplateMapper` 等
 
 以 `ApplicationMapper` 为例：
 
@@ -408,9 +417,9 @@ public interface ApplicationMapper extends BaseMapper<Application> {
 }
 ```
 
-带数据范围的列表查询写在 XML 中，范围条件直接进 SQL，分页的 `total` 不会把无权查看的记录算进去：
+带数据范围的列表查询写在 Mapper 注解的 `<script>` 动态 SQL 中，范围条件直接进 SQL，分页的 `total` 不会把无权查看的记录算进去（下面是 `scope=dept` 时展开后的 SQL）：
 
-```sql title="ApplicationMapper.xml"
+```sql title="ApplicationMapper.java（@Select 动态 SQL）"
 -- scope=dept：只返回本人负责部门的非草稿申请
 SELECT a.*
   FROM application a
@@ -432,11 +441,11 @@ SELECT a.*
 
 1. `SecurityConfig`：配置安全策略
     1. 无状态会话，关闭表单登录与 Session
-    2. 公开接口：注册、登录、刷新令牌、部门列表、用户名 / 邮箱可用性检查；其余接口需登录
+    2. 公开接口：注册、登录、刷新令牌、退出、部门列表、用户名 / 邮箱可用性检查、健康检查；SSE 通知流用一次性票据在业务层鉴权（EventSource 不能带请求头）；其余接口需登录
     3. `/api/admin/**` 需要管理类权限点
     4. 定义密码编码器 `DelegatingPasswordEncoder`，默认 BCrypt（cost = 10）
     5. 注册 JWT 校验过滤器
-2. `JwtConfig`：HS256 密钥来自环境变量 `JWT_SECRET`（≥ 32 字节）；访问令牌 30 分钟，刷新令牌 7 天
+2. `EasProperties`：绑定 `application.yml` 中的 `eas.*` 配置。JWT 的 HS256 密钥来自环境变量 `JWT_SECRET`（≥ 32 字节），访问令牌 30 分钟、刷新令牌 7 天，由 `security.TokenService` 签发和校验
 3. `CorsConfig`：开发时允许 `http://localhost:5173`（Vite）与 H5 调试地址；部署后前后端经 Nginx 同源，不再需要跨域
 4. `MybatisPlusConfig`：注册分页插件与乐观锁插件
 5. `MinioConfig`：创建 `MinioClient`，桶名 `eas-files`
@@ -457,8 +466,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(a -> a
                 // 路径不含 context-path，实际 URL 为 /api/auth/...
                 .requestMatchers("/auth/register", "/auth/login",
-                                 "/auth/refresh", "/auth/availability",
-                                 "/public/**").permitAll()
+                                 "/auth/refresh", "/auth/logout",
+                                 "/auth/availability", "/public/**").permitAll()
+                // SSE 用一次性票据鉴权（EventSource 不能带请求头）
+                .requestMatchers("/notifications/stream").permitAll()
+                .requestMatchers("/actuator/health", "/error").permitAll()
                 .requestMatchers("/admin/**").hasRole("SYS_ADMIN")
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter,
@@ -536,7 +548,7 @@ public record ExpenseSaveRequest(
 }
 ```
 
-草稿阶段只做格式校验（类型、长度、范围），必填项和业务规则在提交时检查，否则用户没法保存填了一半的草稿。
+草稿阶段允许缺少必填内容，保存时检查格式（类型、长度、范围），并校验已填写的业务关系（关联申请的归属与状态、同行人是否有效、同单票据是否重复）；必填项和其余业务规则在提交时检查，否则用户没法保存填了一半的草稿。
 
 ### 4.1.5 Response：封装响应数据
 
@@ -623,7 +635,7 @@ public record ApiResponse<T>(
     2. 复制重提
     3. 详情组装（业务数据、流程节点、审批日志、当前用户可执行的操作）
     4. 列表查询
-7. `PurchaseService`、`TravelService`、`ExpenseService`、`CustomFormService`：各类申请的字段保存与提交校验
+7. `BusinessDataService`、`BusinessValidator`：四类申请（采购、差旅、报销、自定义表单）的字段保存与提交校验；`BusinessHandlersConfig` 为每类申请注册一个 `BizHandler`，供流程引擎在提交时调用
 8. `TemplateService`：模板增改、启用 / 停用、草稿版本、发布
 9. `TemplatePublishValidator`：发布前校验
 10. `flow` 包：流程引擎
@@ -843,20 +855,21 @@ public class AuthController {
 }
 ```
 
-批准待办。`@PreAuthorize` 只检查功能权限，是否为当前审批人由 `FlowEngine` 在 SQL 条件里判断：
+批准待办。类上的 `@PreAuthorize` 只检查功能权限，是否为当前审批人由 `FlowEngine` 在 SQL 条件里判断。`IdempotencyService.execute` 包住业务调用：检查 `Idempotency-Key`，同键同内容的重复请求直接返回首次结果：
 
 ```java title="TaskController.java"
 @RestController
 @RequestMapping("/tasks")  // 实际路径 /api/tasks
+@PreAuthorize("hasAuthority('TASK_HANDLE')")
 public class TaskController {
-    @PostMapping("/{taskId}/approve")
-    @PreAuthorize("hasAuthority('TASK_HANDLE')")
-    @Idempotent  // 拦截器检查 Idempotency-Key，重复请求返回首次结果
-    public ApiResponse<ActionResult> approve(
-            @PathVariable Long taskId,
-            @Valid @RequestBody ApproveRequest req,
-            @AuthenticationPrincipal CurrentUser user) {
-        return ApiResponse.ok(flowEngine.approve(taskId, user, req));
+    @PostMapping("/{id}/approve")
+    public Object approve(
+        @PathVariable Long id,
+        @Valid @RequestBody ApproveRequest body,
+        @RequestHeader(value = "Idempotency-Key", required = false) String key,
+        @AuthenticationPrincipal CurrentUser u) {
+        return idempotency.execute(u, key, "POST /tasks/" + id + "/approve",
+                body, () -> engine.approve(id, u, body));
     }
 }
 ```
@@ -1385,7 +1398,7 @@ public class FileService {
 
 采购申请由三部分组成：采购明细（可增删，≥ 1 条）、报价比较（≥ 2 家）、采购选择（拟选供应商与理由）。明细金额 `amount_cents = round(quantity × unit_price_cents)` 由服务端用 `BigDecimal`、`HALF_UP` 计算，数量用字符串传输，避免浮点。
 
-提交时 `PurchaseService` 依次检查以下规则，失败时在 `errors[].rule` 中返回规则码：
+提交时 `BusinessValidator` 依次检查以下规则，失败时在 `errors[].rule` 中返回规则码：
 
 | 规则码 | 规则 |
 |---|---|
@@ -1400,7 +1413,7 @@ public class FileService {
 
 “未选最低价”的判断：
 
-```java title="PurchaseService.java"
+```java title="BusinessValidator.java（改写为易读形式）"
 long lowest = quotes.stream()
     .mapToLong(PurchaseQuote::getQuoteAmountCents).min().orElseThrow();
 boolean notLowest = selected.getQuoteAmountCents() > lowest;
@@ -1418,8 +1431,8 @@ if (notLowest && length(detail.getNotLowestReason()) < 10) {
 
 出差天数按自然日计算：取开始、结束时间在上海时区的日期，`天数 = 结束日期 − 开始日期 + 1`。例如 11 月 20 日 18:00 出发、11 月 21 日 09:00 返回，记 2 天。差旅补贴、考勤、统计都按天计，晚上出发次日返回的行程实际占用了两个工作日，所以用自然日作为主口径。实际时长（小时，保留一位小数）作为辅助信息，用来区分当日往返和跨夜，上例为 15.0 小时。
 
-```java title="TravelService.java"
-public class TravelService {
+```java title="BusinessDataService.java（改写为易读形式）"
+public class BusinessDataService {
     private static final ZoneId CN = ZoneId.of("Asia/Shanghai");
 
     void computeDuration(TravelDetail t) {
@@ -1435,7 +1448,7 @@ public class TravelService {
 }
 ```
 
-两个值都在保存和提交时由服务端计算落库，客户端传值被忽略；界面显示为“2 天（自然日）/ 实际 15.0 小时”。
+两个值在保存草稿时由服务端计算落库，提交时直接使用落库结果（提交前必然经过保存），客户端传值被忽略；界面显示为“2 天（自然日）/ 实际 15.0 小时”。
 
 其他校验：结束时间不得早于开始时间，跨度不超过 90 天；预算不得为负；同行人员可选系统用户或填写姓名，系统用户必须是启用状态、不能是本人、不能重复。开始时间早于提交时间时不拦截，审批界面显示“事后补报”标签。
 
@@ -1447,8 +1460,8 @@ public class TravelService {
 
 金额在前端以字符串输入，用 `yuanToCents` 转成整数分（见 4.2.1），接口只传分。提交时服务端用明细金额重新求和，覆盖客户端可能传来的任何合计值：
 
-```java title="ExpenseService.java"
-public class ExpenseService {
+```java title="BusinessDataService.java（改写为易读形式）"
+public class BusinessDataService {
     long recomputeTotal(List<ExpenseItem> items) {
         long total = 0;
         for (ExpenseItem it : items) {
@@ -1824,7 +1837,7 @@ T1 为撤回事务，T2 为批准事务，两者竞争同一 `application` 行�
 
 审批日志 `approval_log` 记录每一次提交、批准、驳回、撤回、转办：操作人（含姓名快照）、动作、意见或驳回理由、操作前后的申请状态、申请版本（第几次提交）、模板版本号、时间、IP。详情页按时间顺序展示。
 
-管理变更写入 `audit_log`：注册审核、角色授予与回收、主办人设置、部门负责人变更、数据范围授权与回收、模板发布与启停、系统配置修改、转办、管理员查看业务正文、账号锁定。每条记录保存操作人、目标对象、修改前后的值（JSONB）、原因和 IP。管理端写操作由 `@Audited` 切面统一记录，管理端审计页可按对象查询，并以 JSON 差异对比显示前后值。
+管理变更写入 `audit_log`：注册审核、角色授予与回收、主办人设置、部门负责人变更、数据范围授权与回收、模板发布与启停、系统配置修改、转办、管理员查看业务正文、账号锁定。每条记录保存操作人、目标对象、修改前后的值（JSONB）、原因和 IP。管理端各服务在修改数据的同一事务中调用 `AuditService` 写审计（转办由 `@Audited` 切面记录），管理端审计页可按对象查询，并以 JSON 差异对比显示前后值。
 
 转办记录写入 `assignee_history`。这三张表只允许追加，靠两层保证：
 
@@ -1871,7 +1884,7 @@ REVOKE UPDATE, DELETE ON approval_log, audit_log, assignee_history
 
 未读数、标记已读的 SQL 都带 `recipient_id = 当前用户`：
 
-```sql title="NotificationMapper.xml"
+```sql title="NotificationMapper.java（@Update）"
 -- 标记已读：只能标记自己的通知
 UPDATE notification
    SET is_read = true, read_at = now()
@@ -1950,17 +1963,17 @@ public class NotificationPusher {
 | 财务 | 需授权 `FIN_STATS_READ` | 按费用类型的报销已通过金额、无票支出金额与占比、各部门报销与采购金额 | 柱状图、表格 |
 | 企业 | 需授权 `APP_READ@ALL` | 各部门对比 | 分组柱状图 |
 
-本部门统计 SQL：
+本部门统计 SQL（`StatsService` 用 `JdbcTemplate` 执行，同一只读事务内完成全部聚合）：
 
-```sql title="StatsMapper.xml"
+```sql title="StatsService.java"
 -- 状态分布与金额
 -- :fromTs/:toTs 由上海时区日期换算，区间 [from 00:00, to+1 00:00)
 SELECT a.type,
        a.status,
        count(*) AS cnt,
-       sum(a.amount_cents) FILTER (WHERE a.status = 'APPROVED')
+       COALESCE(sum(a.amount_cents) FILTER (WHERE a.status = 'APPROVED'), 0)
            AS approved_amount_cents,
-       sum(a.amount_cents) FILTER (WHERE a.status = 'IN_APPROVAL')
+       COALESCE(sum(a.amount_cents) FILTER (WHERE a.status = 'IN_APPROVAL'), 0)
            AS in_progress_amount_cents
   FROM application a
  WHERE a.dept_id = :deptId
@@ -1970,13 +1983,16 @@ SELECT a.type,
    AND a.submitted_at <  :toTs
  GROUP BY a.type, a.status;
 
--- 月度已通过金额趋势（按提交月份）
+-- 月度趋势（按提交月份）：申请数含全部非草稿申请，金额只计已通过
 SELECT to_char(a.submitted_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM')
            AS month,
-       sum(a.amount_cents) AS approved_amount_cents
+       count(*) AS cnt,
+       COALESCE(sum(a.amount_cents) FILTER (WHERE a.status = 'APPROVED'), 0)
+           AS approved_amount_cents
   FROM application a
  WHERE a.dept_id = :deptId
-   AND a.status = 'APPROVED'
+   AND a.status <> 'DRAFT'
+   AND a.deleted_at IS NULL
    AND a.submitted_at >= :fromTs
    AND a.submitted_at <  :toTs
  GROUP BY 1
@@ -2004,9 +2020,9 @@ SELECT to_char(a.submitted_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM')
 
 | 服务 | 镜像 | 说明 |
 |---|---|---|
-| postgres | `postgres:16-alpine` | 数据卷 `pgdata`；挂载 `db/init` 到 `/docker-entrypoint-initdb.d`，首次初始化时创建运行账号 `eas_app` |
-| minio | `minio/minio` | 数据卷 `miniodata`；root 账号只给 minio-init 使用 |
-| minio-init | `minio/mc` | 一次性任务：创建私有桶 `eas-files`，创建只能读写该桶的专用 access key |
+| postgres | 由 `db/Dockerfile` 构建（基于 `postgres:16-alpine`） | 数据卷 `pgdata`；镜像内 `/docker-entrypoint-initdb.d` 含 `db/init` 脚本，首次初始化时创建运行账号 `eas_app` |
+| minio | 由 `minio/Dockerfile` 构建 | MinIO 官方已不再发布二进制和镜像，从固定提交的源码编译 `minio` 与 `mc`；数据卷 `miniodata`；root 账号只给 minio-init 使用 |
+| minio-init | 与 minio 共用镜像 | 一次性任务：用镜像内的 `mc` 创建私有桶 `eas-files`，创建只能读写该桶的专用 access key |
 | mailpit | `axllent/mailpit` | 演示用 SMTP 与收件箱（8025） |
 | backend | 由 `backend/Dockerfile` 构建 | 启动时用 `eas_owner` 执行 Flyway 迁移，运行时用 `eas_app` 连接 |
 | nginx | 由 `nginx/Dockerfile` 构建 | 多阶段构建 Web 与 H5，托管静态资源并反向代理 `/api/` |
@@ -2015,7 +2031,7 @@ SELECT to_char(a.submitted_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM')
 
 ```yaml title="docker-compose.yml"
 postgres:
-  image: postgres:16-alpine
+  build: ./db              # postgres:16-alpine + 初始化脚本
   environment:
     POSTGRES_DB: eas
     POSTGRES_USER: eas_owner            # 表属主，Flyway 迁移用
@@ -2024,7 +2040,6 @@ postgres:
     TZ: Asia/Shanghai
   volumes:
     - pgdata:/var/lib/postgresql/data
-    - ./db/init:/docker-entrypoint-initdb.d:ro
   healthcheck:
     test: ["CMD-SHELL", "pg_isready -U eas_owner -d eas"]
     interval: 5s
@@ -2056,7 +2071,8 @@ MinIO 的 root 账号不交给后端。minio-init 用 root 建桶，再创建一
 
 ```yaml title="docker-compose.yml"
 minio-init:
-  image: minio/mc
+  image: eas-minio:local   # 与 minio 共用镜像，内含 mc
+  pull_policy: never
   depends_on: { minio: { condition: service_healthy } }
   environment:
     ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
@@ -2177,7 +2193,8 @@ Flyway 脚本：
 | `V2__append_only_triggers.sql` | 日志只追加触发器、模板版本不可变触发器、运行账号授权 |
 | `V3__seed_base.sql` | 角色、权限点、费用类型、系统配置、部门 |
 | `V4__seed_builtin_templates.sql` | 三个内置模板 |
-| `db/demo/R__seed_demo.sql` | 演示账号、两个自定义模板、示例申请；仅 `demo` profile 加载 |
+| `V5__allow_incomplete_draft_details.sql` | 去掉线上报价链接、单一来源说明、无票原因三条 CHECK，让草稿可以保存未填完的内容；这些规则改由提交校验执行 |
+| `db/demo/R__seed_demo.sql` | 演示账号、两个自定义模板、数据范围授权；仅 `demo` profile 加载 |
 
 种子脚本可重复执行，基础数据用 `ON CONFLICT DO NOTHING`。初始化部门为研发部、市场部、财务部、总经办，演示账号统一初始密码 `Demo@2026`（以 BCrypt 哈希写入）：
 
@@ -2194,13 +2211,13 @@ Flyway 脚本：
 | `fin_auditor_wu` | 吴审 | 财务部 | 财务审批人（主办人） | 采购预算审查、报销财务审核 |
 | `pending_he` | 何晓 | 申请加入市场部 | 无（待审核） | 注册审核演示 |
 
-示例申请让统计图表一开始就有数据：王工有已通过的差旅单（供报销关联）、审批中的采购单、已驳回的报销单各一张，周敏有一张审批中的请假单。
+示例申请由 `DemoDataInitializer` 在 `demo` profile 首次启动时调用真实的保存、提交、审批接口生成（快照、待办、日志、通知与正式流程一致），让统计图表一开始就有数据：王工有已通过的差旅单（供报销关联）、审批中的采购单、已驳回的报销单各一张，周敏有一张审批中的请假单。
 
 代码用 git 管理（提交前把 `git log --stat` 导出到 `docs/git_log.txt`）：`main` 为可演示版本，`dev` 为集成分支，功能在 `feature/<模块>` 分支开发；提交信息采用 `feat(flow): ...`、`fix(expense): ...` 格式；里程碑打 tag。提交作业时附带 `.git` 目录。
 
 ## Q17：关键场景如何测试和演示？
 
-后端测试放在 `backend/src/test/java/edu/zju/eas` 下，按 `security`、`flow`、`biz`、`template`、`notify` 分包（目录见 2.1）。测试使用 JUnit 5 和 Spring Boot Test，数据库用 Testcontainers 启动真实的 PostgreSQL 16，Flyway 迁移和演示数据与部署环境一致。条件更新、部分唯一索引、触发器这些行为只有在真实 PostgreSQL 上才测得准，所以不用 H2。`mvn test` 一条命令运行全部用例，结果整理到 `docs/test_report.md`。
+后端测试放在 `backend/src/test/java/edu/zju/eas` 下，按 `security`、`flow`、`biz`、`template`、`notify` 等分包（目录见 2.1）。测试使用 JUnit 5 和 Spring Boot Test，数据库是真实的 PostgreSQL 16：默认由 Testcontainers 启动，没有 Docker 的机器可用环境变量 `EAS_TEST_PG_URL` / `EAS_TEST_PG_USER` / `EAS_TEST_PG_PASSWORD` 指定一个可建库的 PostgreSQL；两者都不可用时测试报错，不会被跳过。Flyway 迁移和演示数据与部署环境一致。条件更新、部分唯一索引、触发器这些行为只有在真实 PostgreSQL 上才测得准，所以不用 H2。`mvn test` 一条命令运行全部用例，结果整理到 `docs/test_report.md`。
 
 关键用例与演示账号（密码均为 `Demo@2026`）：
 
@@ -2261,7 +2278,7 @@ class WithdrawApproveRaceTest extends IntegrationTestBase {
 }
 ```
 
-`IntegrationTestBase` 用 `@Testcontainers` 和 `@ServiceConnection` 启动 `postgres:16-alpine` 容器，所有测试类共享同一个容器；每个用例开始前重置演示数据。前端用 Vitest 测试金额转换函数（`yuanToCents` 的边界输入）。演示视频按上表顺序录制 T01、T05、T07、T10、T12、T13，视频链接与操作说明写在 `docs/demo_video.md`。
+`TestDatabase` 负责提供数据库服务器（Testcontainers 启动的 `postgres:16-alpine` 容器，整个测试进程共用一个；或环境变量指定的服务器），并新建随机命名的临时库：继承 `IntegrationTestBase` 的测试类共用一个库，`IntegrationTestBase` 在每个用例开始前清空并重放演示数据；`CoreWorkflowIntegrationTest`、`DemoDataTest`、`AdminTemplateStatsTest` 各用一个独立的库。`AdminTemplateStatsTest` 结束时立即删库；`DemoDataTest` 结束时关闭自己的 Spring 上下文，它的库和其余临时库在测试进程退出时删除。前端用 Vitest 测试金额转换函数（`yuanToCents` 的边界输入）。演示视频按上表顺序录制 T01、T05、T07、T10、T12、T13，视频链接与操作说明写在 `docs/demo_video.md`。
 
 ## Q18：增强功能是如何实现的？
 
@@ -2269,7 +2286,7 @@ class WithdrawApproveRaceTest extends IntegrationTestBase {
 
 会签 / 或签：节点 `mode` 可选 `COUNTERSIGN`（会签，全部同意才通过，任一驳回即驳回）或 `OR_SIGN`（或签，任一人处理即决定节点结果，其余待办自动取消）。节点激活时为每个审批人创建待办，节点实例记录 `required_count`、`approved_count`。批准时先原子地累加计数：
 
-```sql title="FlowNodeInstanceMapper.xml"
+```sql title="FlowNodeInstanceMapper.java（@Select）"
 UPDATE flow_node_instance
    SET approved_count = approved_count + 1
  WHERE id = :nodeId AND status = 'ACTIVE'
@@ -2282,7 +2299,7 @@ RETURNING approved_count, required_count;
 
 跨单重复票据预警：同一报销单内的重复票据直接拒绝（见 Q7）；跨报销单的重复只提示、不拦截，因为分次报销、发票冲红重开等合法情况也会出现同号票据，是否重复由财务判断。提交时和财务打开详情时查询：
 
-```sql title="ExpenseInvoiceMapper.xml"
+```sql title="BusinessDataService.java（跨单票据查询）"
 SELECT ei.id, ei.invoice_no, a.app_no, a.status
   FROM expense_invoice ei
   JOIN application a ON a.id = ei.application_id
