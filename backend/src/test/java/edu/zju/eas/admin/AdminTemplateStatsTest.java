@@ -3,6 +3,7 @@ package edu.zju.eas.admin;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import edu.zju.eas.TestDatabase;
 import edu.zju.eas.common.Jsons;
+import edu.zju.eas.common.Times;
 import edu.zju.eas.controller.admin.*;
 import edu.zju.eas.controller.stats.StatsController;
 import edu.zju.eas.controller.template.TemplateController;
@@ -13,6 +14,7 @@ import edu.zju.eas.repository.*;
 import edu.zju.eas.response.*;
 import edu.zju.eas.security.*;
 import edu.zju.eas.service.*;
+import edu.zju.eas.service.flow.FlowEngine;
 import edu.zju.eas.service.admin.*;
 import edu.zju.eas.service.notify.NotificationService;
 import edu.zju.eas.service.stats.StatsService;
@@ -31,6 +33,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -61,7 +64,9 @@ class AdminTemplateStatsTest {
     private GrantAdminService grants;
     private ConfigAdminService config;
     private StatsService stats;
+    private AdminQueryService queries;
     private MockMvc mvc;
+    private MockMvc grantMvc;
 
     @BeforeAll void start() throws Exception {
         databaseUrl=TestDatabase.createDatabase("eas_module_test");
@@ -71,7 +76,10 @@ class AdminTemplateStatsTest {
         templates=context.getBean(TemplateService.class);users=context.getBean(UserAdminService.class);
         departments=context.getBean(DepartmentAdminService.class);grants=context.getBean(GrantAdminService.class);
         config=context.getBean(ConfigAdminService.class);stats=context.getBean(StatsService.class);
+        queries=context.getBean(AdminQueryService.class);
         mvc=MockMvcBuilders.standaloneSetup(new TemplateAdminController(templates),new TemplateController(templates),new StatsController(stats))
+                .setControllerAdvice(new GlobalExceptionHandler()).build();
+        grantMvc=MockMvcBuilders.standaloneSetup(new AdminController(users,departments,grants,config,queries,mock(FlowEngine.class)))
                 .setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 
@@ -232,6 +240,22 @@ class AdminTemplateStatsTest {
         var future=grants.create(new GrantCreate(5L,"FIN_STATS_READ","ALL",null,OffsetDateTime.now().plusDays(1),null,"未来授权"));
         assertThat(future.active()).isFalse();as(5);
         assertThatThrownBy(()->stats.finance(janStart(),janEnd())).isInstanceOf(BizException.class);
+    }
+
+    /** 管理端带有效期日期创建授权：前端折算成 +08:00 的 ISO 时间后应创建成功且当天有效；
+     * 直接提交纯日期（旧负载）会被 OffsetDateTime 反序列化拒绝，返回 400。 */
+    @Test void grantCreationAcceptsShanghaiDateBoundariesAndRejectsPureDates() throws Exception {
+        LocalDate today=LocalDate.now(Times.ZONE);
+        String body="{\"userId\":4,\"permissionCode\":\"FIN_STATS_READ\",\"scopeType\":\"ALL\","
+                +"\"validFrom\":\""+today+"T00:00:00+08:00\",\"validUntil\":\""+today.plusDays(1)+"T00:00:00+08:00\","
+                +"\"reason\":\"带日期授权\"}";
+        grantMvc.perform(post("/admin/grants").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.active").value(true))
+                .andExpect(jsonPath("$.data.validUntil").exists());
+        String pureDate="{\"userId\":4,\"permissionCode\":\"FIN_STATS_READ\",\"scopeType\":\"ALL\","
+                +"\"validFrom\":\""+today+"\",\"reason\":\"纯日期\"}";
+        grantMvc.perform(post("/admin/grants").contentType(MediaType.APPLICATION_JSON).content(pureDate))
+                .andExpect(status().isBadRequest());
     }
 
     @Test void managementQueriesPaginateMetadataWithoutBusinessContent() {
