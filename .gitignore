@@ -1,4 +1,5 @@
 .env
+.env.dev
 *.log
 .DS_Store
 .idea/

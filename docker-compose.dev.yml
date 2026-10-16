@@ -1,0 +1,12 @@
+# 本地开发叠加配置：把依赖服务的端口发布到本机（仅 127.0.0.1），供 mvn spring-boot:run 直接连接。
+# 用法见 README“本地开发”：docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres minio minio-init mailpit
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${DEV_PG_PORT:-5432}:5432"
+  minio:
+    ports:
+      - "127.0.0.1:${DEV_MINIO_PORT:-9000}:9000"
+  mailpit:
+    ports:
+      - "127.0.0.1:${DEV_SMTP_PORT:-1025}:1025"
