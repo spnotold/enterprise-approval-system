@@ -26,8 +26,8 @@ function display(f: FormField): string {
 </script>
 
 <template>
-  <view class="card">
-    <view class="card-title">表单内容 <text class="muted">模板 v{{ data.versionNo }}</text></view>
+  <view class="panel">
+    <view class="panel-title">表单内容<text class="panel-sub">模板 v{{ data.versionNo }}</text></view>
     <view v-for="f in data.formSchema.fields" :key="f.key" class="kv">
       <text class="kv-label">{{ f.label }}</text>
       <view class="kv-value">
@@ -37,8 +37,10 @@ function display(f: FormField): string {
           ref-type="CUSTOM_FIELD"
           readonly
         />
-        <text v-else>{{ display(f) }}</text>
+        <text v-else :class="{ amount: f.type === 'AMOUNT' }">{{ display(f) }}</text>
       </view>
     </view>
   </view>
 </template>
+
+<style scoped src="./fields.css"></style>

@@ -1,0 +1,185 @@
+/* 详情页字段区与明细行：各详情组件以 <style scoped src="./fields.css"> 引入 */
+
+/* 两列键值：左列字段名，右列值，行间 1rpx 分隔线 */
+.kv {
+  display: flex;
+  align-items: baseline;
+  padding: 20rpx 0;
+  font-size: var(--eas-fs-sm);
+  line-height: 1.6;
+  border-top: 1rpx solid var(--eas-rule);
+}
+
+.kv:first-child,
+.panel-title + .kv,
+.panel-title + .line {
+  border-top: none;
+}
+
+.kv-label {
+  width: 168rpx;
+  flex-shrink: 0;
+  padding-right: 16rpx;
+  color: var(--eas-ink-2);
+}
+
+.kv-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--eas-ink);
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.num,
+.amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.amount {
+  font-weight: 600;
+}
+
+.link {
+  color: var(--eas-primary);
+}
+
+.danger-text {
+  color: var(--eas-danger);
+}
+
+/* 面板：白底、1rpx 线框，无阴影 */
+.panel {
+  background: var(--eas-surface);
+  border: 1rpx solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  padding: 8rpx 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0 12rpx;
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  color: var(--eas-ink);
+}
+
+.panel-sub {
+  margin-left: 16rpx;
+  font-size: var(--eas-fs-xs);
+  font-weight: 400;
+  color: var(--eas-ink-3);
+}
+
+/* 明细行（采购明细、费用明细、报价）：同一面板内逐行排布，行间分隔线 */
+.line {
+  padding: 20rpx 0;
+  border-top: 1rpx solid var(--eas-rule);
+}
+
+.line-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.line-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  color: var(--eas-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.line-amount {
+  flex-shrink: 0;
+  margin-left: 24rpx;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  color: var(--eas-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.line-meta {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 6rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.line-meta-item {
+  margin-right: 24rpx;
+}
+
+.line-note {
+  margin-top: 6rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+/* 小标记：描边小框，不填色 */
+.mark {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  padding: 0 8rpx;
+  font-size: var(--eas-fs-xs);
+  font-weight: 400;
+  line-height: 36rpx;
+  border: 1rpx solid currentColor;
+  border-radius: var(--eas-radius-tag);
+  color: var(--eas-ink-2);
+}
+
+.mark-primary {
+  color: var(--eas-primary);
+}
+
+.mark-success {
+  color: var(--eas-success);
+}
+
+.mark-danger {
+  color: var(--eas-danger);
+}
+
+.mark-warning {
+  color: var(--eas-warning-text);
+}
+
+/* 提示条 */
+.note {
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+  border-radius: var(--eas-radius-control);
+  font-size: var(--eas-fs-sm);
+  line-height: 1.6;
+}
+
+.note-info {
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
+}
+
+.note-warning {
+  background: var(--eas-warning-tint);
+  color: var(--eas-warning-text);
+}
+
+.note-danger {
+  background: var(--eas-danger-tint);
+  color: var(--eas-danger);
+}
+
+.note-title {
+  font-weight: 600;
+}
