@@ -7,7 +7,7 @@ import { api } from '@/lib/api'
 import type { ApiError } from '@/lib/http'
 import type { GrantPermission, GrantView, ScopeType, UserOption } from '@/lib/types'
 import { GRANT_PERMISSION_LABEL, SCOPE_TYPE_LABEL, toOptions } from '@/lib/labels'
-import { fmtDate, fmtDateTime, todayShanghai } from '@/lib/datetime'
+import { addDays, fmtDate, fmtDateTime, shanghaiWallToIso, todayShanghai } from '@/lib/datetime'
 import { showError } from '@/lib/errors'
 import { promptReason } from '@/lib/prompt'
 import { useListQuery } from '@/composables/useListQuery'
@@ -81,6 +81,12 @@ function grantState(g: GrantView): GrantState {
 function canRevoke(g: GrantView): boolean {
   const s = grantState(g)
   return s === 'ACTIVE' || s === 'NOT_STARTED'
+}
+
+/** validUntil 存为次日 00:00（含所选当天，见 toEndIso）；列表展示最后有效日，与所选失效日期一致 */
+function fmtGrantUntil(iso: string): string {
+  const t = Date.parse(iso)
+  return Number.isNaN(t) ? fmtDate(iso) : fmtDate(new Date(t - 1000).toISOString())
 }
 
 async function revoke(g: GrantView) {
@@ -199,6 +205,16 @@ async function openCreate() {
   }
 }
 
+// 授权日期折算成带 +08:00 偏移的 ISO 时间（服务端是 OffsetDateTime，收不了纯日期）：
+// 生效日取当天 00:00；失效日含当天，存次日 00:00——与后端 valid_until > now 的严格比较一致
+// （对应服务端 Times.endExclusive 的语义）。
+function toStartIso(date: string | null): string | null {
+  return date ? shanghaiWallToIso(`${date}T00:00:00`) : null
+}
+function toEndIso(date: string | null): string | null {
+  return date ? shanghaiWallToIso(`${addDays(date, 1)}T00:00:00`) : null
+}
+
 async function submit() {
   if (!(await formRef.value?.validate().catch(() => false))) return
   form.error = null
@@ -207,8 +223,8 @@ async function submit() {
     permissionCode: form.permissionCode as GrantPermission,
     scopeType: form.scopeType,
     deptId: form.scopeType === 'DEPT' ? form.deptId : null,
-    validFrom: form.validFrom || null,
-    validUntil: form.validUntil || null,
+    validFrom: toStartIso(form.validFrom),
+    validUntil: toEndIso(form.validUntil),
     reason: form.reason.trim(),
   }
   const ok = await run({
@@ -280,7 +296,7 @@ async function submit() {
         </el-table-column>
         <el-table-column label="有效期" min-width="190">
           <template #default="{ row }">
-            {{ fmtDate(row.validFrom) }} ~ {{ row.validUntil ? fmtDate(row.validUntil) : '长期' }}
+            {{ fmtDate(row.validFrom) }} ~ {{ row.validUntil ? fmtGrantUntil(row.validUntil) : '长期' }}
           </template>
         </el-table-column>
         <el-table-column prop="reason" label="原因" min-width="160" show-overflow-tooltip />
