@@ -1,24 +1,31 @@
 <script setup lang="ts">
-// 状态标签：草稿灰、审批中蓝（可附当前节点与审批人）、已通过绿、已驳回红、已撤回深灰
+// 列表状态：圆点与文字；详情页保留各自的单据头样式。
 import { computed } from 'vue'
 import type { AppStatus, CurrentNode } from '@/lib/types'
-import { APP_STATUS_COLOR, APP_STATUS_LABEL } from '@/utils/labels'
+import { APP_STATUS_LABEL } from '@/utils/labels'
 
 const props = defineProps<{
   status: AppStatus
   node?: CurrentNode | null
 }>()
 
-const color = computed(() => APP_STATUS_COLOR[props.status] ?? '#8f959e')
+const statusClass = computed(() => ({
+  DRAFT: 'status-tag--muted',
+  IN_APPROVAL: 'status-tag--primary',
+  APPROVED: 'status-tag--success',
+  REJECTED: 'status-tag--danger',
+  WITHDRAWN: 'status-tag--muted',
+})[props.status])
 const nodeText = computed(() => {
   if (props.status !== 'IN_APPROVAL' || !props.node) return ''
-  return props.node.assigneeName ? `${props.node.name} · ${props.node.assigneeName}` : props.node.name
+  return props.node.assigneeName ? `${props.node.name} ${props.node.assigneeName}` : props.node.name
 })
 </script>
 
 <template>
-  <view class="status">
-    <text class="status-tag" :style="{ color: color, borderColor: color }">{{ APP_STATUS_LABEL[status] }}</text>
+  <view class="status" :class="statusClass">
+    <view class="status-dot" />
+    <text class="status-tag">{{ APP_STATUS_LABEL[status] }}</text>
     <text v-if="nodeText" class="status-node">{{ nodeText }}</text>
   </view>
 </template>
@@ -30,20 +37,18 @@ const nodeText = computed(() => {
   max-width: 100%;
 }
 
-.status-tag {
-  flex-shrink: 0;
-  height: 40rpx;
-  line-height: 36rpx;
-  padding: 0 12rpx;
-  font-size: 22rpx;
-  border: 2rpx solid;
-  border-radius: 8rpx;
-}
+.status-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: currentColor; flex-shrink: 0; margin-right: 10rpx; }
+.status-tag { flex-shrink: 0; font-size: 24rpx; }
+.status-tag--muted { color: var(--eas-ink-2); }
+.status-tag--muted .status-dot { background: var(--eas-muted); }
+.status-tag--primary { color: var(--eas-primary); }
+.status-tag--success { color: var(--eas-success); }
+.status-tag--danger { color: var(--eas-danger); }
 
 .status-node {
   margin-left: 10rpx;
-  font-size: 22rpx;
-  color: #646a73;
+  font-size: 24rpx;
+  color: var(--eas-ink-2);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

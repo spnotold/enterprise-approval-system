@@ -28,11 +28,12 @@ onHide(() => realtime.onAppHide())
 
 /* 全局样式：基准宽度 750rpx，触控目标不小于 88rpx */
 page {
-  background-color: #f5f6f7;
-  color: #1f2329;
+  background-color: var(--eas-paper);
+  color: var(--eas-ink);
   font-size: 28rpx;
-  line-height: 1.5;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+  line-height: 1.6;
+  font-family: var(--eas-font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
 view,
@@ -55,10 +56,11 @@ textarea {
 }
 
 .card {
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--eas-surface);
+  border: 1rpx solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
   padding: 24rpx 28rpx;
-  margin-bottom: 24rpx;
+  margin-bottom: 16rpx;
 }
 
 .card-title {
@@ -67,12 +69,13 @@ textarea {
   justify-content: space-between;
   font-size: 30rpx;
   font-weight: 600;
+  color: var(--eas-ink);
   margin-bottom: 12rpx;
 }
 
 .section-title {
-  font-size: 26rpx;
-  color: #8f959e;
+  font-size: 24rpx;
+  color: var(--eas-ink-2);
   margin: 8rpx 8rpx 16rpx;
 }
 
@@ -106,24 +109,24 @@ textarea {
 }
 
 .muted {
-  color: #8f959e;
+  color: var(--eas-ink-3);
   font-size: 24rpx;
 }
 
 .text-primary {
-  color: #2f6bff;
+  color: var(--eas-primary);
 }
 
 .text-danger {
-  color: #e5484d;
+  color: var(--eas-danger);
 }
 
 .text-success {
-  color: #16a34a;
+  color: var(--eas-success);
 }
 
 .text-warning {
-  color: #d97706;
+  color: var(--eas-warning-text);
 }
 
 .bold {
@@ -153,7 +156,7 @@ textarea {
 .kv-label {
   width: 190rpx;
   flex-shrink: 0;
-  color: #646a73;
+  color: var(--eas-ink-2);
 }
 
 .kv-value {
@@ -172,11 +175,11 @@ textarea {
   height: 88rpx;
   line-height: 88rpx;
   padding: 0 28rpx;
-  border-radius: 12rpx;
+  border-radius: var(--eas-radius-control);
   font-size: 30rpx;
-  background: #fff;
-  color: #1f2329;
-  border: 2rpx solid #dcdfe6;
+  background: var(--eas-surface);
+  color: var(--eas-ink);
+  border: 2rpx solid var(--eas-rule-strong);
   box-sizing: border-box;
 }
 
@@ -185,20 +188,20 @@ textarea {
 }
 
 .btn-primary {
-  background: #2f6bff;
-  color: #fff;
-  border-color: #2f6bff;
+  background: var(--eas-primary);
+  color: var(--eas-surface);
+  border-color: var(--eas-primary);
 }
 
 .btn-danger {
-  background: #e5484d;
-  color: #fff;
-  border-color: #e5484d;
+  background: var(--eas-danger);
+  color: var(--eas-surface);
+  border-color: var(--eas-danger);
 }
 
 .btn-ghost-danger {
-  color: #e5484d;
-  border-color: #f5b8ba;
+  color: var(--eas-danger);
+  border-color: var(--eas-danger);
 }
 
 .btn-block {
@@ -217,12 +220,12 @@ textarea {
   min-height: 88rpx;
   min-width: 88rpx;
   padding: 0 16rpx;
-  color: #2f6bff;
+  color: var(--eas-primary);
   font-size: 28rpx;
 }
 
 .link-btn.danger {
-  color: #e5484d;
+  color: var(--eas-danger);
 }
 
 /* 底部固定操作栏，留出安全区 */
@@ -234,9 +237,9 @@ textarea {
   z-index: 90;
   display: flex;
   align-items: center;
-  background: #fff;
+  background: var(--eas-surface);
+  border-top: 1rpx solid var(--eas-rule);
   padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
-  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
 }
 
 .bottom-bar .btn {
@@ -257,12 +260,12 @@ textarea {
   display: flex;
   align-items: center;
   font-size: 28rpx;
-  color: #1f2329;
+  color: var(--eas-ink);
   margin-bottom: 12rpx;
 }
 
 .req {
-  color: #e5484d;
+  color: var(--eas-danger);
   margin-right: 4rpx;
 }
 
@@ -270,8 +273,9 @@ textarea {
   width: 100%;
   height: 88rpx;
   padding: 0 20rpx;
-  background: #f7f8fa;
-  border-radius: 10rpx;
+  background: var(--eas-paper);
+  border: 2rpx solid transparent;
+  border-radius: var(--eas-radius-control);
   font-size: 30rpx;
 }
 
@@ -279,10 +283,11 @@ textarea {
   width: 100%;
   min-height: 168rpx;
   padding: 20rpx;
-  background: #f7f8fa;
-  border-radius: 10rpx;
+  background: var(--eas-paper);
+  border: 2rpx solid transparent;
+  border-radius: var(--eas-radius-control);
   font-size: 30rpx;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .picker-value {
@@ -291,27 +296,34 @@ textarea {
   justify-content: space-between;
   height: 88rpx;
   padding: 0 20rpx;
-  background: #f7f8fa;
-  border-radius: 10rpx;
+  background: var(--eas-paper);
+  border: 2rpx solid transparent;
+  border-radius: var(--eas-radius-control);
   font-size: 30rpx;
 }
 
+.input:focus,
+.textarea:focus {
+  border-color: var(--eas-primary);
+}
+
 .placeholder {
-  color: #a8abb2;
+  color: var(--eas-placeholder);
 }
 
 .is-error {
-  background: #fff1f0 !important;
+  background: var(--eas-danger-tint) !important;
+  border-color: var(--eas-danger) !important;
 }
 
 .field-err {
-  color: #e5484d;
+  color: var(--eas-danger);
   font-size: 24rpx;
   margin-top: 8rpx;
 }
 
 .field-help {
-  color: #8f959e;
+  color: var(--eas-ink-3);
   font-size: 24rpx;
   margin-top: 8rpx;
 }
@@ -329,66 +341,67 @@ textarea {
   align-items: center;
   height: 40rpx;
   padding: 0 12rpx;
-  border-radius: 8rpx;
-  font-size: 22rpx;
+  border-radius: var(--eas-radius-tag);
+  font-size: 24rpx;
   line-height: 40rpx;
-  background: #f0f2f5;
-  color: #646a73;
+  background: var(--eas-muted-tint);
+  color: var(--eas-ink-2);
   margin-right: 8rpx;
   white-space: nowrap;
 }
 
 .tag-blue {
-  background: #e8efff;
-  color: #2f6bff;
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
 }
 
 .tag-green {
-  background: #e7f6ec;
-  color: #16a34a;
+  background: var(--eas-success-tint);
+  color: var(--eas-success);
 }
 
 .tag-red {
-  background: #fdecec;
-  color: #e5484d;
+  background: var(--eas-danger-tint);
+  color: var(--eas-danger);
 }
 
 .tag-orange {
-  background: #fff4e5;
-  color: #d97706;
+  background: var(--eas-warning-tint);
+  color: var(--eas-warning-text);
 }
 
 /* 横幅提示 */
 .banner {
   padding: 20rpx 24rpx;
-  border-radius: 12rpx;
-  margin-bottom: 24rpx;
+  border-radius: var(--eas-radius-panel);
+  margin-bottom: 16rpx;
   font-size: 26rpx;
   line-height: 1.6;
 }
 
 .banner-danger {
-  background: #fdecec;
-  color: #b42318;
+  background: var(--eas-danger-tint);
+  color: var(--eas-danger);
 }
 
 .banner-warning {
-  background: #fff7e6;
-  color: #ad6800;
+  background: var(--eas-warning-tint);
+  color: var(--eas-warning-text);
 }
 
 .banner-info {
-  background: #e8efff;
-  color: #1d4ed8;
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
 }
 
-/* 分段切换 */
+/* 分段切换；页面接入 .seg-indicator 后由选中块通过 transform 滑动。 */
 .seg {
+  position: relative;
   display: flex;
-  background: #fff;
-  border-radius: 12rpx;
+  background: var(--eas-paper-deep);
+  border-radius: var(--eas-radius-control);
   padding: 6rpx;
-  margin-bottom: 24rpx;
+  margin-bottom: 16rpx;
 }
 
 .seg-item {
@@ -396,23 +409,48 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 76rpx;
-  border-radius: 10rpx;
+  height: 88rpx;
+  border-radius: 6rpx;
   font-size: 28rpx;
-  color: #646a73;
+  color: var(--eas-ink-2);
 }
 
 .seg-item.active {
-  background: #2f6bff;
-  color: #fff;
+  background: var(--eas-surface);
+  color: var(--eas-ink);
   font-weight: 600;
+}
+
+.seg-indicator {
+  position: absolute;
+  top: 6rpx;
+  bottom: 6rpx;
+  left: 6rpx;
+  z-index: 0;
+  background: var(--eas-surface);
+  border: 1rpx solid var(--eas-rule);
+  border-radius: 6rpx;
+  transition: transform var(--eas-dur) var(--eas-ease);
+}
+
+.seg-indicator ~ .seg-item {
+  position: relative;
+  z-index: 1;
+}
+
+.seg-indicator ~ .seg-item.active {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-indicator { transition: none; }
 }
 
 /* 筛选条 */
 .filter-bar {
   display: flex;
   align-items: center;
-  margin-bottom: 20rpx;
+  margin-bottom: 16rpx;
 }
 
 .filter-chip {
@@ -422,30 +460,32 @@ textarea {
   min-height: 72rpx;
   padding: 0 24rpx;
   margin-right: 16rpx;
-  background: #fff;
-  border-radius: 36rpx;
+  background: var(--eas-surface);
+  border: 2rpx solid var(--eas-rule);
+  border-radius: var(--eas-radius-control);
   font-size: 26rpx;
-  color: #1f2329;
+  color: var(--eas-ink);
 }
 
 .filter-chip.active {
-  color: #2f6bff;
-  background: #e8efff;
+  color: var(--eas-primary);
+  background: var(--eas-primary-tint);
+  border-color: var(--eas-primary-tint);
 }
 
 .update-tip {
   text-align: center;
   padding: 18rpx;
-  margin-bottom: 20rpx;
-  border-radius: 12rpx;
-  background: #e8efff;
-  color: #2f6bff;
+  margin-bottom: 16rpx;
+  border-radius: var(--eas-radius-control);
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
   font-size: 26rpx;
 }
 
 .divider {
   height: 1rpx;
-  background: #f0f1f2;
+  background: var(--eas-rule);
   margin: 16rpx 0;
 }
 </style>
