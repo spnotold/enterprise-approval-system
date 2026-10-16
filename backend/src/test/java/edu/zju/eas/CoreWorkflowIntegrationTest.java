@@ -6,7 +6,6 @@ import edu.zju.eas.repository.*;
 import edu.zju.eas.security.*;
 import edu.zju.eas.service.file.StorageService;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,18 +25,19 @@ import static edu.zju.eas.service.app.BusinessDataService.map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
-/** 指向独立 PostgreSQL 测试库运行；不触碰本地开发库或 Docker 中的业务数据。 */
+/** 在独立的临时库上运行（服务器来源见 {@link TestDatabase}），不触碰本地开发库或 Docker 中的业务数据。 */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@EnabledIfEnvironmentVariable(named="EAS_TEST_DB_URL",matches=".+")
 class CoreWorkflowIntegrationTest {
+    private static String databaseUrl;
     @DynamicPropertySource static void database(DynamicPropertyRegistry p){
-        p.add("spring.datasource.url",()->System.getenv("EAS_TEST_DB_URL"));
-        p.add("spring.datasource.username",()->System.getenv().getOrDefault("EAS_TEST_DB_USER","eas_test"));
-        p.add("spring.datasource.password",()->System.getenv().getOrDefault("EAS_TEST_DB_PASSWORD",""));
-        p.add("spring.flyway.user",()->System.getenv().getOrDefault("EAS_TEST_DB_USER","eas_test"));
-        p.add("spring.flyway.password",()->System.getenv().getOrDefault("EAS_TEST_DB_PASSWORD",""));
+        databaseUrl=TestDatabase.createDatabase("eas_core_it");
+        p.add("spring.datasource.url",()->databaseUrl);
+        p.add("spring.datasource.username",TestDatabase::user);
+        p.add("spring.datasource.password",TestDatabase::password);
+        p.add("spring.flyway.user",TestDatabase::user);
+        p.add("spring.flyway.password",TestDatabase::password);
         p.add("eas.jwt.secret",()->"test-secret-for-integration-tests-only-32b");
         p.add("eas.minio.secret-key",()->"integration-test-key");
     }

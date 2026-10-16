@@ -1,6 +1,7 @@
 package edu.zju.eas.admin;
 
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import edu.zju.eas.TestDatabase;
 import edu.zju.eas.common.Jsons;
 import edu.zju.eas.controller.admin.*;
 import edu.zju.eas.controller.stats.StatsController;
@@ -34,7 +35,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.sql.DataSource;
 import java.time.*;
@@ -47,16 +47,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** 真实 PostgreSQL 的约束、JSONB、聚合与事务测试；不启动其他代理负责的应用模块。
- * 默认使用 Testcontainers；没有 Docker 时可指定 EAS_TEST_PG_URL/USER/PASSWORD，
- * 必须使用可 CREATEDB 的测试账号。始终创建并清理独立数据库，不接触原有业务数据。
+ * 在独立的临时库上运行（服务器来源见 {@link TestDatabase}），不接触原有业务数据。
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AdminTemplateStatsTest {
     private static DataSource source;
     private AnnotationConfigApplicationContext context;
-    private PostgreSQLContainer<?> container;
-    private JdbcTemplate adminJdbc,jdbc;
-    private String database;
+    private JdbcTemplate jdbc;
+    private String databaseUrl;
     private TemplateService templates;
     private UserAdminService users;
     private DepartmentAdminService departments;
@@ -66,18 +64,8 @@ class AdminTemplateStatsTest {
     private MockMvc mvc;
 
     @BeforeAll void start() throws Exception {
-        String url=System.getenv("EAS_TEST_PG_URL");
-        String user=System.getenv("EAS_TEST_PG_USER"),password=System.getenv("EAS_TEST_PG_PASSWORD");
-        if(url==null || url.isBlank()) {
-            container=new PostgreSQLContainer<>("postgres:16-alpine");container.start();
-            url=container.getJdbcUrl();user=container.getUsername();password=container.getPassword();
-        }
-        DriverManagerDataSource admin=new DriverManagerDataSource(url,user,password);adminJdbc=new JdbcTemplate(admin);
-        database="eas_module_test_"+UUID.randomUUID().toString().replace("-","");
-        adminJdbc.execute("CREATE DATABASE "+database);
-        String suffix=url.contains("?")?url.substring(url.indexOf('?')):"";
-        String base=url.contains("?")?url.substring(0,url.indexOf('?')):url;
-        source=new DriverManagerDataSource(base.substring(0,base.lastIndexOf('/')+1)+database+suffix,user,password);
+        databaseUrl=TestDatabase.createDatabase("eas_module_test");
+        source=new DriverManagerDataSource(databaseUrl,TestDatabase.user(),TestDatabase.password());
         Flyway.configure().dataSource(source).locations("classpath:db/migration").load().migrate();
         context=new AnnotationConfigApplicationContext(TestConfig.class);jdbc=context.getBean(JdbcTemplate.class);
         templates=context.getBean(TemplateService.class);users=context.getBean(UserAdminService.class);
@@ -90,8 +78,7 @@ class AdminTemplateStatsTest {
     @AfterAll void stop() {
         SecurityContextHolder.clearContext();
         if(context!=null) context.close();
-        if(adminJdbc!=null && database!=null) adminJdbc.execute("DROP DATABASE IF EXISTS "+database+" WITH (FORCE)");
-        if(container!=null) container.stop();
+        if(databaseUrl!=null) TestDatabase.dropDatabase(databaseUrl);
     }
 
     @BeforeEach void reset() {
