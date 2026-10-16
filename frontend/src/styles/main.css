@@ -1,7 +1,7 @@
 :root {
   --eas-gap: 16px;
   --eas-header-height: 56px;
-  --eas-no-invoice-bg: #fdf3e6;
+  --eas-no-invoice-bg: var(--eas-warning-tint);
 }
 
 html,
