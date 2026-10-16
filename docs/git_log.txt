@@ -1,216 +1,1156 @@
+commit 54bddef0ba921fe41497be383077131a9486f823
+Merge: 91a74c2 64b205a
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 04:55:40 2026 -0400
+
+    Merge branch 'feature/docs-sync' into dev
+
+commit 91a74c20b9abc20d126d156056dfc2c01cad745f
+Merge: ab02ea1 749f5b3
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 04:55:40 2026 -0400
+
+    Merge branch 'feature/test-database' into dev
+
+commit 64b205a24c4fb28480e86abe7a7949d862387ad9
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 04:55:20 2026 -0400
+
+    docs: experiment report in Word and PDF with cover page
+
+ docs/experiment_report/experiment_report.docx | Bin 0 -> 18024 bytes
+ docs/experiment_report/experiment_report.pdf  | Bin 0 -> 327839 bytes
+ 2 files changed, 0 insertions(+), 0 deletions(-)
+
+commit e42ee1eec7c1adbf17428878b0103865b4ac27e0
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 04:55:20 2026 -0400
+
+    docs: record deployment acceptance and 62 backend tests
+    
+    The Docker Compose deployment was verified in 6700f00 but several documents
+    still said it was not. Test report counts AdminBootstrapTest (62 tests) and
+    documents the new way to run the backend tests.
+
+ README.md                        |  5 +++--
+ docs/demo_video.md               |  2 +-
+ docs/experiment_report/README.md | 12 +++++++-----
+ docs/summary.md                  |  4 ++--
+ docs/test_report.md              | 22 +++++++++++++++-------
+ 5 files changed, 28 insertions(+), 17 deletions(-)
+
+commit 3d8fd45ee224432e3050e92d75c67c63dcf2ff67
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 04:55:20 2026 -0400
+
+    docs: sync design document with the implementation
+    
+    Fill in department and major on the cover; update directory trees, the
+    V5 migration, class names (BusinessDataService/BusinessValidator,
+    StatsService on JdbcTemplate, IdempotencyService.execute, AuditService),
+    SecurityConfig public paths, the source-built MinIO and postgres images,
+    and the TestDatabase setup. The Word copy moves back to docs/ with the
+    same edits and re-rendered code images.
+
+ docs/archive/README.md            |   1 -
+ docs/archive/design_document.docx | Bin 11888488 -> 12303001 bytes
+ docs/design_document.md           | 129 +++++++++++++++++++++-----------------
+ 3 files changed, 73 insertions(+), 57 deletions(-)
+
+commit 749f5b34d39a6b395a5dadf9d0f1aba790006e0f
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 04:55:20 2026 -0400
+
+    test: run integration tests on Testcontainers or a configured PostgreSQL
+    
+    TestDatabase provides the PostgreSQL 16 server for all integration tests:
+    EAS_TEST_PG_URL/USER/PASSWORD when set, otherwise one Testcontainers
+    postgres:16-alpine container per JVM. Tests now error instead of being
+    silently skipped when neither is available, so `mvn test` really runs
+    every case. Each test class gets a randomly named temp database; dbname
+    query parameters are stripped and the connection is checked against
+    current_database(). DemoDataTest closes its own context after the class.
+
+ .../edu/zju/eas/CoreWorkflowIntegrationTest.java   |  16 ++--
+ .../test/java/edu/zju/eas/IntegrationTestBase.java |  41 ++-------
+ .../src/test/java/edu/zju/eas/TestDatabase.java    | 102 +++++++++++++++++++++
+ .../edu/zju/eas/admin/AdminTemplateStatsTest.java  |  27 ++----
+ .../test/java/edu/zju/eas/demo/DemoDataTest.java   |  48 +++-------
+ docs/{archive => }/design_document.docx            | Bin
+ 6 files changed, 139 insertions(+), 95 deletions(-)
+
+commit ab02ea14610cf81f4310cd8cc376e7a1cff33c78
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 01:50:57 2026 -0400
+
+    docs: archive development handoff and Word copy of design document
+
+ README.md                                 |   8 ++++----
+ docs/{ => archive}/DEVELOPMENT_HANDOFF.md |   0
+ docs/archive/README.md                    |   6 ++++++
+ docs/{ => archive}/design_document.docx   | Bin
+ docs/experiment_report/README.md          |   2 +-
+ 5 files changed, 11 insertions(+), 5 deletions(-)
+
+commit e8881b7ad00a458600b22751420bfe9bb3646058
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 01:47:39 2026 -0400
+
+    docs: refresh git log export
+
+ docs/git_log.txt | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
 commit bb19887d6c46e0b550f38a1a8b66ffbcc293acf3
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-16 01:47:34 -0400
+Date:   Fri Oct 16 01:47:34 2026 -0400
 
     fix(deploy): issues from deployment review
+    
+    - compose no longer falls back to the demo profile when SPRING_PROFILES_ACTIVE
+      is empty; demo is enabled explicitly in template.env
+    - serialize admin bootstrap with a transaction-level advisory lock so
+      concurrent first starts don't crash one instance
+    - behind a TLS-terminating proxy: nginx passes through X-Forwarded-Proto/Port
+      only when the upstream sends them, and Spring parses forwarded headers, so
+      https same-origin requests pass the CORS check
+    - backend runtime image eclipse-temurin:17-jre (multi-arch, arm64 builds);
+      health check uses curl
+
+ README.md                                                       | 4 ++--
+ backend/Dockerfile                                              | 3 ++-
+ backend/src/main/java/edu/zju/eas/bootstrap/AdminBootstrap.java | 2 ++
+ backend/src/main/resources/application.yml                      | 1 +
+ docker-compose.yml                                              | 4 ++--
+ docs/DEVELOPMENT_HANDOFF.md                                     | 4 ++--
+ nginx/default.conf                                              | 7 ++++++-
+ 7 files changed, 17 insertions(+), 8 deletions(-)
 
 commit b1f88c056d74d81c33a6be8306e5d5d069683893
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-16 01:36:35 -0400
+Date:   Fri Oct 16 01:36:35 2026 -0400
 
     docs: refresh git log export
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ docs/git_log.txt | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
 
 commit 6700f004abc063bc1a0f84bae6c5652a7ef1bcaa
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-16 01:36:27 -0400
+Date:   Fri Oct 16 01:36:27 2026 -0400
 
     fix(deploy): make docker compose deployment work end to end
+    
+    - nginx forwards the full Host header; with $host the port was dropped and
+      same-origin POSTs on a non-80 port were rejected as invalid CORS requests
+    - build MinIO and mc from pinned source: official images are no longer published
+    - bake db/init into a postgres image so a 700 host directory (umask 077) can't
+      hide the init script from the container
+    - .dockerignore files; Maven/npm cache mounts and npm ci
+    - configurable HTTP_PORT / MAILPIT_PORT / APP_BASE_URL, pass COOKIE_SECURE and
+      EAS_ADMIN_PASSWORD to the backend
+    - verified: all 6 services healthy; web/H5, login + cookie refresh, upload and
+      download, SSE, mail via Mailpit, least-privilege DB and MinIO accounts
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .dockerignore               | 12 ++++++++++++
+ README.md                   |  6 +++++-
+ backend/.dockerignore       |  3 +++
+ backend/Dockerfile          |  5 +++--
+ db/Dockerfile               |  4 ++++
+ docker-compose.yml          | 17 +++++++++++------
+ docs/DEVELOPMENT_HANDOFF.md |  4 ++--
+ frontend/.dockerignore      |  2 ++
+ minio/Dockerfile            | 16 ++++++++++++++++
+ nginx/Dockerfile            |  5 +++--
+ nginx/default.conf          |  4 +++-
+ template.env                |  9 +++++++++
+ 12 files changed, 73 insertions(+), 14 deletions(-)
 
 commit d0caf931b6d89cb7cca895641ad5a8d756cc6838
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-16 01:36:27 -0400
+Date:   Fri Oct 16 01:36:27 2026 -0400
 
     feat(auth): bootstrap first system admin for non-demo deployments
+    
+    When no SYS_ADMIN exists and EAS_ADMIN_PASSWORD is set, create user admin in
+    总经办 at startup (audited). No-op once an administrator exists.
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../java/edu/zju/eas/bootstrap/AdminBootstrap.java | 64 ++++++++++++++++++++++
+ .../java/edu/zju/eas/config/EasProperties.java     |  2 +
+ backend/src/main/resources/application.yml         |  1 +
+ .../edu/zju/eas/security/AdminBootstrapTest.java   | 53 ++++++++++++++++++
+ 4 files changed, 120 insertions(+)
 
 commit ffa00ecf2d13f415303653118dd1d1238f68261f
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 21:04:28 -0400
+Date:   Thu Oct 15 21:04:28 2026 -0400
 
     docs: refresh git log export
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ docs/git_log.txt | 81 +++++++++++++++++---------------------------------------
+ 1 file changed, 25 insertions(+), 56 deletions(-)
 
 commit 262b101b21070412dd13150431900e9c2d82549a
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 21:04:13 -0400
+Date:   Thu Oct 15 21:04:13 2026 -0400
 
     docs: record round-2 review fixes (60 backend tests)
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ docs/DEVELOPMENT_HANDOFF.md |  3 ++-
+ docs/test_report.md         | 19 +++++++++++++++++--
+ 2 files changed, 19 insertions(+), 3 deletions(-)
 
 commit 3903240a7659b60bdee28d4a8157704765baab47
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 21:03:54 -0400
+Date:   Thu Oct 15 21:03:54 2026 -0400
 
     test: best-effort cleanup of the demo test database
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ backend/src/test/java/edu/zju/eas/demo/DemoDataTest.java | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
 
 commit 27e96b7968c0201eb1901ee82c110943e818bd55
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 21:02:33 -0400
+Date:   Thu Oct 15 21:02:33 2026 -0400
 
     fix: issues from round-2 backend review (gpt-6.1-sol)
+    
+    - admin accounts never approve: TASK_HANDLE is dropped for SYS_ADMIN even with
+      business roles; approve/reject and transfer targets reject administrators
+    - transfer cannot hand a second countersign vote to someone who already acted
+      on the node
+    - cross-application invoice matches reveal the other application only to
+      finance approvers (Q18); others get the redacted warning
+    - audit administrator reads via scope=granted lists and LINKED summaries
+    - fractional cent values are rejected (400) instead of truncated
+    - custom fields: empty arrays are type-checked; NUMBER defaults to 4 decimals
+    - linkable applications capped at 100
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../java/edu/zju/eas/config/JacksonConfig.java     |  2 +
+ .../edu/zju/eas/repository/ApprovalTaskMapper.java |  4 ++
+ .../edu/zju/eas/repository/FlowQueryMapper.java    |  6 +-
+ .../java/edu/zju/eas/security/AuthInfoService.java |  4 ++
+ .../java/edu/zju/eas/service/AuditService.java     |  8 +++
+ .../zju/eas/service/admin/ConfigAdminService.java  |  2 +-
+ .../zju/eas/service/app/ApplicationService.java    | 10 +--
+ .../edu/zju/eas/service/app/BusinessValidator.java |  4 +-
+ .../edu/zju/eas/service/flow/ApproverResolver.java |  4 +-
+ .../java/edu/zju/eas/service/flow/FlowEngine.java  | 13 +++-
+ .../service/template/TemplatePublishValidator.java |  2 +-
+ .../java/edu/zju/eas/review/ReviewRound2Test.java  | 81 ++++++++++++++++++++++
+ 12 files changed, 124 insertions(+), 16 deletions(-)
 
 commit a4c160300cfb1e777544c54051bfde50136a7a41
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 20:58:22 -0400
+Date:   Thu Oct 15 20:58:22 2026 -0400
 
     docs: sync final test results and handoff (55 backend tests)
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ docs/DEVELOPMENT_HANDOFF.md |  8 ++++----
+ docs/git_log.txt            | 18 ++++++++++++++++++
+ docs/test_report.md         | 13 +++++++------
+ docs/user_guide.md          |  1 +
+ 4 files changed, 30 insertions(+), 10 deletions(-)
 
 commit e3136b035401583dc29c42c9a01160950a3e3dfa
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 18:03:11 -0400
+Date:   Thu Oct 15 18:03:11 2026 -0400
 
     fix: validate persisted date years before database writes
 
+ .../java/edu/zju/eas/service/app/BusinessValidator.java     | 13 ++++++++++++-
+ .../src/test/java/edu/zju/eas/biz/ReviewRegressionTest.java | 10 ++++++++++
+ 2 files changed, 22 insertions(+), 1 deletion(-)
+
 commit c8bf56713a9f3a08cbb32ee58cabf01399e77062
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 18:00:55 -0400
+Date:   Thu Oct 15 18:00:55 2026 -0400
 
     fix(web): recover failed refresh inside approval dialog
 
+ docs/DEVELOPMENT_HANDOFF.md                        |  3 ++-
+ docs/test_report.md                                |  3 ++-
+ frontend/src/components/ApprovePanel.vue           | 22 +++++++++++++++++++++-
+ .../src/views/applications/ApplicationDetail.vue   |  2 +-
+ 4 files changed, 26 insertions(+), 4 deletions(-)
+
 commit ec2209ef2590b8e8d2b2a8514f7e5fc396b400b9
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 17:57:21 -0400
+Date:   Thu Oct 15 17:57:21 2026 -0400
 
     docs: add acceptance recording and sync verified project handoff
 
+ docs/DEVELOPMENT_HANDOFF.md      |  18 +--
+ docs/demo/seal-approval-e2e.mp4  | Bin 0 -> 3534636 bytes
+ docs/demo_video.md               |  16 ++-
+ docs/experiment_report/README.md | 131 ++++++++++++++++++-
+ docs/git_log.txt                 | 272 ++++++++++++++++++++++-----------------
+ docs/summary.md                  |  42 +++++-
+ docs/test_report.md              |  41 +++++-
+ docs/user_guide.md               |   4 +-
+ 8 files changed, 383 insertions(+), 141 deletions(-)
+
 commit d8690698427728e8cb50974f41e9a8a0c0aa747a
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 17:54:12 -0400
+Date:   Thu Oct 15 17:54:12 2026 -0400
 
     fix: harden copy validation, attachment privacy and live refresh
 
+ .../src/main/java/edu/zju/eas/job/CleanupJobs.java |   2 +-
+ .../java/edu/zju/eas/job/OverdueReminderJob.java   |  16 +++
+ .../zju/eas/service/admin/AdminQueryService.java   |   2 +-
+ .../zju/eas/service/admin/ConfigAdminService.java  |   6 +-
+ .../zju/eas/service/app/ApplicationService.java    |  16 ++-
+ .../zju/eas/service/app/BusinessDataService.java   |  16 ++-
+ .../edu/zju/eas/service/app/BusinessValidator.java |  33 +++++-
+ .../java/edu/zju/eas/service/flow/FlowEngine.java  |  13 ++-
+ .../service/template/TemplatePublishValidator.java |  12 ++-
+ .../zju/eas/service/template/TemplateService.java  |  11 +-
+ .../edu/zju/eas/CoreWorkflowIntegrationTest.java   |   4 +-
+ .../test/java/edu/zju/eas/IntegrationTestBase.java |   3 +-
+ .../edu/zju/eas/admin/AdminTemplateStatsTest.java  |  12 +++
+ .../java/edu/zju/eas/biz/ReviewRegressionTest.java | 118 +++++++++++++++++++++
+ .../java/edu/zju/eas/job/MaintenanceJobsTest.java  |  72 +++++++++++++
+ frontend/src/components/ApprovePanel.vue           |  29 +++--
+ frontend/src/components/ExpenseItemTable.vue       |   2 +-
+ frontend/src/components/tasks/TaskListContent.vue  |   4 +-
+ frontend/src/lib/types.ts                          |   2 +
+ .../src/views/applications/ApplicationDetail.vue   |  34 ++++--
+ mobile/composables/useDraft.ts                     |  99 ++++++++---------
+ mobile/lib/types.ts                                |   2 +
+ mobile/pages/apply/expense.vue                     |   7 +-
+ mobile/pages/apply/purchase.vue                    |   1 +
+ 24 files changed, 420 insertions(+), 96 deletions(-)
+
 commit 7f55323d8fb29be5d380679d496263d82b1e2ca0
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 09:48:11 -0400
+Date:   Thu Oct 15 09:48:11 2026 -0400
 
     docs: user guide
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ docs/user_guide.md | 114 ++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 113 insertions(+), 1 deletion(-)
 
 commit c9aafcdc861f04dcbdef94c1722c65a85429a6ec
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 09:46:37 -0400
+Date:   Thu Oct 15 09:46:37 2026 -0400
 
     fix: issues found in browser QA
+    
+    - flow: transfer stored candidate_ids as a JSON string (double encoding), which
+      broke task lists and detail with 500; transfer is audited once
+    - file: set MinIO region so the client skips GetBucketLocation, which the
+      bucket-scoped key may not call (every upload failed with Access Denied)
+    - notify: invalid SSE ticket returns 401 instead of 500
+    - web: grants scope text, task list type/template column, status column width,
+      log status text for node-to-node moves, stale demo hint
+    - mobile: clearer wording for skipped nodes in the path preview
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../main/java/edu/zju/eas/config/EasProperties.java    |  1 +
+ .../src/main/java/edu/zju/eas/config/MinioConfig.java  |  2 ++
+ .../edu/zju/eas/controller/NotificationController.java | 10 ++++++----
+ .../edu/zju/eas/controller/admin/AdminController.java  |  2 +-
+ .../main/java/edu/zju/eas/service/flow/FlowEngine.java |  2 +-
+ .../src/test/java/edu/zju/eas/flow/FlowRulesTest.java  | 18 ++++++++++++++++++
+ frontend/src/components/tasks/TaskListContent.vue      |  2 +-
+ frontend/src/views/Login.vue                           |  2 +-
+ frontend/src/views/admin/Grants.vue                    |  3 +--
+ frontend/src/views/applications/ApplicationDetail.vue  |  2 +-
+ frontend/src/views/applications/ApplicationList.vue    |  2 +-
+ mobile/composables/useDraft.ts                         |  2 +-
+ 12 files changed, 35 insertions(+), 13 deletions(-)
 
 commit 6bce9fc8b7b50c73c65e8a2bc89076d1a58a34c3
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 09:11:13 -0400
+Date:   Thu Oct 15 09:11:13 2026 -0400
 
     docs: test report and updated development status
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ README.md                   |  2 +-
+ docs/DEVELOPMENT_HANDOFF.md | 65 +++++++++++++++------------------------
+ docs/test_report.md         | 75 ++++++++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 99 insertions(+), 43 deletions(-)
 
 commit 17cbfc508ef5a13c9ae232a8272e708bf6e59673
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 09:09:19 -0400
+Date:   Thu Oct 15 09:09:19 2026 -0400
 
     test: key scenarios T01-T16 against real PostgreSQL
+    
+    IntegrationTestBase boots the demo profile on a throwaway database and resets
+    seed data before each test. Covers access isolation, current-approver and admin
+    checks, self-approval fallback, withdraw/approve race (20 rounds), concurrent
+    approve, idempotent replay, terminal immutability, tamper-proof totals, cent
+    arithmetic, duplicate invoices, file type sniffing, notification isolation and
+    template version snapshots.
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../test/java/edu/zju/eas/IntegrationTestBase.java | 203 +++++++++++++++++++++
+ .../java/edu/zju/eas/biz/BusinessRulesTest.java    |  68 +++++++
+ .../test/java/edu/zju/eas/flow/FlowRulesTest.java  | 122 +++++++++++++
+ .../java/edu/zju/eas/notify/NotificationTest.java  |  38 ++++
+ .../edu/zju/eas/security/AccessControlTest.java    |  69 +++++++
+ .../edu/zju/eas/template/TemplateVersionTest.java  |  48 +++++
+ 6 files changed, 548 insertions(+)
 
 commit b36570305834aadbe66f8c693fc562af7275ab2b
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 09:04:29 -0400
+Date:   Thu Oct 15 09:04:29 2026 -0400
 
     feat(demo): demo accounts, custom templates and sample applications
+    
+    - db/demo/R__seed_demo.sql: 10 demo accounts (Demo@2026), roles and primary
+      handlers, department heads, data-scope grants, LEAVE and SEAL templates
+    - DemoDataInitializer (demo profile) creates the sample applications through
+      the real save/submit/approve/reject flow, once
+    - fix(auth): register UUID type handler globally; login failed with 500 when
+      inserting refresh_token.family_id
+    - fix(flow): custom NUMBER/AMOUNT/DATE fields are compared by value in node
+      conditions ("10" > "3" was false as strings)
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../java/edu/zju/eas/config/MybatisPlusConfig.java |   8 ++
+ .../java/edu/zju/eas/demo/DemoDataInitializer.java | 136 +++++++++++++++++++++
+ .../zju/eas/service/app/BusinessDataService.java   |  15 ++-
+ .../src/main/resources/db/demo/R__seed_demo.sql    | 111 +++++++++++++++++
+ .../test/java/edu/zju/eas/demo/DemoDataTest.java   | 122 ++++++++++++++++++
+ 5 files changed, 391 insertions(+), 1 deletion(-)
 
 commit e2995d288bfee06f6b61ef7cbc3a62c959316993
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 08:59:49 -0400
+Date:   Thu Oct 15 08:59:49 2026 -0400
 
     fix(api): pending-count route, Idempotent-Replayed header, ISO date query params
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../src/main/java/edu/zju/eas/controller/TaskController.java   |  4 ++++
+ .../src/main/java/edu/zju/eas/service/IdempotencyService.java  | 10 ++++++++++
+ backend/src/main/resources/application.yml                     |  4 ++++
+ .../src/test/java/edu/zju/eas/CoreWorkflowIntegrationTest.java |  3 +++
+ 4 files changed, 21 insertions(+)
 
 commit 76c33eace7253333efaa2520d400f78b6fbfe2d6
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 08:58:24 -0400
+Date:   Thu Oct 15 08:58:24 2026 -0400
 
     feat(job): cleanup and overdue reminder jobs; align application config
+    
+    - purge TEMP attachments after 24h, idempotency records after 7 days,
+      soft-deleted drafts after 30 days, expired refresh tokens
+    - remind assignees of overdue tasks every 30 min (once per task per day)
+    - application.yml: jwt access-minutes/refresh-days, cookie-secure, app base-url,
+      zh_CN locale; add demo profile loading db/demo
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../src/main/java/edu/zju/eas/job/CleanupJobs.java | 95 ++++++++++++++++++++++
+ .../java/edu/zju/eas/job/OverdueReminderJob.java   | 68 ++++++++++++++++
+ .../eas/service/notify/NotificationService.java    |  4 +-
+ backend/src/main/resources/application-demo.yml    |  5 +-
+ backend/src/main/resources/application.yml         | 10 ++-
+ 5 files changed, 175 insertions(+), 7 deletions(-)
 
 commit 7d20093de48d74a9c33aea09a430b0e9c721b80c
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 08:55:16 -0400
+Date:   Thu Oct 15 08:55:16 2026 -0400
 
     feat(mobile): purchase/expense/custom forms, stats page, strict typecheck fixes
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ mobile/components/ApproveSheet.vue       |   5 +-
+ mobile/components/AttachmentPicker.vue   |   5 +-
+ mobile/components/CustomFormRenderer.vue |  21 +-
+ mobile/components/MoneyInput.vue         |   5 +-
+ mobile/components/UChart.vue             |   9 +-
+ mobile/composables/useDraft.ts           |  58 ++--
+ mobile/env.d.ts                          |  11 +-
+ mobile/lib/files.ts                      |   5 +-
+ mobile/package.json                      |   3 +-
+ mobile/pages/app/list.vue                |   9 +-
+ mobile/pages/apply/custom.vue            | 140 +++++++++
+ mobile/pages/apply/expense.vue           | 189 ++++++++++++
+ mobile/pages/apply/purchase.vue          | 197 ++++++++++++
+ mobile/pages/apply/travel.vue            |  16 +-
+ mobile/pages/me/index.vue                |   5 +-
+ mobile/pages/me/password.vue             |   5 +-
+ mobile/pages/register/index.vue          |  12 +-
+ mobile/pages/stats/index.vue             | 499 +++++++++++++++++++++++++++++++
+ mobile/pages/task/list.vue               |   5 +-
+ mobile/tests/applyForms.test.mjs         | 114 +++++++
+ mobile/tests/files.test.mjs              |  46 +++
+ mobile/tests/loadTs.mjs                  |  35 +++
+ mobile/tests/useDraft.test.mjs           |  66 ++++
+ mobile/utils/applyForms.ts               | 191 ++++++++++++
+ mobile/utils/customForm.ts               |  40 ++-
+ mobile/utils/decimal.ts                  |   8 +
+ mobile/utils/feedback.ts                 |   2 +-
+ mobile/utils/time.ts                     |   7 +
+ mobile/utils/uniEvent.ts                 |  47 +++
+ 29 files changed, 1678 insertions(+), 77 deletions(-)
 
 commit 22a689991a3bdb79d7007cdbd2e49e556f330ff7
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 08:55:16 -0400
+Date:   Thu Oct 15 08:55:16 2026 -0400
 
     feat(web): application detail and task list pages
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .../applications/ApplicationBusiness.vue           | 124 ++++++++++
+ .../applications/LinkedApplicationCard.vue         |  38 +++
+ frontend/src/components/tasks/TaskListContent.vue  | 130 ++++++++++
+ .../src/views/applications/ApplicationDetail.vue   | 271 ++++++++++++++++++++-
+ frontend/src/views/tasks/TaskList.vue              |  14 +-
+ 5 files changed, 575 insertions(+), 2 deletions(-)
 
 commit 1a914b92d128a39c7da9abcb2da7cb5e40117735
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 08:55:16 -0400
+Date:   Thu Oct 15 08:55:16 2026 -0400
 
     feat(backend): application, task, file, template, admin and stats APIs
+    
+    Business save/submit validation for purchase/travel/expense/custom, access policy,
+    idempotent submit/approve, admin services and stats queries, V5 draft constraint
+    relaxation, and integration tests against a real PostgreSQL.
+    Fix: stats monthly alias needs AS (month is a keyword); test fixture columns.
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ .gitignore                                         |   4 +
+ .../zju/eas/controller/ApplicationController.java  |  67 ++++
+ .../edu/zju/eas/controller/FileController.java     |  43 +++
+ .../edu/zju/eas/controller/TaskController.java     |  31 ++
+ .../zju/eas/controller/admin/AdminController.java  |  61 ++++
+ .../controller/admin/TemplateAdminController.java  |  28 ++
+ .../zju/eas/controller/stats/StatsController.java  |  23 ++
+ .../controller/template/TemplateController.java    |  17 +
+ .../main/java/edu/zju/eas/dto/admin/AdminDtos.java |  51 +++
+ .../edu/zju/eas/dto/app/ApplicationSummary.java    |  10 +
+ .../java/edu/zju/eas/dto/app/BusinessRequests.java |  41 +++
+ .../main/java/edu/zju/eas/dto/app/ListQuery.java   |   8 +
+ .../main/java/edu/zju/eas/dto/stats/StatsDtos.java |  23 ++
+ .../edu/zju/eas/dto/template/TemplateDtos.java     |  33 ++
+ .../edu/zju/eas/repository/ApplicationMapper.java  |  33 +-
+ .../java/edu/zju/eas/service/AccessPolicy.java     |  58 ++++
+ .../edu/zju/eas/service/IdempotencyService.java    |  52 ++++
+ .../zju/eas/service/admin/AdminQueryService.java   |  63 ++++
+ .../edu/zju/eas/service/admin/AdminSupport.java    |  64 ++++
+ .../zju/eas/service/admin/ConfigAdminService.java  |  80 +++++
+ .../eas/service/admin/DepartmentAdminService.java  |  87 ++++++
+ .../zju/eas/service/admin/GrantAdminService.java   |  79 +++++
+ .../zju/eas/service/admin/UserAdminService.java    | 175 +++++++++++
+ .../zju/eas/service/app/ApplicationService.java    | 178 +++++++++++
+ .../zju/eas/service/app/BusinessDataService.java   | 246 +++++++++++++++
+ .../eas/service/app/BusinessHandlersConfig.java    |  20 ++
+ .../edu/zju/eas/service/app/BusinessValidator.java | 199 ++++++++++++
+ .../java/edu/zju/eas/service/file/FileService.java |  18 +-
+ .../java/edu/zju/eas/service/flow/FlowEngine.java  |   1 +
+ .../edu/zju/eas/service/stats/StatsService.java    | 152 +++++++++
+ .../service/template/TemplatePublishValidator.java | 205 ++++++++++++
+ .../zju/eas/service/template/TemplateService.java  | 225 ++++++++++++++
+ .../V5__allow_incomplete_draft_details.sql         |   5 +
+ .../edu/zju/eas/CoreWorkflowIntegrationTest.java   | 220 +++++++++++++
+ .../edu/zju/eas/admin/AdminTemplateStatsTest.java  | 345 +++++++++++++++++++++
+ 35 files changed, 2939 insertions(+), 6 deletions(-)
 
 commit 7212793a5844872a78311b2e257993abc283676f
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 06:46:17 -0400
+Date:   Thu Oct 15 06:46:17 2026 -0400
 
     fix: wrap up frontend build issues and document development handoff
 
+ README.md                                          |  2 +
+ docs/DEVELOPMENT_HANDOFF.md                        | 53 ++++++++++++++++++++++
+ .../src/views/applications/ApplicationList.vue     |  2 +-
+ mobile/components/AttachmentPicker.vue             |  6 +--
+ mobile/lib/api/auth.ts                             |  9 ++--
+ mobile/lib/money.ts                                |  4 ++
+ mobile/lib/types.ts                                | 31 +++++++++++--
+ 7 files changed, 95 insertions(+), 12 deletions(-)
+
 commit 81dbf5f484df3ea963baafcb20be1f843e7dc773
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
-Date:   2026-10-15 06:42:33 -0400
+Date:   Thu Oct 15 06:42:33 2026 -0400
 
     chore: checkpoint approval system implementation in progress
 
+ backend/pom.xml                                    |    4 +
+ .../src/main/java/edu/zju/eas/EasApplication.java  |   17 +
+ .../main/java/edu/zju/eas/common/AuditAspect.java  |   40 +
+ .../main/java/edu/zju/eas/common/AuditTrail.java   |   33 +
+ .../src/main/java/edu/zju/eas/common/Audited.java  |   20 +
+ .../src/main/java/edu/zju/eas/common/Hashes.java   |   27 +
+ .../src/main/java/edu/zju/eas/common/Jsons.java    |   53 +
+ .../main/java/edu/zju/eas/common/RequestInfo.java  |   41 +
+ backend/src/main/java/edu/zju/eas/common/Sqls.java |   18 +
+ .../src/main/java/edu/zju/eas/common/Times.java    |   27 +
+ .../main/java/edu/zju/eas/common/TraceContext.java |   15 +
+ .../java/edu/zju/eas/common/TraceIdFilter.java     |   32 +
+ .../edu/zju/eas/common/mybatis/JsonbHandlers.java  |   52 +
+ .../zju/eas/common/mybatis/JsonbTypeHandler.java   |   56 +
+ .../zju/eas/common/mybatis/UuidTypeHandler.java    |   34 +
+ backend/src/main/java/edu/zju/eas/config/.gitkeep  |    0
+ .../main/java/edu/zju/eas/config/AsyncConfig.java  |   22 +
+ .../main/java/edu/zju/eas/config/CorsConfig.java   |   28 +
+ .../java/edu/zju/eas/config/EasProperties.java     |   53 +
+ .../java/edu/zju/eas/config/JacksonConfig.java     |   44 +
+ .../main/java/edu/zju/eas/config/MinioConfig.java  |   19 +
+ .../java/edu/zju/eas/config/MybatisPlusConfig.java |   23 +
+ .../java/edu/zju/eas/config/SecurityConfig.java    |   53 +
+ .../java/edu/zju/eas/config/TransactionConfig.java |   11 +
+ .../src/main/java/edu/zju/eas/controller/.gitkeep  |    0
+ .../edu/zju/eas/controller/AuthController.java     |  179 ++
+ .../edu/zju/eas/controller/DictController.java     |   49 +
+ .../java/edu/zju/eas/controller/MeController.java  |   44 +
+ .../zju/eas/controller/NotificationController.java |   98 +
+ .../edu/zju/eas/controller/PublicController.java   |   24 +
+ backend/src/main/java/edu/zju/eas/dto/.gitkeep     |    0
+ .../zju/eas/dto/auth/ChangePasswordRequest.java    |   13 +
+ .../java/edu/zju/eas/dto/auth/LoginRequest.java    |   10 +
+ .../java/edu/zju/eas/dto/auth/LoginResult.java     |    8 +
+ .../src/main/java/edu/zju/eas/dto/auth/MeView.java |   26 +
+ .../edu/zju/eas/dto/auth/PreferencesRequest.java   |    6 +
+ .../java/edu/zju/eas/dto/auth/RefreshRequest.java  |   10 +
+ .../java/edu/zju/eas/dto/auth/RegisterRequest.java |   25 +
+ .../java/edu/zju/eas/dto/common/DeptOption.java    |    4 +
+ .../edu/zju/eas/dto/common/ExpenseTypeOption.java  |    4 +
+ .../main/java/edu/zju/eas/dto/common/IdName.java   |    4 +
+ .../java/edu/zju/eas/dto/common/ReasonRequest.java |    8 +
+ .../java/edu/zju/eas/dto/common/UserBrief.java     |    4 +
+ .../java/edu/zju/eas/dto/common/UserOption.java    |    4 +
+ .../java/edu/zju/eas/dto/flow/ActionRequest.java   |    7 +
+ .../java/edu/zju/eas/dto/flow/ActionResult.java    |    6 +
+ .../java/edu/zju/eas/dto/flow/ApproveRequest.java  |    7 +
+ .../java/edu/zju/eas/dto/flow/PathPreview.java     |   11 +
+ .../java/edu/zju/eas/dto/flow/RejectRequest.java   |   11 +
+ .../java/edu/zju/eas/dto/flow/TransferRequest.java |    8 +
+ backend/src/main/java/edu/zju/eas/model/.gitkeep   |    0
+ .../java/edu/zju/eas/model/app/Application.java    |   30 +
+ .../java/edu/zju/eas/model/app/CustomFormData.java |   16 +
+ .../java/edu/zju/eas/model/app/ExpenseDetail.java  |   14 +
+ .../java/edu/zju/eas/model/app/ExpenseInvoice.java |   18 +
+ .../java/edu/zju/eas/model/app/ExpenseItem.java    |   20 +
+ .../edu/zju/eas/model/app/ExpenseRelation.java     |   11 +
+ .../java/edu/zju/eas/model/app/ExpenseType.java    |   18 +
+ .../java/edu/zju/eas/model/app/PurchaseDetail.java |   27 +
+ .../java/edu/zju/eas/model/app/PurchaseItem.java   |   21 +
+ .../java/edu/zju/eas/model/app/PurchaseQuote.java  |   25 +
+ .../edu/zju/eas/model/app/TravelCompanion.java     |   15 +
+ .../java/edu/zju/eas/model/app/TravelDetail.java   |   26 +
+ .../java/edu/zju/eas/model/common/Attachment.java  |   29 +
+ .../java/edu/zju/eas/model/common/AuditLog.java    |   26 +
+ .../zju/eas/model/common/IdempotencyRecord.java    |   21 +
+ .../edu/zju/eas/model/common/Notification.java     |   22 +
+ .../zju/eas/model/common/NotificationDelivery.java |   21 +
+ .../java/edu/zju/eas/model/common/SysConfig.java   |   16 +
+ .../java/edu/zju/eas/model/flow/ApprovalLog.java   |   26 +
+ .../java/edu/zju/eas/model/flow/ApprovalTask.java  |   25 +
+ .../edu/zju/eas/model/flow/AssigneeHistory.java    |   20 +
+ .../java/edu/zju/eas/model/flow/FlowInstance.java  |   21 +
+ .../edu/zju/eas/model/flow/FlowNodeInstance.java   |   46 +
+ .../java/edu/zju/eas/model/flow/UrgeRecord.java    |   17 +
+ .../java/edu/zju/eas/model/org/DataScopeGrant.java |   24 +
+ .../java/edu/zju/eas/model/org/Department.java     |   19 +
+ .../java/edu/zju/eas/model/org/Permission.java     |   15 +
+ .../java/edu/zju/eas/model/org/RefreshToken.java   |   23 +
+ .../src/main/java/edu/zju/eas/model/org/Role.java  |   18 +
+ .../java/edu/zju/eas/model/org/RolePermission.java |   11 +
+ .../main/java/edu/zju/eas/model/org/SysUser.java   |   39 +
+ .../main/java/edu/zju/eas/model/org/UserRole.java  |   18 +
+ .../edu/zju/eas/model/template/ApproverRule.java   |   31 +
+ .../java/edu/zju/eas/model/template/Condition.java |   13 +
+ .../edu/zju/eas/model/template/ConditionRule.java  |   17 +
+ .../edu/zju/eas/model/template/FieldOption.java    |   13 +
+ .../edu/zju/eas/model/template/FieldRules.java     |   34 +
+ .../java/edu/zju/eas/model/template/FormField.java |   41 +
+ .../edu/zju/eas/model/template/FormSchema.java     |   15 +
+ .../edu/zju/eas/model/template/NodeConfig.java     |   12 +
+ .../java/edu/zju/eas/model/template/NodeDef.java   |   24 +
+ .../zju/eas/model/template/ProcessTemplate.java    |   26 +
+ .../eas/model/template/ProcessTemplateDept.java    |   11 +
+ .../eas/model/template/ProcessTemplateVersion.java |   34 +
+ .../src/main/java/edu/zju/eas/repository/.gitkeep  |    0
+ .../edu/zju/eas/repository/ApplicationMapper.java  |  120 +
+ .../edu/zju/eas/repository/ApprovalLogMapper.java  |    9 +
+ .../edu/zju/eas/repository/ApprovalTaskMapper.java |   64 +
+ .../zju/eas/repository/AssigneeHistoryMapper.java  |    9 +
+ .../edu/zju/eas/repository/AttachmentMapper.java   |    9 +
+ .../edu/zju/eas/repository/AuditLogMapper.java     |    9 +
+ .../edu/zju/eas/repository/AuthQueryMapper.java    |   39 +
+ .../zju/eas/repository/CustomFormDataMapper.java   |    9 +
+ .../zju/eas/repository/DataScopeGrantMapper.java   |    9 +
+ .../edu/zju/eas/repository/DepartmentMapper.java   |   19 +
+ .../zju/eas/repository/ExpenseDetailMapper.java    |    9 +
+ .../zju/eas/repository/ExpenseInvoiceMapper.java   |    9 +
+ .../edu/zju/eas/repository/ExpenseItemMapper.java  |    9 +
+ .../zju/eas/repository/ExpenseRelationMapper.java  |    9 +
+ .../edu/zju/eas/repository/ExpenseTypeMapper.java  |    9 +
+ .../edu/zju/eas/repository/FlowInstanceMapper.java |    9 +
+ .../zju/eas/repository/FlowNodeInstanceMapper.java |   68 +
+ .../edu/zju/eas/repository/FlowQueryMapper.java    |   42 +
+ .../eas/repository/IdempotencyRecordMapper.java    |    9 +
+ .../eas/repository/NotificationDeliveryMapper.java |   35 +
+ .../edu/zju/eas/repository/NotificationMapper.java |   51 +
+ .../edu/zju/eas/repository/PermissionMapper.java   |    9 +
+ .../eas/repository/ProcessTemplateDeptMapper.java  |   27 +
+ .../zju/eas/repository/ProcessTemplateMapper.java  |    9 +
+ .../repository/ProcessTemplateVersionMapper.java   |    9 +
+ .../zju/eas/repository/PurchaseDetailMapper.java   |    9 +
+ .../edu/zju/eas/repository/PurchaseItemMapper.java |    9 +
+ .../zju/eas/repository/PurchaseQuoteMapper.java    |    9 +
+ .../edu/zju/eas/repository/RefreshTokenMapper.java |   30 +
+ .../java/edu/zju/eas/repository/RoleMapper.java    |    9 +
+ .../zju/eas/repository/RolePermissionMapper.java   |    9 +
+ .../edu/zju/eas/repository/SysConfigMapper.java    |    9 +
+ .../java/edu/zju/eas/repository/SysUserMapper.java |   55 +
+ .../zju/eas/repository/TravelCompanionMapper.java  |    9 +
+ .../edu/zju/eas/repository/TravelDetailMapper.java |    9 +
+ .../edu/zju/eas/repository/UrgeRecordMapper.java   |   23 +
+ .../edu/zju/eas/repository/UserQueryMapper.java    |   32 +
+ .../edu/zju/eas/repository/UserRoleMapper.java     |    9 +
+ .../src/main/java/edu/zju/eas/response/.gitkeep    |    0
+ .../java/edu/zju/eas/response/ApiResponse.java     |   33 +
+ .../java/edu/zju/eas/response/BizException.java    |   48 +
+ .../main/java/edu/zju/eas/response/ErrorCode.java  |   50 +
+ .../main/java/edu/zju/eas/response/FieldError.java |    5 +
+ .../java/edu/zju/eas/response/FieldErrors.java     |   34 +
+ .../zju/eas/response/GlobalExceptionHandler.java   |  166 ++
+ .../java/edu/zju/eas/response/PageResponse.java    |   23 +
+ .../java/edu/zju/eas/security/AuthInfoService.java |   78 +
+ .../java/edu/zju/eas/security/CurrentUser.java     |   46 +
+ .../main/java/edu/zju/eas/security/GrantScope.java |   26 +
+ .../java/edu/zju/eas/security/JwtAuthFilter.java   |   54 +
+ .../src/main/java/edu/zju/eas/security/Perms.java  |   42 +
+ .../java/edu/zju/eas/security/RateLimiter.java     |   36 +
+ .../edu/zju/eas/security/RestAuthHandlers.java     |   44 +
+ .../java/edu/zju/eas/security/SecurityUtils.java   |   15 +
+ .../java/edu/zju/eas/security/TokenService.java    |  103 +
+ .../java/edu/zju/eas/service/AuditService.java     |   52 +
+ .../main/java/edu/zju/eas/service/AuthService.java |  208 ++
+ .../edu/zju/eas/service/DepartmentService.java     |   53 +
+ .../main/java/edu/zju/eas/service/MeService.java   |   50 +
+ .../java/edu/zju/eas/service/SysConfigService.java |   52 +
+ .../edu/zju/eas/service/file/AttachmentMeta.java   |   13 +
+ .../java/edu/zju/eas/service/file/FileService.java |  231 ++
+ .../edu/zju/eas/service/file/PdfInspector.java     |   89 +
+ .../edu/zju/eas/service/file/StorageService.java   |   77 +
+ .../main/java/edu/zju/eas/service/flow/.gitkeep    |    0
+ .../edu/zju/eas/service/flow/ApproverResolver.java |  177 ++
+ .../java/edu/zju/eas/service/flow/BizHandler.java  |   25 +
+ .../zju/eas/service/flow/ConditionEvaluator.java   |  120 +
+ .../java/edu/zju/eas/service/flow/FlowEngine.java  |  614 +++++
+ .../edu/zju/eas/service/flow/UserDirectory.java    |   46 +
+ .../src/main/java/edu/zju/eas/service/job/.gitkeep |    0
+ .../main/java/edu/zju/eas/service/notify/.gitkeep  |    0
+ .../edu/zju/eas/service/notify/MailDispatcher.java |   98 +
+ .../eas/service/notify/NotificationCreated.java    |    6 +
+ .../zju/eas/service/notify/NotificationPusher.java |   30 +
+ .../eas/service/notify/NotificationService.java    |  142 ++
+ .../java/edu/zju/eas/service/notify/SseHub.java    |   79 +
+ .../zju/eas/service/notify/SseTicketService.java   |   39 +
+ .../resources/db/migration/V1__init_schema.sql     |  575 +++++
+ .../db/migration/V2__append_only_triggers.sql      |   90 +
+ .../main/resources/db/migration/V3__seed_base.sql  |   81 +
+ .../db/migration/V4__seed_builtin_templates.sql    |   58 +
+ frontend/eslint.config.js                          |   39 +
+ frontend/package-lock.json                         | 2389 ++++++++++++++++++--
+ frontend/package.json                              |   14 +-
+ frontend/src/App.vue                               |    8 +-
+ frontend/src/components/.gitkeep                   |    0
+ frontend/src/components/AmountInput.vue            |   73 +
+ frontend/src/components/ApprovePanel.vue           |  132 ++
+ frontend/src/components/AttachmentUploader.vue     |  299 +++
+ frontend/src/components/ExpenseItemTable.vue       |  329 +++
+ frontend/src/components/FilePreviewDialog.vue      |   97 +
+ frontend/src/components/FlowTimeline.vue           |  168 ++
+ frontend/src/components/FormRenderer.vue           |  216 ++
+ frontend/src/components/ItemTable.vue              |  143 ++
+ frontend/src/components/JsonDiff.vue               |  318 +++
+ frontend/src/components/ListEmpty.vue              |   19 +
+ frontend/src/components/MoneyText.vue              |   34 +
+ frontend/src/components/NoticeBell.vue             |  147 ++
+ frontend/src/components/QuoteTable.vue             |  187 ++
+ frontend/src/components/StatsChart.vue             |   75 +
+ frontend/src/components/StatusTag.vue              |   47 +
+ .../TemplateDesigner/ApproverRuleEditor.vue        |  116 +
+ .../TemplateDesigner/ConditionEditor.vue           |  286 +++
+ .../components/TemplateDesigner/ConditionValue.vue |   71 +
+ .../components/TemplateDesigner/FieldLibrary.vue   |   91 +
+ .../src/components/TemplateDesigner/FieldProps.vue |  545 +++++
+ .../src/components/TemplateDesigner/FormCanvas.vue |  194 ++
+ .../src/components/TemplateDesigner/NodeEditor.vue |  149 ++
+ .../src/components/TemplateDesigner/NodeList.vue   |  191 ++
+ frontend/src/components/TemplateDesigner/index.vue |  511 +++++
+ frontend/src/components/TemplateDesigner/utils.ts  |  522 +++++
+ frontend/src/components/UserPicker.vue             |  109 +
+ frontend/src/components/admin/ServerErrorAlert.vue |   25 +
+ frontend/src/composables/.gitkeep                  |    0
+ frontend/src/composables/useAction.ts              |  115 +
+ frontend/src/composables/useBreakpoint.ts          |   13 +
+ frontend/src/composables/useDraftForm.ts           |  306 +++
+ frontend/src/composables/useFieldErrors.ts         |   99 +
+ frontend/src/composables/useListQuery.ts           |  197 ++
+ frontend/src/composables/useSse.ts                 |  111 +
+ frontend/src/lib/.gitkeep                          |    0
+ frontend/src/lib/api/admin.ts                      |  122 +
+ frontend/src/lib/api/applications.ts               |   57 +
+ frontend/src/lib/api/auth.ts                       |   17 +
+ frontend/src/lib/api/dict.ts                       |   12 +
+ frontend/src/lib/api/files.ts                      |   14 +
+ frontend/src/lib/api/index.ts                      |   13 +
+ frontend/src/lib/api/me.ts                         |    9 +
+ frontend/src/lib/api/notifications.ts              |   12 +
+ frontend/src/lib/api/stats.ts                      |   12 +
+ frontend/src/lib/api/tasks.ts                      |   14 +
+ frontend/src/lib/api/templates.ts                  |    9 +
+ frontend/src/lib/datetime.ts                       |  160 ++
+ frontend/src/lib/errors.ts                         |   72 +
+ frontend/src/lib/fileView.ts                       |   68 +
+ frontend/src/lib/formModels.ts                     |  218 ++
+ frontend/src/lib/formSchema.ts                     |  186 ++
+ frontend/src/lib/http.ts                           |  165 ++
+ frontend/src/lib/idem.ts                           |   14 +
+ frontend/src/lib/labels.ts                         |  205 ++
+ frontend/src/lib/money.spec.ts                     |  164 ++
+ frontend/src/lib/money.ts                          |   57 +
+ frontend/src/lib/pathPreview.ts                    |   34 +
+ frontend/src/lib/prompt.ts                         |   39 +
+ frontend/src/lib/types.ts                          | 1007 +++++++++
+ frontend/src/main.ts                               |    1 +
+ frontend/src/router/index.ts                       |  250 +-
+ frontend/src/router/menu.ts                        |  103 +
+ frontend/src/stores/.gitkeep                       |    0
+ frontend/src/stores/auth.ts                        |  125 +
+ frontend/src/stores/dict.ts                        |   63 +
+ frontend/src/stores/notice.ts                      |   99 +
+ frontend/src/styles/main.css                       |  146 ++
+ frontend/src/views/Forbidden.vue                   |   28 +
+ frontend/src/views/HomeView.vue                    |    5 -
+ frontend/src/views/Layout.vue                      |  245 ++
+ frontend/src/views/Login.vue                       |  288 +++
+ frontend/src/views/NotFound.vue                    |   28 +
+ frontend/src/views/Notifications.vue               |  272 +++
+ frontend/src/views/Profile.vue                     |  323 +++
+ frontend/src/views/Register.vue                    |  465 ++++
+ frontend/src/views/Stats.vue                       |  904 ++++++++
+ frontend/src/views/Workbench.vue                   |  591 +++++
+ frontend/src/views/admin/.gitkeep                  |    0
+ frontend/src/views/admin/AuditLogs.vue             |  211 ++
+ frontend/src/views/admin/Deliveries.vue            |  118 +
+ frontend/src/views/admin/Departments.vue           |  316 +++
+ frontend/src/views/admin/ExpenseTypes.vue          |  267 +++
+ frontend/src/views/admin/Grants.vue                |  434 ++++
+ frontend/src/views/admin/Registrations.vue         |  205 ++
+ frontend/src/views/admin/Roles.vue                 |  175 ++
+ frontend/src/views/admin/SysConfig.vue             |  186 ++
+ frontend/src/views/admin/TaskMonitor.vue           |  269 +++
+ frontend/src/views/admin/TemplateDesign.vue        |  620 +++++
+ frontend/src/views/admin/Templates.vue             |  400 ++++
+ frontend/src/views/admin/Users.vue                 |  603 +++++
+ .../src/views/applications/ApplicationDetail.vue   |    3 +
+ .../src/views/applications/ApplicationList.vue     |  230 ++
+ frontend/src/views/apply/ApplicationEdit.vue       |   51 +
+ frontend/src/views/apply/ApplyHome.vue             |  165 ++
+ frontend/src/views/apply/CustomForm.vue            |  236 ++
+ frontend/src/views/apply/ExpenseForm.vue           |  368 +++
+ frontend/src/views/apply/FormShell.vue             |  124 +
+ frontend/src/views/apply/PurchaseForm.vue          |  406 ++++
+ frontend/src/views/apply/TravelForm.vue            |  373 +++
+ frontend/src/views/tasks/TaskList.vue              |    3 +
+ frontend/tsconfig.json                             |    2 +-
+ frontend/vitest.config.ts                          |   14 +
+ mobile/App.vue                                     |  448 +++-
+ mobile/components/AdminNotice.vue                  |   38 +
+ mobile/components/AppCard.vue                      |   38 +
+ mobile/components/ApproveSheet.vue                 |  131 ++
+ mobile/components/AttachmentPicker.vue             |  358 +++
+ mobile/components/BottomSheet.vue                  |   83 +
+ mobile/components/CustomFormRenderer.vue           |  203 ++
+ mobile/components/EmptyState.vue                   |   31 +
+ mobile/components/FlowTimeline.vue                 |  158 ++
+ mobile/components/FormItem.vue                     |   21 +
+ mobile/components/LinkedAppCard.vue                |   51 +
+ mobile/components/MoneyInput.vue                   |  108 +
+ mobile/components/StatusTag.vue                    |   51 +
+ mobile/components/StepBar.vue                      |   91 +
+ mobile/components/UChart.vue                       |  135 ++
+ mobile/components/detail/AppDetailBody.vue         |   39 +
+ mobile/components/detail/AppHeader.vue             |   85 +
+ mobile/components/detail/CustomDetail.vue          |   44 +
+ mobile/components/detail/ExpenseDetail.vue         |   92 +
+ mobile/components/detail/LogList.vue               |   52 +
+ mobile/components/detail/PurchaseDetail.vue        |  136 ++
+ mobile/components/detail/TravelDetail.vue          |   70 +
+ mobile/composables/useDraft.ts                     |  188 ++
+ mobile/composables/useFieldErrors.ts               |  106 +
+ mobile/composables/usePagedList.ts                 |   53 +
+ mobile/env.d.ts                                    |   31 +
+ mobile/lib/api/admin.ts                            |  124 +
+ mobile/lib/api/applications.ts                     |   59 +
+ mobile/lib/api/auth.ts                             |   18 +
+ mobile/lib/api/dict.ts                             |   14 +
+ mobile/lib/api/index.ts                            |   22 +
+ mobile/lib/api/me.ts                               |   11 +
+ mobile/lib/api/notifications.ts                    |   14 +
+ mobile/lib/api/stats.ts                            |   14 +
+ mobile/lib/api/tasks.ts                            |   16 +
+ mobile/lib/api/templates.ts                        |   11 +
+ mobile/lib/config.ts                               |   16 +
+ mobile/lib/files.ts                                |  216 ++
+ mobile/lib/http.ts                                 |  222 ++
+ mobile/lib/idem.ts                                 |   36 +
+ mobile/lib/money.ts                                |   55 +
+ mobile/lib/types.ts                                |  984 ++++++++
+ mobile/package-lock.json                           |  253 ++-
+ mobile/package.json                                |    8 +-
+ mobile/pages.json                                  |  140 +-
+ mobile/pages/app/detail.vue                        |  268 +++
+ mobile/pages/app/list.vue                          |  192 ++
+ mobile/pages/apply/index.vue                       |  115 +
+ mobile/pages/apply/travel.vue                      |  459 ++++
+ mobile/pages/home/index.vue                        |  279 +++
+ mobile/pages/index/index.vue                       |    5 -
+ mobile/pages/login/index.vue                       |  200 ++
+ mobile/pages/me/index.vue                          |  156 ++
+ mobile/pages/me/password.vue                       |   96 +
+ mobile/pages/notice/list.vue                       |  134 ++
+ mobile/pages/register/index.vue                    |  190 ++
+ mobile/pages/task/handle.vue                       |  103 +
+ mobile/pages/task/list.vue                         |  177 ++
+ mobile/scripts/gen-tabbar-icons.mjs                |  317 +++
+ mobile/scripts/sync-lib.mjs                        |   61 +
+ mobile/static/tabbar/apply-active.png              |  Bin 0 -> 522 bytes
+ mobile/static/tabbar/apply.png                     |  Bin 0 -> 522 bytes
+ mobile/static/tabbar/home-active.png               |  Bin 0 -> 610 bytes
+ mobile/static/tabbar/home.png                      |  Bin 0 -> 609 bytes
+ mobile/static/tabbar/me-active.png                 |  Bin 0 -> 725 bytes
+ mobile/static/tabbar/me.png                        |  Bin 0 -> 723 bytes
+ mobile/static/tabbar/notice-active.png             |  Bin 0 -> 614 bytes
+ mobile/static/tabbar/notice.png                    |  Bin 0 -> 613 bytes
+ mobile/static/tabbar/task-active.png               |  Bin 0 -> 595 bytes
+ mobile/static/tabbar/task.png                      |  Bin 0 -> 594 bytes
+ mobile/stores/auth.ts                              |  192 ++
+ mobile/stores/dict.ts                              |   40 +
+ mobile/stores/notice.ts                            |  101 +
+ mobile/stores/realtime.ts                          |  152 ++
+ mobile/tsconfig.json                               |   13 +-
+ mobile/utils/action.ts                             |   35 +
+ mobile/utils/chart.ts                              |   26 +
+ mobile/utils/chooseFiles.ts                        |  220 ++
+ mobile/utils/customForm.ts                         |  139 ++
+ mobile/utils/decimal.ts                            |   54 +
+ mobile/utils/feedback.ts                           |   88 +
+ mobile/utils/labels.ts                             |  147 ++
+ mobile/utils/nav.ts                                |   92 +
+ mobile/utils/storage.ts                            |   30 +
+ mobile/utils/time.ts                               |  125 +
+ 370 files changed, 36711 insertions(+), 248 deletions(-)
+
 commit 52f30fa6950c55e4d561215555a7726eb3c5018e
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 15:05:17 +0800
+Date:   Thu Oct 15 15:05:17 2026 +0800
 
     chore: add package lock files
 
+ frontend/.gitignore        |     1 -
+ frontend/package-lock.json |  1897 ++++++++
+ mobile/.gitignore          |     1 -
+ mobile/package-lock.json   | 10179 +++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 12076 insertions(+), 2 deletions(-)
+
 commit 131e142a63c95bd7f6f819829b9caf5cf8d9bfcb
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 15:03:06 +0800
+Date:   Thu Oct 15 15:03:06 2026 +0800
 
     docs: update git log
 
+ docs/git_log.txt | 63 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 63 insertions(+)
+
 commit dbb1ebff7b0de57421f6ee8e65e90996fa0d5977
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 15:03:06 +0800
+Date:   Thu Oct 15 15:03:06 2026 +0800
 
     chore: add test skeleton and build placeholders
 
+ backend/pom.xml                                      | 20 ++++++++++++++++++++
+ .../test/java/edu/zju/eas/IntegrationTestBase.java   |  4 ++++
+ .../src/test/java/edu/zju/eas/biz}/.gitkeep          |  0
+ .../src/test/java/edu/zju/eas/flow}/.gitkeep         |  0
+ backend/src/test/java/edu/zju/eas/notify/.gitkeep    |  0
+ backend/src/test/java/edu/zju/eas/security/.gitkeep  |  0
+ backend/src/test/java/edu/zju/eas/template/.gitkeep  |  0
+ backend/src/test/resources/application-test.yml      |  7 +++++++
+ frontend/.gitignore                                  |  1 +
+ frontend/src/env.d.ts                                |  7 +++++++
+ frontend/src/main.ts                                 |  7 +------
+ frontend/src/router/index.ts                         | 14 ++++++++++++++
+ frontend/src/views/HomeView.vue                      |  5 +++++
+ mobile/.gitignore                                    |  5 +++++
+ mobile/App.vue                                       |  7 +++++++
+ mobile/index.html                                    | 12 ++++++++++++
+ mobile/main.ts                                       |  7 +++++++
+ mobile/package.json                                  | 11 ++++++-----
+ mobile/pages.json                                    |  9 ++++++++-
+ mobile/pages/index/index.vue                         |  5 +++++
+ mobile/tsconfig.json                                 | 14 ++++++++++++++
+ mobile/vite.config.ts                                |  6 ++++++
+ 22 files changed, 129 insertions(+), 12 deletions(-)
+
 commit 53d47125ee653708ffb1fd4fdd5d197c6399f82c
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 15:01:51 +0800
+Date:   Thu Oct 15 15:01:51 2026 +0800
 
     chore: add db init script and align deploy config
 
+ README.md                                  |  4 +--
+ backend/src/main/resources/application.yml |  6 ++--
+ db/init/01_create_app_user.sh              | 16 ++++++++++
+ docker-compose.yml                         | 47 ++++++++++++++++++++----------
+ nginx/Dockerfile                           |  6 ++--
+ nginx/default.conf                         | 28 ++++++++++++++++++
+ nginx/nginx.conf                           | 35 ----------------------
+ template.env                               | 12 ++++----
+ 8 files changed, 91 insertions(+), 63 deletions(-)
+
 commit c614040b4e7beed4de912cea2a24cffac87f18de
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 15:01:27 +0800
+Date:   Thu Oct 15 15:01:27 2026 +0800
 
     docs: sync design document and add report placeholders
 
+ README.md                        |  15 +-
+ docs/demo_video.md               |   3 +
+ docs/design_document.docx        | Bin 10214458 -> 11888488 bytes
+ docs/design_document.md          | 545 ++++++++++++++++++++++++++++-----------
+ docs/experiment_report/README.md |   8 +
+ docs/git_log.txt                 |  98 +++++++
+ docs/summary.md                  |   3 +
+ docs/test_report.md              |   3 +
+ docs/user_guide.md               |   3 +
+ 9 files changed, 530 insertions(+), 148 deletions(-)
+
 commit 0512c54ffadf2b71655ef6d6349262232e92b1b4
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 14:35:30 +0800
+Date:   Thu Oct 15 14:35:30 2026 +0800
 
     docs: replace pdf with markdown version
 
+ README.md                |    2 +-
+ docs/design_document.md  | 2044 ++++++++++++++++++++++++++++++++++++++++++++++
+ docs/design_document.pdf |  Bin 10354056 -> 0 bytes
+ 3 files changed, 2045 insertions(+), 1 deletion(-)
+
 commit 350c8c2980a9d5a1ba26fb9b6965d04ff0f8b2f0
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 14:32:17 +0800
+Date:   Thu Oct 15 14:32:17 2026 +0800
 
     chore: add docker compose skeleton
 
+ docker-compose.yml | 83 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ nginx/Dockerfile   | 20 +++++++++++++
+ nginx/nginx.conf   | 35 +++++++++++++++++++++++
+ 3 files changed, 138 insertions(+)
+
 commit d75c37857d52353b3abc8922e197d8729fbacb59
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 14:31:59 +0800
+Date:   Thu Oct 15 14:31:59 2026 +0800
 
     chore: add frontend and mobile skeleton
 
+ frontend/.gitignore         |  6 ++++++
+ frontend/Dockerfile         | 10 ++++++++++
+ frontend/index.html         | 12 ++++++++++++
+ frontend/package.json       | 26 ++++++++++++++++++++++++++
+ frontend/src/App.vue        |  5 +++++
+ frontend/src/main.ts        | 13 +++++++++++++
+ frontend/template.env.local |  2 ++
+ frontend/tsconfig.json      | 21 +++++++++++++++++++++
+ frontend/vite.config.ts     | 24 ++++++++++++++++++++++++
+ mobile/manifest.json        | 31 +++++++++++++++++++++++++++++++
+ mobile/package.json         | 27 +++++++++++++++++++++++++++
+ mobile/pages.json           | 15 +++++++++++++++
+ 12 files changed, 192 insertions(+)
+
 commit 6c098cb6878cd8e25bf3b4f354859887021f1943
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 14:31:36 +0800
+Date:   Thu Oct 15 14:31:36 2026 +0800
 
     chore: add backend skeleton
 
+ backend/.gitignore                                 |   6 +
+ backend/Dockerfile                                 |  13 ++
+ backend/pom.xml                                    | 137 +++++++++++++++++++++
+ .../src/main/java/edu/zju/eas/EasApplication.java  |  12 ++
+ backend/src/main/resources/application-demo.yml    |   7 ++
+ backend/src/main/resources/application.yml         |  49 ++++++++
+ 6 files changed, 224 insertions(+)
+
 commit 43ad3a6d958da78d4f9f578f1a5fabdab57d39b7
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 14:31:12 +0800
+Date:   Thu Oct 15 14:31:12 2026 +0800
 
     docs: add design document
 
+ docs/design_document.docx | Bin 0 -> 10214458 bytes
+ docs/design_document.pdf  | Bin 0 -> 10354056 bytes
+ 2 files changed, 0 insertions(+), 0 deletions(-)
+
 commit 548b2536e5b81b8f6c208186faaddf62ba87a5f5
 Author: Yuhang Li <3240105750@zju.edu.cn>
-Date:   2026-10-15 14:31:12 +0800
+Date:   Thu Oct 15 14:31:12 2026 +0800
 
     chore: init project structure
 
+ .gitignore                                         |  9 +++
+ README.md                                          | 86 ++++++++++++++++++++++
+ backend/src/main/java/edu/zju/eas/config/.gitkeep  |  0
+ .../src/main/java/edu/zju/eas/controller/.gitkeep  |  0
+ backend/src/main/java/edu/zju/eas/dto/.gitkeep     |  0
+ backend/src/main/java/edu/zju/eas/model/.gitkeep   |  0
+ .../src/main/java/edu/zju/eas/repository/.gitkeep  |  0
+ .../src/main/java/edu/zju/eas/response/.gitkeep    |  0
+ .../main/java/edu/zju/eas/service/flow/.gitkeep    |  0
+ .../src/main/java/edu/zju/eas/service/job/.gitkeep |  0
+ .../main/java/edu/zju/eas/service/notify/.gitkeep  |  0
+ backend/src/main/resources/db/demo/.gitkeep        |  0
+ backend/src/main/resources/db/migration/.gitkeep   |  0
+ frontend/public/.gitkeep                           |  0
+ frontend/src/components/.gitkeep                   |  0
+ frontend/src/composables/.gitkeep                  |  0
+ frontend/src/lib/.gitkeep                          |  0
+ frontend/src/router/.gitkeep                       |  0
+ frontend/src/stores/.gitkeep                       |  0
+ frontend/src/views/admin/.gitkeep                  |  0
+ mobile/components/.gitkeep                         |  0
+ mobile/lib/.gitkeep                                |  0
+ mobile/pages/.gitkeep                              |  0
+ mobile/static/.gitkeep                             |  0
+ template.env                                       | 17 +++++
+ 25 files changed, 112 insertions(+)
