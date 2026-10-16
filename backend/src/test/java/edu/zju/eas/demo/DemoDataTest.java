@@ -1,28 +1,26 @@
 package edu.zju.eas.demo;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import edu.zju.eas.TestDatabase;
 import edu.zju.eas.common.Jsons;
 import edu.zju.eas.service.file.StorageService;
 import edu.zju.eas.repository.ProcessTemplateMapper;
 import edu.zju.eas.repository.ProcessTemplateVersionMapper;
 import edu.zju.eas.service.template.TemplatePublishValidator;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -32,28 +30,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @AutoConfigureMockMvc
 @ActiveProfiles("demo")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@EnabledIfEnvironmentVariable(named = "EAS_TEST_PG_URL", matches = ".+")
+// 类结束时关闭上下文（定时任务、连接池随之停止），临时库由 TestDatabase 在进程退出时删除
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class DemoDataTest {
-    private static final String DB = "eas_demo_test_" + UUID.randomUUID().toString().replace("-", "");
-
-    private static JdbcTemplate admin() {
-        return new JdbcTemplate(new DriverManagerDataSource(System.getenv("EAS_TEST_PG_URL"),
-                System.getenv("EAS_TEST_PG_USER"), System.getenv("EAS_TEST_PG_PASSWORD")));
-    }
-
-    private static String dbUrl() {
-        String url = System.getenv("EAS_TEST_PG_URL");
-        return url.substring(0, url.lastIndexOf('/') + 1) + DB;
-    }
+    private static String databaseUrl;
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry p) {
-        admin().execute("CREATE DATABASE " + DB);
-        p.add("spring.datasource.url", DemoDataTest::dbUrl);
-        p.add("spring.datasource.username", () -> System.getenv("EAS_TEST_PG_USER"));
-        p.add("spring.datasource.password", () -> System.getenv("EAS_TEST_PG_PASSWORD"));
-        p.add("spring.flyway.user", () -> System.getenv("EAS_TEST_PG_USER"));
-        p.add("spring.flyway.password", () -> System.getenv("EAS_TEST_PG_PASSWORD"));
+        // 每个测试类单独建库，演示数据初始化器要在空库上运行
+        databaseUrl = TestDatabase.createDatabase("eas_demo_test");
+        p.add("spring.datasource.url", () -> databaseUrl);
+        p.add("spring.datasource.username", TestDatabase::user);
+        p.add("spring.datasource.password", TestDatabase::password);
+        p.add("spring.flyway.user", TestDatabase::user);
+        p.add("spring.flyway.password", TestDatabase::password);
         p.add("eas.jwt.secret", () -> "test-secret-for-integration-tests-only-32b");
         p.add("eas.minio.secret-key", () -> "integration-test-key");
     }
@@ -65,20 +55,6 @@ class DemoDataTest {
     @Autowired ProcessTemplateVersionMapper versions;
     @Autowired DemoDataInitializer initializer;
     @MockBean StorageService storage;
-
-    @AfterAll
-    void dropDatabase() {
-        ((com.zaxxer.hikari.HikariDataSource) jdbc.getDataSource()).close();
-        // 尽力清理：autovacuum 进程可能短暂连在临时库上，非超级用户无法终止它，稍后重试；库名带随机后缀，残留不影响下次运行
-        for (int attempt = 0; attempt < 5; attempt++) {
-            try {
-                admin().execute("DROP DATABASE IF EXISTS " + DB + " WITH (FORCE)");
-                return;
-            } catch (org.springframework.dao.DataAccessException e) {
-                try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
-            }
-        }
-    }
 
     @Test
     void demoAccountsLogIn() throws Exception {

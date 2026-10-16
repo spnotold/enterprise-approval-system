@@ -7,14 +7,12 @@ import edu.zju.eas.security.TokenService;
 import edu.zju.eas.service.SysConfigService;
 import edu.zju.eas.service.file.StorageService;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -23,7 +21,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -38,46 +35,28 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 /**
  * 端到端集成测试基类：真实 PostgreSQL 16（Flyway 迁移 + 演示账号与模板），MockMvc 走完整的安全过滤链。
- * 整个 JVM 共用一个新建的临时库；每个用例开始前清空业务数据并重放种子脚本。
- * 需要可建库的测试账号：EAS_TEST_PG_URL / EAS_TEST_PG_USER / EAS_TEST_PG_PASSWORD（见 ~/tools/env.sh）。
+ * 整个 JVM 共用一个新建的临时库（服务器来源见 {@link TestDatabase}）；每个用例开始前清空业务数据并重放种子脚本。
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("demo")
-@EnabledIfEnvironmentVariable(named = "EAS_TEST_PG_URL", matches = ".+")
 public abstract class IntegrationTestBase {
     protected static final String PASSWORD = "Demo@2026";
     protected static final ZoneId CN = ZoneId.of("Asia/Shanghai");
-    private static final String DB = "eas_it_" + UUID.randomUUID().toString().replace("-", "");
-    private static boolean created;
+    private static String databaseUrl;
 
-    static synchronized void createDatabase() {
-        if (created) return;
-        new JdbcTemplate(adminSource()).execute("CREATE DATABASE " + DB);
-        created = true;
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                new JdbcTemplate(adminSource()).execute("DROP DATABASE IF EXISTS " + DB + " WITH (FORCE)");
-            } catch (RuntimeException ignored) {
-                // 测试库带随机后缀，清理失败不影响下次运行
-            }
-        }));
-    }
-
-    private static DataSource adminSource() {
-        return new DriverManagerDataSource(System.getenv("EAS_TEST_PG_URL"),
-                System.getenv("EAS_TEST_PG_USER"), System.getenv("EAS_TEST_PG_PASSWORD"));
+    private static synchronized String databaseUrl() {
+        if (databaseUrl == null) databaseUrl = TestDatabase.createDatabase("eas_it");
+        return databaseUrl;
     }
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry p) {
-        createDatabase();
-        String url = System.getenv("EAS_TEST_PG_URL");
-        p.add("spring.datasource.url", () -> url.substring(0, url.lastIndexOf('/') + 1) + DB);
-        p.add("spring.datasource.username", () -> System.getenv("EAS_TEST_PG_USER"));
-        p.add("spring.datasource.password", () -> System.getenv("EAS_TEST_PG_PASSWORD"));
-        p.add("spring.flyway.user", () -> System.getenv("EAS_TEST_PG_USER"));
-        p.add("spring.flyway.password", () -> System.getenv("EAS_TEST_PG_PASSWORD"));
+        p.add("spring.datasource.url", IntegrationTestBase::databaseUrl);
+        p.add("spring.datasource.username", TestDatabase::user);
+        p.add("spring.datasource.password", TestDatabase::password);
+        p.add("spring.flyway.user", TestDatabase::user);
+        p.add("spring.flyway.password", TestDatabase::password);
         p.add("eas.jwt.secret", () -> "test-secret-for-integration-tests-only-32b");
         p.add("eas.minio.secret-key", () -> "integration-test-key");
     }
