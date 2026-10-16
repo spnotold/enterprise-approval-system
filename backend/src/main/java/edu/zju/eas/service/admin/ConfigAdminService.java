@@ -71,7 +71,7 @@ public class ConfigAdminService {
                         SELECT EXISTS(SELECT 1 FROM sys_user u JOIN user_role ur ON ur.user_id=u.id
                         JOIN role_permission rp ON rp.role_id=ur.role_id JOIN permission p ON p.id=rp.permission_id
                         WHERE u.id=? AND u.status='ACTIVE' AND p.code='TASK_HANDLE')
-                        """,Boolean.class,uid)) && !flow.isAdminOnly(uid);
+                        """,Boolean.class,uid)) && !flow.isSysAdmin(uid);
             }
             default -> valid=false;
         }

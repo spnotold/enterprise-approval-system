@@ -125,7 +125,7 @@ public class ApproverResolver {
         if (u == null || !SysUser.ACTIVE.equals(u.getStatus())) {
             return Attempt.fail(label + "已停用");
         }
-        if (flowQueryMapper.isAdminOnly(uid)) {
+        if (flowQueryMapper.isSysAdmin(uid)) {
             return Attempt.fail(label + "只有系统管理员角色");
         }
         return Attempt.ok(uid, label + " " + u.getRealName());
@@ -168,7 +168,7 @@ public class ApproverResolver {
                 continue;
             }
             SysUser u = userMapper.selectById(uid);
-            if (u != null && SysUser.ACTIVE.equals(u.getStatus()) && !flowQueryMapper.isAdminOnly(uid)) {
+            if (u != null && SysUser.ACTIVE.equals(u.getStatus()) && !flowQueryMapper.isSysAdmin(uid)) {
                 result.add(uid);
             }
         }

@@ -61,4 +61,8 @@ public interface ApprovalTaskMapper extends BaseMapper<ApprovalTask> {
 
     @Select("SELECT count(*) FROM approval_task WHERE assignee_id = #{uid} AND status = 'PENDING'")
     long countPendingOfUser(@Param("uid") Long uid);
+
+    /** 该用户是否已在此节点处理过（会签时同一人不能贡献两票） */
+    @Select("SELECT EXISTS (SELECT 1 FROM approval_task WHERE node_instance_id = #{nodeId} AND assignee_id = #{uid} AND status IN ('APPROVED', 'REJECTED'))")
+    boolean actedOnNode(@Param("nodeId") Long nodeId, @Param("uid") Long uid);
 }

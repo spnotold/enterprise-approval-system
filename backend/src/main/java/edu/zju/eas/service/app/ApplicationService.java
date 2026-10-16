@@ -123,13 +123,15 @@ public class ApplicationService {
             if(!all&&visible.isEmpty())throw BizException.forbidden();
         }
         var query=new ListQuery(scope,user.id(),visible,all,type,status,from,to,keyword==null||keyword.isBlank()?null:keyword.trim());
-        return PageResponse.of(applications.pageList(new Page<>(page,size),query),this::summary);
+        PageResponse<ApplicationSummary> result=PageResponse.of(applications.pageList(new Page<>(page,size),query),this::summary);
+        if(user.isAdmin()&&"granted".equals(scope)&&!result.records().isEmpty())audit.logBizList(user,scope,result.records().stream().map(ApplicationSummary::id).toList());
+        return result;
     }
 
     public Map<String,Object> detail(Long id,CurrentUser user){
         Application a=applications.selectById(id);boolean full=access.canViewApplication(user,a);
         if(!full&&!access.canViewAsLinked(user,a))throw BizException.notFound();
-        if(full&&user.isAdmin()&&!user.id().equals(a.getApplicantId()))audit.logBizAccess(user,a,"DETAIL");
+        if(user.isAdmin()&&!user.id().equals(a.getApplicantId()))audit.logBizAccess(user,a,full?"DETAIL":"LINKED");
         var template=templates.selectById(a.getTemplateId());var version=a.getTemplateVersionId()==null?null:versions.selectById(a.getTemplateVersionId());
         boolean canFiles=full&&access.canReadApplicationAttachments(user,a);ApprovalTask myTask=full?tasks.pendingOf(id,user.id()):null;List<String> actions=new ArrayList<>();
         if(full&&user.id().equals(a.getApplicantId())&&user.has(Perms.APP_CREATE)){
@@ -149,7 +151,7 @@ public class ApplicationService {
 
     public List<Map<String,Object>> logs(Long id,CurrentUser u){Application a=applications.selectById(id);if(!access.canViewApplication(u,a))throw BizException.notFound();if(u.isAdmin()&&!u.id().equals(a.getApplicantId()))audit.logBizAccess(u,a,"LOGS");return logRows(id);}
     public PathPreview preview(Long id,CurrentUser u){Application a=own(id,u);if(!"DRAFT".equals(a.getStatus()))throw BizException.stateChanged();return engine.preview(a,u);}
-    public List<Map<String,Object>> linkable(CurrentUser u){return applications.selectList(Wrappers.<Application>lambdaQuery().eq(Application::getApplicantId,u.id()).eq(Application::getStatus,"APPROVED").in(Application::getType,List.of("TRAVEL","PURCHASE")).isNull(Application::getDeletedAt).orderByDesc(Application::getFinishedAt)).stream().map(business::linked).toList();}
+    public List<Map<String,Object>> linkable(CurrentUser u){return applications.selectList(Wrappers.<Application>lambdaQuery().eq(Application::getApplicantId,u.id()).eq(Application::getStatus,"APPROVED").in(Application::getType,List.of("TRAVEL","PURCHASE")).isNull(Application::getDeletedAt).orderByDesc(Application::getFinishedAt).last("LIMIT 100")).stream().map(business::linked).toList();}
     public List<Map<String,Object>> invoiceDuplicates(Long id,CurrentUser u){Application a=applications.selectById(id);if(!access.canViewApplication(u,a)||!access.canReadApplicationAttachments(u,a))throw BizException.notFound();if(!"EXPENSE".equals(a.getType()))return List.of();if(u.isAdmin())audit.logBizAccess(u,a,"INVOICE_DUPLICATES");return invoices.selectList(Wrappers.<ExpenseInvoice>lambdaQuery().eq(ExpenseInvoice::getApplicationId,id)).stream().flatMap(iv->business.duplicates(iv,revealDuplicates(u,a)).stream()).toList();}
 
     public PageResponse<Map<String,Object>> taskList(CurrentUser user,boolean pending,String type,String keyword,int page,int size){
@@ -185,6 +187,6 @@ public class ApplicationService {
     private static String title(Object r){return r instanceof Purchase p?p.title():r instanceof Travel t?t.title():r instanceof Expense e?e.title():((Custom)r).title();}
     private static Integer version(Object r){return r instanceof Purchase p?p.version():r instanceof Travel t?t.version():r instanceof Expense e?e.version():((Custom)r).version();}
     private static void remapArray(ObjectNode node,String key,Map<Long,Long> ids){if(node.path(key).isArray()){var a=Jsons.MAPPER.createArrayNode();for(JsonNode id:node.path(key)){Long target=ids.get(id.longValue());if(target!=null)a.add(target);}node.set(key,a);}}
-    private boolean revealDuplicates(CurrentUser u,Application a){return !u.id().equals(a.getApplicantId())&&(u.hasRole(Perms.ROLE_FINANCE_APPROVER)||tasks.existsByAppAndAssignee(a.getId(),u.id()));}
+    private boolean revealDuplicates(CurrentUser u,Application a){return !u.id().equals(a.getApplicantId())&&u.hasRole(Perms.ROLE_FINANCE_APPROVER);}
     static void checkPage(int page,int size){if(page<1||size<1||size>100||page>1000000)throw new BizException(ErrorCode.BAD_REQUEST,"分页参数不正确");}
 }

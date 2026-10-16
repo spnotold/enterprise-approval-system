@@ -166,7 +166,7 @@ public class TemplatePublishValidator {
     }
     private boolean validUser(Long id) {
         SysUser u=id==null?null:users.selectById(id);
-        return u!=null && SysUser.ACTIVE.equals(u.getStatus()) && !flow.isAdminOnly(id)
+        return u!=null && SysUser.ACTIVE.equals(u.getStatus()) && !flow.isSysAdmin(id)
                 && permissions.permissionCodes(id).contains(Perms.TASK_HANDLE);
     }
     private void condition(Condition c,Map<String,FormField> fields,boolean builtin,String path,List<ValidationIssue> out) {

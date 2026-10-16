@@ -297,6 +297,9 @@ public class FlowEngine {
 
     @Transactional
     public ActionResult approve(Long taskId, CurrentUser u, ApproveRequest req) {
+        if (u.isAdmin()) {
+            throw BizException.forbidden();   // 管理员不能审批，即使另有业务角色
+        }
         ApprovalTask task = taskMapper.selectById(taskId);
         if (task == null || !task.getAssigneeId().equals(u.id())) {
             throw new BizException(ErrorCode.NOT_CURRENT_APPROVER);
@@ -374,6 +377,9 @@ public class FlowEngine {
 
     @Transactional
     public ActionResult reject(Long taskId, CurrentUser u, RejectRequest req) {
+        if (u.isAdmin()) {
+            throw BizException.forbidden();   // 管理员不能审批，即使另有业务角色
+        }
         ApprovalTask task = taskMapper.selectById(taskId);
         if (task == null || !task.getAssigneeId().equals(u.id())) {
             throw new BizException(ErrorCode.NOT_CURRENT_APPROVER);
@@ -452,11 +458,14 @@ public class FlowEngine {
         if (to.getId().equals(task.getAssigneeId())) {
             throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "新审批人与原审批人相同");
         }
-        if (flowQueryMapper.isAdminOnly(to.getId())) {
-            throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "不能转给只有管理员角色的账号");
+        if (flowQueryMapper.isSysAdmin(to.getId())) {
+            throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "不能转给系统管理员");
         }
         if (appMapper.lockInApproval(app.getId()) == 0) {
             throw BizException.stateChanged();
+        }
+        if (taskMapper.actedOnNode(task.getNodeInstanceId(), to.getId())) {
+            throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "新审批人已处理过该节点，不能重复审批");
         }
         if (taskMapper.markTransferred(taskId, req.reason()) == 0) {
             throw new BizException(ErrorCode.TASK_ALREADY_PROCESSED);

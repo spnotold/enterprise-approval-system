@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 
 /** 管理审计日志：只追加（表上有触发器，运行账号也没有 UPDATE / DELETE 权限） */
@@ -48,5 +49,12 @@ public class AuditService {
     public void logBizAccess(CurrentUser u, Application app, String what) {
         write(u.id(), u.realName(), "BIZ_CONTENT_READ", "APPLICATION", String.valueOf(app.getId()), null,
                 Map.of("appNo", app.getAppNo(), "content", what), null);
+    }
+
+    /** 管理员按授权范围列表查询业务数据（标题、金额等）时留痕，记录本页返回的申请 ID */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logBizList(CurrentUser u, String scope, List<Long> applicationIds) {
+        write(u.id(), u.realName(), "BIZ_CONTENT_READ", "APPLICATION_LIST", scope, null,
+                Map.of("applicationIds", applicationIds), null);
     }
 }

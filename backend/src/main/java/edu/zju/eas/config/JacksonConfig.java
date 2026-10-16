@@ -29,6 +29,8 @@ public class JacksonConfig {
                 .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .featuresToEnable(SerializationFeature.WRITE_DATES_WITH_CONTEXT_TIME_ZONE)
                 .featuresToDisable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                // 金额是整数分：123.99 这类小数直接 400，不静默截断
+                .featuresToDisable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
                 .postConfigurer(mapper -> mapper.addHandler(new DeserializationProblemHandler() {
                     @Override
                     public boolean handleUnknownProperty(DeserializationContext ctxt, JsonParser p,

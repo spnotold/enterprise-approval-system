@@ -31,12 +31,10 @@ public interface FlowQueryMapper {
     @Select("SELECT head_user_id FROM department WHERE code = #{code} AND deleted_at IS NULL")
     Long headOfCode(@Param("code") String code);
 
-    /** 只持有 SYS_ADMIN（没有任何业务角色）的账号不能做审批人 */
+    /** 持有 SYS_ADMIN 的账号不能做审批人，即使另有业务角色 */
     @Select("""
             SELECT EXISTS (SELECT 1 FROM user_role ur JOIN role r ON r.id = ur.role_id
                             WHERE ur.user_id = #{uid} AND r.code = 'SYS_ADMIN')
-               AND NOT EXISTS (SELECT 1 FROM user_role ur JOIN role r ON r.id = ur.role_id
-                                WHERE ur.user_id = #{uid} AND r.code <> 'SYS_ADMIN')
             """)
-    boolean isAdminOnly(@Param("uid") Long uid);
+    boolean isSysAdmin(@Param("uid") Long uid);
 }

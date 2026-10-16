@@ -165,7 +165,7 @@ public class BusinessValidator {
                 String text=v.asText();
                 if(text.codePointCount(0,text.length())>maximum){e.add(p,"FORM_LENGTH","文字长度不能超过 "+maximum+" 字");continue;}
             }
-            boolean empty=v==null||v.isNull()||(v.isTextual()&&v.asText().isBlank())||(v.isArray()&&v.isEmpty());
+            boolean empty=v==null||v.isNull()||(v.isTextual()&&v.asText().isBlank())||(v.isArray()&&v.isEmpty()&&"ATTACHMENT".equals(f.getType()));
             if(empty){if(full&&f.isRequired())e.add(p,"FORM_REQUIRED","请填写"+f.getLabel());continue;}
             try{
                 switch(f.getType()){
@@ -178,7 +178,7 @@ public class BusinessValidator {
                     case "NUMBER" -> {
                         if(!v.isTextual()||v.asText().length()>40||!v.asText().matches("-?\\d+(?:\\.\\d+)?"))throw new IllegalArgumentException();
                         BigDecimal n=new BigDecimal(v.asText());
-                        if(rules.getPrecision()!=null&&n.scale()>rules.getPrecision())e.add(p,"FORM_NUMBER","小数位数过多");
+                        if(n.scale()>(rules.getPrecision()==null?4:rules.getPrecision()))e.add(p,"FORM_NUMBER","小数位数过多");   // 未配置精度时最多 4 位小数（Q8）
                         if(rules.getMin()!=null&&n.compareTo(new BigDecimal(rules.getMin()))<0||rules.getMax()!=null&&n.compareTo(new BigDecimal(rules.getMax()))>0)e.add(p,"FORM_RANGE","数值超出允许范围");
                         if(rules.getStep()!=null){BigDecimal base=rules.getMin()==null?BigDecimal.ZERO:new BigDecimal(rules.getMin());if(n.subtract(base).remainder(new BigDecimal(rules.getStep())).signum()!=0)e.add(p,"FORM_STEP","数值不符合步长要求");}
                     }

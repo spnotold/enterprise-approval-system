@@ -51,6 +51,10 @@ public class AuthInfoService {
         }
         Set<String> roles = Set.copyOf(authQueryMapper.roleCodes(userId));
         Set<String> perms = new HashSet<>(authQueryMapper.permissionCodes(userId));
+        // 系统管理员即使另有业务角色也不能审批（审批权与管理权分离）
+        if (roles.contains(Perms.ROLE_SYS_ADMIN)) {
+            perms.remove(Perms.TASK_HANDLE);
+        }
         Set<Long> heads = Set.copyOf(authQueryMapper.headDeptIds(userId));
         List<GrantScope> grants = authQueryMapper.unrevokedGrants(userId).stream()
                 .map(GrantScope::fromEntity)
