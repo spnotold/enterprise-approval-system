@@ -207,7 +207,7 @@ function onCommand(cmd: string) {
   padding: 16px 20px 6px;
   font-size: var(--eas-fs-xs);
   line-height: 1.4;
-  color: var(--eas-ink-3);
+  color: var(--eas-ink-2);
 }
 .menu :deep(.el-menu-item-group__title:empty) {
   display: none;
