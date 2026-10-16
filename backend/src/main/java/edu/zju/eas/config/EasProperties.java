@@ -36,6 +36,8 @@ public class EasProperties {
     public static class Auth {
         /** 刷新令牌 Cookie 是否带 Secure；通过局域网 IP 以 http 演示时需设为 false */
         private boolean cookieSecure = true;
+        /** 首个系统管理员的初始密码：库中没有任何系统管理员时，用它创建 admin 账号（非 demo 部署用） */
+        private String bootstrapAdminPassword;
     }
 
     @Data
