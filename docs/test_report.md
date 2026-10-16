@@ -11,17 +11,21 @@
 | Web 前端 | Vitest：金额转换（元 ↔ 分）边界输入 |
 | 移动端 | Node test runner：表单校验、金额、自定义表单渲染工具函数 |
 
-后端测试需要一个可建库的 PostgreSQL 账号，通过环境变量提供：
+有 Docker 的机器上直接运行，`TestDatabase` 用 Testcontainers 启动 `postgres:16-alpine`，所有测试类共用这一个容器：
+
+```bash
+cd backend && mvn test
+```
+
+没有 Docker 时，用环境变量指定一个可建库（CREATEDB）的 PostgreSQL 16 账号，测试会在其中新建随机命名的临时库，结束后删除：
 
 ```bash
 export EAS_TEST_PG_URL=jdbc:postgresql://localhost:5432/postgres
 export EAS_TEST_PG_USER=eas_test EAS_TEST_PG_PASSWORD=...
-# CoreWorkflowIntegrationTest 另用一个已存在的测试库
-export EAS_TEST_DB_URL=jdbc:postgresql://localhost:5432/eas_it EAS_TEST_DB_USER=eas_test EAS_TEST_DB_PASSWORD=...
 cd backend && mvn test
 ```
 
-没有设置上述变量时，`AdminTemplateStatsTest` 会改用 Testcontainers 启动 `postgres:16-alpine`（需要 Docker），其余集成测试自动跳过。
+两者都不可用时，集成测试报错（`Could not find a valid Docker environment`），不会被静默跳过。本报告的结果来自第二种方式（本机没有 Docker 权限），并确认了不设变量、又没有 Docker 时测试全部报错而不是显示通过。
 
 ## 2. 结果汇总
 
@@ -38,11 +42,12 @@ cd backend && mvn test
 | 后端 `DemoDataTest` | 3 | 3 | 0 |
 | 后端 `MaintenanceJobsTest` | 3 | 3 | 0 |
 | 后端 `ReviewRound2Test` | 5 | 5 | 0 |
-| 后端合计 | **60** | **60** | **0** |
+| 后端 `AdminBootstrapTest` | 2 | 2 | 0 |
+| 后端合计 | **62** | **62** | **0** |
 | Web `npm run test` | 84 | 84 | 0 |
 | 移动端 `npm run test` | 20 | 20 | 0 |
 
-后端结果依据 11 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 60 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 再次通过，84 项测试通过；移动端前次 `npm run typecheck` 通过，同步 11 个文件，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
+以上结果为 2026-10-16 的完整重跑。后端依据 12 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 62 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 通过，84 项测试通过；移动端 `npm run typecheck` 通过，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 
@@ -87,6 +92,8 @@ cd backend && mvn test
 
 **`demo.DemoDataTest`（3 个）**：`demo` profile 在全新数据库上启动；演示账号可登录、待审核账号 `40104`、管理员没有 `TASK_HANDLE`；请假、用章模板通过发布校验；示例申请经真实流程生成（王工的已通过差旅、停在吴审处的采购、已驳回报销，周敏 5 天请假经过企业负责人节点），重复启动不重复生成。
 
+**`security.AdminBootstrapTest`（2 个）**：非 demo 部署设置 `EAS_ADMIN_PASSWORD` 且没有系统管理员时，启动创建 `admin` 并写审计；已有管理员时不再创建。
+
 **`job.MaintenanceJobsTest`（3 个）**：TEMP 附件解绑后保留 24 小时；超时任务每日只提醒一次；扫描后已完成审批不会误发提醒。第三项先锁定申请再复核，测试确实观察到扫描受阻于锁，覆盖并发时序。
 
 ## 5. 测试中发现并修复的缺陷
@@ -106,7 +113,8 @@ cd backend && mvn test
 
 - Web 浏览器实际走通用章审批闭环：`rd_emp_wang` 发起，`rd_head_li` 和 `fin_head_qian` 审批，王工查看完成结果。原始录像：[docs/demo/seal-approval-e2e.mp4](demo/seal-approval-e2e.mp4)，说明：[docs/demo_video.md](demo_video.md)。
 - 移动端实际通过 H5 登录、通知处理、同一申请详情和个人统计页面检查；统计 canvas 有 92,136 个非透明像素，页面无横向溢出。
-- Docker 部署和微信真机尚未验收；移动端双端构建通过不代表微信真机验收完成。
+- Docker Compose 部署已验收：`docker compose up -d --build` 后 5 个常驻服务正常运行（postgres、minio、backend 健康检查通过），minio-init 初始化后成功退出；经 nginx 验证了 Web / H5 页面、登录与 Cookie 续期、附件上传下载（MinIO）、SSE 推送和 Mailpit 收信；数据库运行账号没有建表和修改日志表的权限，MinIO 专用 key 只能访问 `eas-files` 桶；正式部署（profile 留空并设置 `EAS_ADMIN_PASSWORD`）只创建引导管理员、不加载演示账号；前面再加一层 HTTPS 反向代理时同源请求正常、跨域请求仍被拒绝。
+- 微信真机尚未验收；移动端双端构建通过不代表微信真机验收完成。
 - Web 复审反馈及审批异常恢复：刷新失败时弹窗无法重试的问题已修复。在真实详情页打开驳回弹窗并填写意见，注入一次详情刷新网络异常；错误提示和“重新加载”在弹窗内可见，确认按钮暂停。恢复接口后点击“重新加载”，验证 textarea 仍是同一 DOM、意见全文不变、确认按钮恢复可用；取消未提交的业务操作，注入已清理。最终复审反馈已处理并完成针对性回归。
 
 ## 7. 第二轮后端代码审查（gpt-6.1-sol）后的修复
