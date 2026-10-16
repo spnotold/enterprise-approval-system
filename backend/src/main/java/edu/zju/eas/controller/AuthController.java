@@ -87,7 +87,8 @@ public class AuthController {
                     body == null ? null : body.expectedUserId());
             return ApiResponse.ok(respond(pair, mobile, response));
         } catch (BizException e) {
-            if (!mobile) {
+            // 只在 Cookie 本身失效时清除；属于另一个账号的 Cookie 是别的标签页当前的登录
+            if (!mobile && !(e instanceof AuthService.RefreshUserMismatchException)) {
                 clearCookie(response);
             }
             throw e;
