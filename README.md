@@ -29,6 +29,7 @@ enterprise-approval-system
 ├── backend                 # 后端（Spring Boot）
 ├── frontend                # Web 前端（Vue 3）
 ├── mobile                  # 移动端（uni-app）
+├── minio                   # MinIO 镜像构建（minio 与 mc）
 ├── nginx                   # Nginx 配置与镜像构建
 ├── db
 │   └── init
@@ -41,6 +42,7 @@ enterprise-approval-system
     ├── summary.md          # 总结
     ├── git_log.txt         # git log 导出
     ├── demo_video.md       # 演示视频说明（录像在 demo/）
+    ├── demo                # 演示录像（seal-approval-e2e.mp4）
     ├── experiment_report   # 实验报告（含封面；Word、PDF 与 Markdown 版）
     └── archive             # 归档：开发过程交接记录
 ```
@@ -89,9 +91,11 @@ enterprise-approval-system
    ```bash
    cd mobile
    npm install
-   npm run dev:h5        # H5
+   npm run dev:h5        # H5，访问 http://localhost:5174/m/（与上面 Web 开发服务器同开时；单独运行是 http://localhost:5173/m/）
    npm run dev:mp-weixin # 微信小程序，用微信开发者工具打开 dist/dev/mp-weixin
    ```
+
+   微信开发者工具导入 `dist/dev/mp-weixin` 时可选择「测试号/游客模式」，正式使用需在 `manifest.json` 填自己的 appid。
 
 ## 部署
 
