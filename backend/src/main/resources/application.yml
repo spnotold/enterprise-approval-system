@@ -1,5 +1,6 @@
 server:
   port: 8080
+  forward-headers-strategy: native   # 信任内网代理（nginx）的 X-Forwarded-Proto，https 部署时同源判断才正确
   servlet:
     context-path: /api          # 接口统一前缀
 

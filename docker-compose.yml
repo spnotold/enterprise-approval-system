@@ -67,7 +67,7 @@ services:
       postgres:   { condition: service_healthy }
       minio-init: { condition: service_completed_successfully }
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}   # demo 需在 .env 中显式开启
       DB_URL: jdbc:postgresql://postgres:5432/eas
       DB_USER: eas_app                  # 运行账号：仅 DML 权限
       DB_PASSWORD: ${DB_PASSWORD}
@@ -85,7 +85,7 @@ services:
       EAS_ADMIN_PASSWORD: ${EAS_ADMIN_PASSWORD:-}  # 非 demo 部署：首次启动创建 admin 账号
       TZ: Asia/Shanghai
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- localhost:8080/api/actuator/health"]
+      test: ["CMD-SHELL", "curl -fsS localhost:8080/api/actuator/health"]
       interval: 10s
       retries: 30
 

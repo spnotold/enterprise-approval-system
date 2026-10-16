@@ -6,7 +6,8 @@ RUN --mount=type=cache,target=/root/.m2 mvn -q -B dependency:go-offline
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -q -B package -DskipTests
 
-FROM eclipse-temurin:17-jre-alpine
+# 非 alpine 版本才有 arm64 镜像（Apple Silicon 等）
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 ENV TZ=Asia/Shanghai
 COPY --from=build /app/target/eas.jar app.jar

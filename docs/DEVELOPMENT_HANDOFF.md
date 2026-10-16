@@ -6,11 +6,11 @@
 
 | 检查 | 结果 |
 |---|---|
-| `backend`: `mvn test` | 真实 PostgreSQL 回归 60/60 通过，失败、错误、跳过均为 0；依据 11 份 `backend/target/surefire-reports/TEST*.xml`，含 T01–T16，见 [测试报告](test_report.md) |
+| `backend`: `mvn test` | 真实 PostgreSQL 回归 62/62 通过，失败、错误、跳过均为 0；依据 12 份 `backend/target/surefire-reports/TEST*.xml`，含 T01–T16，见 [测试报告](test_report.md) |
 | `frontend`: `npm run build` / `lint` / `test` | 再次全部通过（84 项测试） |
 | `mobile`: `npm run typecheck` / `test` / `build:h5` / `build:mp-weixin` | 全部通过（20 项测试、同步 11 个文件） |
 | Web 浏览器实录 | `rd_emp_wang` → `rd_head_li` → `fin_head_qian` → 王工，用章申请闭环通过；原始录像见 [demo/seal-approval-e2e.mp4](demo/seal-approval-e2e.mp4) |
-| Docker 部署 | `docker compose up -d --build` 6 个服务全部健康；经 nginx 验证 Web / H5 页面、登录与 Cookie 续期、上传下载（MinIO）、SSE、Mailpit 收信；运行账号无建表和改日志权限，MinIO 专用 key 只能访问 `eas-files` |
+| Docker 部署 | `docker compose up -d --build` 6 个服务全部健康；经 nginx 验证 Web / H5 页面、登录与 Cookie 续期、上传下载（MinIO）、SSE、Mailpit 收信；运行账号无建表和改日志权限，MinIO 专用 key 只能访问 `eas-files`；正式部署（profile 留空 + `EAS_ADMIN_PASSWORD`）只创建引导管理员，不加载演示账号；前置 HTTPS 代理场景同源请求正常、跨域仍拒绝 |
 | 移动端 H5 走查 | 实际登录、通知处理、同单详情、个人统计验证；canvas 正常绘制且无横向溢出 |
 
 ## 已完成

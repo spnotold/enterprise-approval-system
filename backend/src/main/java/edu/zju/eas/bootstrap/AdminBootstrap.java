@@ -30,6 +30,8 @@ public class AdminBootstrap implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         String password = props.getAuth().getBootstrapAdminPassword();
+        // 多个实例同时首次启动时串行执行，后到者拿到锁后会看到已创建的管理员；事务结束自动释放
+        jdbc.queryForObject("SELECT pg_advisory_xact_lock(hashtext('eas:admin-bootstrap'))", Object.class);
         Integer admins = jdbc.queryForObject("""
                 SELECT count(*) FROM user_role ur JOIN role r ON r.id = ur.role_id WHERE r.code = 'SYS_ADMIN'
                 """, Integer.class);

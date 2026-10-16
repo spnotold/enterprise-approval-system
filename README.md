@@ -89,8 +89,8 @@ docker compose up -d --build
 ```
 
 - 启动后访问 `http://localhost`（移动端 H5 为 `http://localhost/m/`），演示邮件收件箱为 `http://localhost:8025`。端口被占用时在 `.env` 中修改 `HTTP_PORT`、`MAILPIT_PORT`，并相应修改 `APP_BASE_URL`（邮件中的链接前缀）。
-- `SPRING_PROFILES_ACTIVE=demo` 会加载演示账号（密码 `Demo@2026`）和示例申请；正式部署留空，并设置 `EAS_ADMIN_PASSWORD`，首次启动时创建系统管理员 `admin`。
-- 通过 http 访问（如局域网 IP）时保持 `COOKIE_SECURE=false`，否则浏览器不保存刷新令牌 Cookie；部署在 https 后改为 `true`。
+- `SPRING_PROFILES_ACTIVE=demo`（`template.env` 默认开启）会加载演示账号（密码 `Demo@2026`）和示例申请；正式部署把它留空，并设置 `EAS_ADMIN_PASSWORD`，首次启动时创建系统管理员 `admin`。
+- 通过 http 访问（如局域网 IP）时保持 `COOKIE_SECURE=false`，否则浏览器不保存刷新令牌 Cookie；部署在 https 后改为 `true`。在 nginx 前面再加一层终止 TLS 的反向代理时，该代理需设置 `X-Forwarded-Proto: https` 并保留原始 `Host`。
 - 数据库与 MinIO 仅在 compose 内部网络可见。数据卷首次初始化时 `db/init` 脚本创建运行账号 `eas_app`；后端启动时用 `eas_owner` 执行 Flyway 迁移，运行时用 `eas_app` 连接（只有增删改查，日志表只能追加），MinIO 使用只能读写 `eas-files` 桶的专用 key。接口统一以 `/api` 为前缀。
 - MinIO 官方已不再发布二进制和镜像，`minio/Dockerfile` 从固定提交的源码编译 `minio` 与 `mc`，首次构建需要几分钟并能访问 Go 模块代理。
 
