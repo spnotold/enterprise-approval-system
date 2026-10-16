@@ -11,6 +11,7 @@ import { useBreakpoint } from '@/composables/useBreakpoint'
 import { activeMenuPath, visibleMenu } from '@/router/menu'
 import { NOTIFICATION_TYPE_LABEL, ROLE_LABEL } from '@/lib/labels'
 import NoticeBell from '@/components/NoticeBell.vue'
+import PaperField from '@/components/PaperField.vue'
 
 const auth = useAuthStore()
 const notice = useNoticeStore()
@@ -132,6 +133,7 @@ function onCommand(cmd: string) {
           </template>
         </el-dropdown>
       </el-header>
+      <PaperField class="layout-paper" />
       <el-main class="main">
         <router-view v-slot="{ Component, route: r }">
           <component :is="Component" :key="KEYED_ROUTES.has(String(r.name)) ? r.path : undefined" />
@@ -243,7 +245,19 @@ function onCommand(cmd: string) {
 }
 
 .main-wrap {
+  position: relative;
   min-width: 0;
+}
+.layout-paper {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(100% - 52px);
+  pointer-events: none;
+  z-index: 0;
 }
 .header {
   display: flex;
@@ -301,8 +315,10 @@ function onCommand(cmd: string) {
   margin-bottom: 2px;
 }
 .main {
+  position: relative;
+  z-index: 1;
   --el-main-padding: 24px;
-  background: var(--eas-paper);
+  background: transparent;
   overflow-y: auto;
 }
 @media (max-width: 768px) {

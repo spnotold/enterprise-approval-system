@@ -1,10 +1,12 @@
 <script setup lang="ts">
 // 登录 / 注册共用外壳：左侧是安静的说明区（用一排签批格示意流转，窄屏隐藏），右侧是白底表单
+import PaperField from '@/components/PaperField.vue'
 </script>
 
 <template>
   <div class="auth-page">
     <aside class="auth-aside">
+      <PaperField class="auth-paper" base="deep" />
       <div class="aside-inner">
         <span class="logo" aria-hidden="true">审</span>
         <p class="aside-title">企业审批系统</p>
@@ -46,6 +48,8 @@
   background: var(--eas-surface);
 }
 .auth-aside {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,7 +57,17 @@
   background: var(--eas-paper-deep);
   border-right: 1px solid var(--eas-rule);
 }
+.auth-paper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
 .aside-inner {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 440px;
 }
