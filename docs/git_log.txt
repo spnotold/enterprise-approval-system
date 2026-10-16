@@ -1,3 +1,27 @@
+commit 262b101b21070412dd13150431900e9c2d82549a
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 21:04:13 -0400
+
+    docs: record round-2 review fixes (60 backend tests)
+
+commit 3903240a7659b60bdee28d4a8157704765baab47
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 21:03:54 -0400
+
+    test: best-effort cleanup of the demo test database
+
+commit 27e96b7968c0201eb1901ee82c110943e818bd55
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 21:02:33 -0400
+
+    fix: issues from round-2 backend review (gpt-6.1-sol)
+
+commit a4c160300cfb1e777544c54051bfde50136a7a41
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 20:58:22 -0400
+
+    docs: sync final test results and handoff (55 backend tests)
+
 commit e3136b035401583dc29c42c9a01160950a3e3dfa
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 18:03:11 -0400
@@ -28,24 +52,11 @@ Date:   2026-10-15 09:48:11 -0400
 
     docs: user guide
 
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-
 commit c9aafcdc861f04dcbdef94c1722c65a85429a6ec
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 09:46:37 -0400
 
     fix: issues found in browser QA
-
-    - flow: transfer stored candidate_ids as a JSON string (double encoding), which
-      broke task lists and detail with 500; transfer is audited once
-    - file: set MinIO region so the client skips GetBucketLocation, which the
-      bucket-scoped key may not call (every upload failed with Access Denied)
-    - notify: invalid SSE ticket returns 401 instead of 500
-    - web: grants scope text, task list type/template column, status column width,
-      log status text for node-to-node moves, stale demo hint
-    - mobile: clearer wording for skipped nodes in the path preview
-
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 commit 6bce9fc8b7b50c73c65e8a2bc89076d1a58a34c3
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
@@ -53,22 +64,11 @@ Date:   2026-10-15 09:11:13 -0400
 
     docs: test report and updated development status
 
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-
 commit 17cbfc508ef5a13c9ae232a8272e708bf6e59673
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 09:09:19 -0400
 
     test: key scenarios T01-T16 against real PostgreSQL
-
-    IntegrationTestBase boots the demo profile on a throwaway database and resets
-    seed data before each test. Covers access isolation, current-approver and admin
-    checks, self-approval fallback, withdraw/approve race (20 rounds), concurrent
-    approve, idempotent replay, terminal immutability, tamper-proof totals, cent
-    arithmetic, duplicate invoices, file type sniffing, notification isolation and
-    template version snapshots.
-
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 commit b36570305834aadbe66f8c693fc562af7275ab2b
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
@@ -76,24 +76,11 @@ Date:   2026-10-15 09:04:29 -0400
 
     feat(demo): demo accounts, custom templates and sample applications
 
-    - db/demo/R__seed_demo.sql: 10 demo accounts (Demo@2026), roles and primary
-      handlers, department heads, data-scope grants, LEAVE and SEAL templates
-    - DemoDataInitializer (demo profile) creates the sample applications through
-      the real save/submit/approve/reject flow, once
-    - fix(auth): register UUID type handler globally; login failed with 500 when
-      inserting refresh_token.family_id
-    - fix(flow): custom NUMBER/AMOUNT/DATE fields are compared by value in node
-      conditions ("10" > "3" was false as strings)
-
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-
 commit e2995d288bfee06f6b61ef7cbc3a62c959316993
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 08:59:49 -0400
 
     fix(api): pending-count route, Idempotent-Replayed header, ISO date query params
-
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 commit 76c33eace7253333efaa2520d400f78b6fbfe2d6
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
@@ -101,21 +88,11 @@ Date:   2026-10-15 08:58:24 -0400
 
     feat(job): cleanup and overdue reminder jobs; align application config
 
-    - purge TEMP attachments after 24h, idempotency records after 7 days,
-      soft-deleted drafts after 30 days, expired refresh tokens
-    - remind assignees of overdue tasks every 30 min (once per task per day)
-    - application.yml: jwt access-minutes/refresh-days, cookie-secure, app base-url,
-      zh_CN locale; add demo profile loading db/demo
-
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-
 commit 7d20093de48d74a9c33aea09a430b0e9c721b80c
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 08:55:16 -0400
 
     feat(mobile): purchase/expense/custom forms, stats page, strict typecheck fixes
-
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 commit 22a689991a3bdb79d7007cdbd2e49e556f330ff7
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
@@ -123,20 +100,11 @@ Date:   2026-10-15 08:55:16 -0400
 
     feat(web): application detail and task list pages
 
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-
 commit 1a914b92d128a39c7da9abcb2da7cb5e40117735
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 08:55:16 -0400
 
     feat(backend): application, task, file, template, admin and stats APIs
-
-    Business save/submit validation for purchase/travel/expense/custom, access policy,
-    idempotent submit/approve, admin services and stats queries, V5 draft constraint
-    relaxation, and integration tests against a real PostgreSQL.
-    Fix: stats monthly alias needs AS (month is a keyword); test fixture columns.
-
-    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 commit 7212793a5844872a78311b2e257993abc283676f
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
@@ -215,3 +183,4 @@ Author: Yuhang Li <3240105750@zju.edu.cn>
 Date:   2026-10-15 14:31:12 +0800
 
     chore: init project structure
+
