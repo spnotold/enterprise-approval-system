@@ -1,0 +1,12 @@
+# nginx 镜像以项目根目录为构建上下文：只需要 frontend、mobile 源码和 nginx 配置
+.git
+.claude
+.agents
+**/node_modules
+**/dist
+**/unpackage
+backend
+docs
+db
+*.env
+.env

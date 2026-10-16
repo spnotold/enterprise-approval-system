@@ -10,6 +10,7 @@
 | `frontend`: `npm run build` / `lint` / `test` | 再次全部通过（84 项测试） |
 | `mobile`: `npm run typecheck` / `test` / `build:h5` / `build:mp-weixin` | 全部通过（20 项测试、同步 11 个文件） |
 | Web 浏览器实录 | `rd_emp_wang` → `rd_head_li` → `fin_head_qian` → 王工，用章申请闭环通过；原始录像见 [demo/seal-approval-e2e.mp4](demo/seal-approval-e2e.mp4) |
+| Docker 部署 | `docker compose up -d --build` 6 个服务全部健康；经 nginx 验证 Web / H5 页面、登录与 Cookie 续期、上传下载（MinIO）、SSE、Mailpit 收信；运行账号无建表和改日志权限，MinIO 专用 key 只能访问 `eas-files` |
 | 移动端 H5 走查 | 实际登录、通知处理、同单详情、个人统计验证；canvas 正常绘制且无横向溢出 |
 
 ## 已完成
@@ -24,8 +25,7 @@
 
 ## 进行中 / 待办
 
-1. Docker 部署验收。
-2. 微信真机验收。
+1. 微信真机验收。
 
 ## 本机运行（无 Docker 环境）
 
