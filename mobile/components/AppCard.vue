@@ -6,11 +6,11 @@ import StatusTag from '@/components/StatusTag.vue'
 import { APP_TYPE_LABEL } from '@/utils/labels'
 import { fmtShort } from '@/utils/time'
 
-defineProps<{ app: ApplicationSummary; showApplicant?: boolean }>()
+defineProps<{ app: ApplicationSummary; showApplicant?: boolean; flush?: boolean }>()
 </script>
 
 <template>
-  <view class="card app-card">
+  <view class="card app-card" :class="{ 'app-card--flush': flush }" hover-class="is-pressed" hover-stay-time="60">
     <view class="row between">
       <view class="row flex1">
         <text class="tag tag-blue">{{ APP_TYPE_LABEL[app.type] }}</text>
@@ -19,7 +19,8 @@ defineProps<{ app: ApplicationSummary; showApplicant?: boolean }>()
       <text v-if="app.amountCents !== null" class="amount">¥{{ formatCents(app.amountCents) }}</text>
     </view>
     <view class="row between app-line">
-      <text class="muted ellipsis flex1">{{ app.appNo }} · {{ app.templateName }}</text>
+      <text class="muted ellipsis flex1">{{ app.appNo }}</text>
+      <text class="muted ellipsis app-template">{{ app.templateName }}</text>
     </view>
     <view class="row between">
       <StatusTag :status="app.status" :node="app.currentNode" />
@@ -32,6 +33,8 @@ defineProps<{ app: ApplicationSummary; showApplicant?: boolean }>()
 </template>
 
 <style scoped>
+.app-card--flush { margin-bottom: 0; }
+.app-template { margin-left: 16rpx; }
 .app-line {
   margin: 6rpx 0 10rpx;
 }

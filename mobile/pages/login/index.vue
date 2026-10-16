@@ -13,6 +13,7 @@ const showPwd = ref(false)
 const busy = ref(false)
 const error = ref('')
 const showDemo = ref(false)
+const focus = ref<'' | 'account' | 'password'>('')
 // 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
 const demoMode = ref(false)
 let redirect = ''
@@ -89,59 +90,86 @@ function goRegister(): void {
 
 <template>
   <view class="login">
-    <view class="brand">
-      <view class="brand-logo">审</view>
-      <view class="brand-name">企业审批系统</view>
-      <view class="muted">采购 · 差旅 · 报销 · 自定义流程</view>
+    <view class="head">
+      <view class="title">企业审批系统</view>
+      <view class="lead">提交申请，查看进度，处理待办。</view>
     </view>
 
-    <view class="card">
+    <view class="panel">
       <view class="field">
-        <view class="field-label">用户名或邮箱</view>
+        <view class="label">用户名或邮箱</view>
         <input
           v-model="account"
-          class="input"
+          class="ctl"
+          :class="{ 'ctl--focus': focus === 'account' }"
           placeholder="请输入用户名或邮箱"
-          placeholder-class="placeholder"
+          placeholder-class="ctl-placeholder"
           maxlength="100"
           confirm-type="next"
+          @focus="focus = 'account'"
+          @blur="focus = ''"
         />
       </view>
       <view class="field">
-        <view class="field-label">密码</view>
-        <view class="row pwd">
+        <view class="label">密码</view>
+        <view class="ctl-row" :class="{ 'ctl--focus': focus === 'password' }">
           <input
             v-model="password"
-            class="input flex1"
+            class="ctl-bare flex1"
             :password="!showPwd"
             placeholder="请输入密码"
-            placeholder-class="placeholder"
+            placeholder-class="ctl-placeholder"
             maxlength="64"
             confirm-type="done"
+            @focus="focus = 'password'"
+            @blur="focus = ''"
             @confirm="submit"
           />
-          <view class="pwd-eye" @tap="showPwd = !showPwd">
-            <uni-icons :type="showPwd ? 'eye' : 'eye-slash'" size="22" color="#8f959e" />
+          <view class="ctl-action" hover-class="is-pressed" :hover-stay-time="60" @tap="showPwd = !showPwd">
+            {{ showPwd ? '隐藏' : '显示' }}
           </view>
         </view>
       </view>
-      <view v-if="error" class="field-err">{{ error }}</view>
-      <button class="btn btn-primary btn-block login-btn" :loading="busy" :disabled="busy" @tap="submit">登录</button>
-      <view class="row between">
-        <view class="link-btn" @tap="goRegister">注册新账号</view>
-        <view v-if="demoMode" class="link-btn" @tap="showDemo = !showDemo">{{ showDemo ? '收起演示账号' : '演示账号' }}</view>
+      <view v-if="error" class="err">{{ error }}</view>
+      <button
+        class="submit"
+        hover-class="submit--pressed"
+        :hover-stay-time="60"
+        :loading="busy"
+        :disabled="busy"
+        @tap="submit"
+      >
+        登录
+      </button>
+      <view class="links">
+        <view class="link" hover-class="is-pressed" :hover-stay-time="60" @tap="goRegister">注册新账号</view>
+        <view v-if="demoMode" class="link" hover-class="is-pressed" :hover-stay-time="60" @tap="showDemo = !showDemo">
+          {{ showDemo ? '收起演示账号' : '演示账号' }}
+        </view>
       </view>
     </view>
 
-    <view v-if="demoMode && showDemo" class="card">
-      <view class="card-title">演示账号 <text class="muted">密码均为 Demo@2026</text></view>
-      <view v-for="d in DEMO_ACCOUNTS" :key="d.username" class="demo" @tap="fillDemo(d.username)">
+    <view v-if="demoMode && showDemo" class="panel demo-panel">
+      <view class="demo-head">
+        <text class="demo-title">演示账号</text>
+        <text class="note">密码均为 Demo@2026</text>
+      </view>
+      <view
+        v-for="d in DEMO_ACCOUNTS"
+        :key="d.username"
+        class="demo"
+        hover-class="is-pressed"
+        :hover-stay-time="60"
+        @tap="fillDemo(d.username)"
+      >
         <view class="flex1">
-          <text class="bold">{{ d.name }}</text>
-          <text class="muted"> {{ d.username }}</text>
-          <view class="muted">{{ d.desc }}</view>
+          <view>
+            <text class="demo-name">{{ d.name }}</text>
+            <text class="note demo-user">{{ d.username }}</text>
+          </view>
+          <view class="note">{{ d.desc }}</view>
         </view>
-        <text class="text-primary">填入</text>
+        <text class="demo-fill">填入</text>
       </view>
     </view>
   </view>
@@ -150,62 +178,203 @@ function goRegister(): void {
 <style scoped>
 .login {
   min-height: 100vh;
-  padding: 80rpx 40rpx calc(48rpx + env(safe-area-inset-bottom));
-  box-sizing: border-box;
+  padding: 96rpx 40rpx calc(48rpx + env(safe-area-inset-bottom));
+  background: var(--eas-paper);
+  color: var(--eas-ink);
+  font-family: var(--eas-font-sans);
 }
 
-.brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 48rpx;
+.head {
+  margin-bottom: 40rpx;
 }
 
-.brand-logo {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 28rpx;
-  background: #2f6bff;
-  color: #fff;
-  font-size: 60rpx;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.title {
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-xl);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--eas-ink);
 }
 
-.brand-name {
-  font-size: 40rpx;
-  font-weight: 700;
-  margin: 20rpx 0 8rpx;
+.lead {
+  margin-top: 12rpx;
+  font-size: var(--eas-fs-sm);
+  line-height: 1.6;
+  color: var(--eas-ink-2);
 }
 
-.pwd {
-  background: #f7f8fa;
-  border-radius: 10rpx;
+.panel {
+  padding: 16rpx 32rpx 24rpx;
+  margin-bottom: 24rpx;
+  background: var(--eas-surface);
+  border: 1rpx solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
 }
 
-.pwd-eye {
-  width: 88rpx;
+.field {
+  padding: 16rpx 0;
+}
+
+.label {
+  margin-bottom: 12rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink-2);
+}
+
+.ctl,
+.ctl-row {
+  width: 100%;
   height: 88rpx;
+  background: var(--eas-paper);
+  border: 2rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+  font-size: var(--eas-fs-md);
+  color: var(--eas-ink);
+  transition: border-color var(--eas-dur-fast) var(--eas-ease);
+}
+
+.ctl {
+  padding: 0 24rpx;
+}
+
+.ctl-row {
+  display: flex;
+  align-items: center;
+}
+
+.ctl-bare {
+  height: 100%;
+  padding: 0 24rpx;
+  font-size: var(--eas-fs-md);
+  color: var(--eas-ink);
+}
+
+.ctl--focus {
+  border-color: var(--eas-primary);
+}
+
+.ctl-placeholder {
+  color: var(--eas-placeholder);
+}
+
+.ctl-action {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  min-width: 112rpx;
+  height: 100%;
+  padding: 0 16rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-primary);
+  border-radius: var(--eas-radius-control);
 }
 
-.login-btn {
-  margin-top: 24rpx;
+.err {
+  margin-top: 8rpx;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.5;
+  color: var(--eas-danger);
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 88rpx;
+  margin: 24rpx 0 0;
+  padding: 0;
+  line-height: 88rpx;
+  font-size: var(--eas-fs-md);
+  color: var(--eas-surface);
+  background: var(--eas-primary);
+  border-radius: var(--eas-radius-control);
+  transition: background-color var(--eas-dur-fast) var(--eas-ease);
+}
+
+.submit::after {
+  border: none;
+}
+
+.submit--pressed {
+  background: var(--eas-primary-hover);
+}
+
+.submit[disabled] {
+  opacity: 0.55;
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88rpx;
+  min-height: 88rpx;
+  padding: 0 16rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-primary);
+  border-radius: var(--eas-radius-control);
+}
+
+.links .link:first-child {
+  margin-left: -16rpx;
+}
+
+.links .link:last-child {
+  margin-right: -16rpx;
+}
+
+.note {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+
+.demo-panel {
+  padding-bottom: 8rpx;
+}
+
+.demo-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 16rpx 0 8rpx;
+}
+
+.demo-title {
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
 }
 
 .demo {
   display: flex;
   align-items: center;
   min-height: 88rpx;
-  padding: 12rpx 0;
-  border-bottom: 1rpx solid #f0f1f2;
+  margin: 0 -32rpx;
+  padding: 16rpx 32rpx;
+  border-top: 1rpx solid var(--eas-rule);
 }
 
-.demo:last-child {
-  border-bottom: none;
+.demo-name {
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+}
+
+.demo-user {
+  margin-left: 16rpx;
+}
+
+.demo-fill {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-primary);
 }
 </style>

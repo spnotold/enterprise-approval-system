@@ -1,9 +1,11 @@
 <script setup lang="ts">
 // 消息：全部 / 未读，标记已读；点击先标记已读，再跳转到关联的申请
 import { computed, ref } from 'vue'
-import { onLoad, onPullDownRefresh, onReachBottom, onShow, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onPageScroll, onHide, onPullDownRefresh, onReachBottom, onShow, onUnload } from '@dcloudio/uni-app'
 import { api } from '@/lib/api'
 import type { NotificationItem } from '@/lib/types'
+import SwipeCell from '@/components/SwipeCell.vue'
+import { closeSwipeCells } from '@/composables/useSwipeTabs'
 import EmptyState from '@/components/EmptyState.vue'
 import { usePagedList } from '@/composables/usePagedList'
 import { requireLogin } from '@/stores/auth'
@@ -24,6 +26,7 @@ const list = usePagedList<NotificationItem>(async (page, size) => {
 }, 15)
 
 function reload(): void {
+  closeSwipeCells()
   void list.reload()
 }
 
@@ -46,6 +49,19 @@ async function tap(n: NotificationItem): Promise<void> {
   }
   openLink(n)
 }
+
+async function markRead(n: NotificationItem): Promise<void> {
+  if (n.read) return
+  try {
+    await api.notifications.markRead(n.id)
+    n.read = true
+    notice.decrease()
+    toast('已标记为已读', 'success')
+    reload()
+  } catch (e) { showError(e) }
+}
+onPageScroll(closeSwipeCells)
+onHide(closeSwipeCells)
 
 async function readAll(): Promise<void> {
   if (!unread.value) return
@@ -80,50 +96,54 @@ onReachBottom(() => void list.loadMore())
 </script>
 
 <template>
-  <view class="page">
+  <view class="page" @tap="closeSwipeCells">
     <view class="row">
       <view class="seg flex1">
-        <view class="seg-item" :class="{ active: !unreadOnly }" @tap="setTab(false)">全部</view>
-        <view class="seg-item" :class="{ active: unreadOnly }" @tap="setTab(true)">
+        <view class="seg-indicator" :style="{ width: 'calc((100% - 12rpx) / 2)', transform: `translateX(${unreadOnly ? 100 : 0}%)` }" />
+        <view class="seg-item" :class="{ active: !unreadOnly }" hover-class="is-pressed" hover-stay-time="60" @tap="setTab(false)">全部</view>
+        <view class="seg-item" :class="{ active: unreadOnly }" hover-class="is-pressed" hover-stay-time="60" @tap="setTab(true)">
           未读<text v-if="unread">（{{ unread > 99 ? '99+' : unread }}）</text>
         </view>
       </view>
-      <view class="link-btn read-all" :class="{ disabled: !unread }" @tap="readAll">全部已读</view>
+      <view class="link-btn read-all" :class="{ disabled: !unread }" hover-class="is-pressed" hover-stay-time="60" @tap="readAll">全部已读</view>
     </view>
 
-    <view v-for="n in list.items.value" :key="n.id" class="card notice" @tap="tap(n)">
-      <view class="row between">
-        <view class="row flex1">
-          <view v-if="!n.read" class="dot" />
-          <text class="tag" :class="n.type === 'APP_REJECTED' || n.type === 'TASK_OVERDUE' ? 'tag-red' : 'tag-blue'">
-            {{ NOTICE_TYPE_LABEL[n.type] ?? '通知' }}
-          </text>
-          <text class="ellipsis" :class="{ bold: !n.read }">{{ n.title }}</text>
+    <SwipeCell v-for="n in list.items.value" :key="n.id" :cell-id="`notice-${n.id}`" :actions="n.read ? [] : [{ key: 'read', text: '标为已读', type: 'primary' }]" @content-tap="tap(n)" @action="markRead(n)">
+      <view class="card notice" hover-class="is-pressed" hover-stay-time="60">
+        <view class="row between">
+          <view class="row flex1">
+            <view v-if="!n.read" class="dot" />
+            <text class="tag" :class="n.type === 'APP_REJECTED' || n.type === 'TASK_OVERDUE' ? 'tag-red' : 'tag-blue'">
+              {{ NOTICE_TYPE_LABEL[n.type] ?? '通知' }}
+            </text>
+            <text class="ellipsis" :class="{ bold: !n.read }">{{ n.title }}</text>
+          </view>
         </view>
+        <view v-if="n.content" class="muted content break">{{ n.content }}</view>
+        <view class="muted">{{ fmtShort(n.createdAt) }}</view>
       </view>
-      <view v-if="n.content" class="muted content break">{{ n.content }}</view>
-      <view class="muted">{{ fmtShort(n.createdAt) }}</view>
-    </view>
+    </SwipeCell>
 
     <EmptyState v-if="list.loaded.value && !list.items.value.length" :text="unreadOnly ? '没有未读消息' : '暂无消息'" />
-    <uni-load-more v-else-if="list.items.value.length" :status="list.moreStatus.value" />
+    <uni-load-more v-else-if="list.items.value.length" :status="list.moreStatus.value" :content-text="{ contentdown: '上拉加载更多', contentrefresh: '加载中', contentnomore: '没有更多记录' }" />
   </view>
 </template>
 
 <style scoped>
+.notice { margin-bottom: 0; }
 .read-all {
   margin: 0 0 24rpx 12rpx;
 }
 
 .read-all.disabled {
-  color: #c0c4cc;
+  color: var(--eas-ink-2);
 }
 
 .dot {
   width: 14rpx;
   height: 14rpx;
   border-radius: 50%;
-  background: #e5484d;
+  background: var(--eas-primary);
   margin-right: 10rpx;
   flex-shrink: 0;
 }

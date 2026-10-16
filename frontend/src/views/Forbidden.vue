@@ -7,22 +7,26 @@ const router = useRouter()
 
 <template>
   <div class="page result-page">
-    <el-result icon="warning" title="403" sub-title="无权访问该页面">
-      <template #extra>
-        <p class="muted small hint">如需访问，请联系系统管理员授予相应权限。</p>
-        <el-button type="primary" @click="router.push('/')">返回工作台</el-button>
-      </template>
-    </el-result>
+    <div class="result">
+      <h2 class="page-title"><span class="code">403</span>无权访问该页面</h2>
+      <p class="hint">如需访问，请联系系统管理员授予相应权限。</p>
+      <el-button type="primary" @click="router.push('/')">返回工作台</el-button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .result-page {
-  align-items: center;
+  min-height: 50vh;
   justify-content: center;
-  min-height: 60vh;
+}
+.code {
+  margin-right: 16px;
+  color: var(--eas-ink-3);
+  font-variant-numeric: tabular-nums;
 }
 .hint {
-  margin: 0 0 16px;
+  margin: 8px 0 20px;
+  color: var(--eas-ink-2);
 }
 </style>

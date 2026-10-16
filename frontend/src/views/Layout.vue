@@ -11,6 +11,7 @@ import { useBreakpoint } from '@/composables/useBreakpoint'
 import { activeMenuPath, visibleMenu } from '@/router/menu'
 import { NOTIFICATION_TYPE_LABEL, ROLE_LABEL } from '@/lib/labels'
 import NoticeBell from '@/components/NoticeBell.vue'
+import PaperField from '@/components/PaperField.vue'
 
 const auth = useAuthStore()
 const notice = useNoticeStore()
@@ -63,7 +64,7 @@ function onCommand(cmd: string) {
   <el-container class="layout">
     <el-aside v-if="!isMobile" :width="collapsed ? '64px' : '216px'" class="aside">
       <div class="brand" :class="{ collapsed }">
-        <span class="logo">审</span>
+        <span class="logo" aria-hidden="true">审</span>
         <span v-if="!collapsed" class="brand-text">企业审批系统</span>
       </div>
       <el-scrollbar>
@@ -86,8 +87,8 @@ function onCommand(cmd: string) {
       </el-scrollbar>
     </el-aside>
 
-    <el-drawer v-else v-model="drawer" direction="ltr" size="240px" :with-header="false">
-      <div class="brand"><span class="logo">审</span><span class="brand-text">企业审批系统</span></div>
+    <el-drawer v-else v-model="drawer" direction="ltr" size="240px" :with-header="false" class="nav-drawer">
+      <div class="brand"><span class="logo" aria-hidden="true">审</span><span class="brand-text">企业审批系统</span></div>
       <el-menu :default-active="active" router class="menu">
         <template v-for="g in groups" :key="g.title ?? 'root'">
           <el-menu-item-group :title="g.title ?? undefined">
@@ -101,11 +102,11 @@ function onCommand(cmd: string) {
     </el-drawer>
 
     <el-container class="main-wrap">
-      <el-header class="header" :height="'56px'">
+      <el-header class="header" :height="'52px'">
         <button
           class="icon-btn"
           type="button"
-          :aria-label="isMobile ? '打开菜单' : '折叠菜单'"
+          :aria-label="isMobile ? '打开菜单' : collapsed ? '展开菜单' : '折叠菜单'"
           @click="isMobile ? (drawer = true) : (collapsed = !collapsed)"
         >
           <el-icon :size="20"><Fold v-if="!collapsed || isMobile" /><Expand v-else /></el-icon>
@@ -114,7 +115,7 @@ function onCommand(cmd: string) {
         <div class="flex-1" />
         <NoticeBell />
         <el-dropdown trigger="click" @command="onCommand">
-          <span class="user">
+          <span class="user" role="button" tabindex="0" aria-label="用户菜单">
             <el-avatar :size="28" class="avatar">{{ auth.me?.realName?.slice(-2) }}</el-avatar>
             <span v-if="!isMobile" class="user-name">{{ auth.me?.realName }}</span>
             <el-icon><ArrowDown /></el-icon>
@@ -132,6 +133,7 @@ function onCommand(cmd: string) {
           </template>
         </el-dropdown>
       </el-header>
+      <PaperField class="layout-paper" />
       <el-main class="main">
         <router-view v-slot="{ Component, route: r }">
           <component :is="Component" :key="KEYED_ROUTES.has(String(r.name)) ? r.path : undefined" />
@@ -148,21 +150,25 @@ function onCommand(cmd: string) {
 .aside {
   display: flex;
   flex-direction: column;
-  background: var(--el-bg-color);
-  border-right: 1px solid var(--el-border-color-lighter);
-  transition: width 0.2s;
+  background: var(--eas-paper-deep);
+  border-right: 1px solid var(--eas-rule);
+  transition: width var(--eas-dur) var(--eas-ease);
   overflow: hidden;
 }
+
+/* 品牌：描边方块，像一枚印章边框 */
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 56px;
-  padding: 0 16px;
+  gap: 10px;
+  height: 52px;
+  flex: none;
+  box-sizing: border-box;
+  padding: 0 20px;
+  font-size: var(--eas-fs-md);
   font-weight: 600;
-  font-size: 16px;
   white-space: nowrap;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--eas-rule);
 }
 .brand.collapsed {
   justify-content: center;
@@ -172,68 +178,152 @@ function onCommand(cmd: string) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
-  background: var(--el-color-primary);
-  color: #fff;
-  font-size: 15px;
+  border: 1.5px solid var(--eas-primary);
+  border-radius: 3px;
+  color: var(--eas-primary);
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  line-height: 1;
   flex: none;
 }
+
+/* 侧边菜单：夹板底色，选中项白底 + 左侧 3px 主色竖线 */
 .menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: var(--eas-ink);
+  --el-menu-hover-bg-color: var(--eas-paper);
+  --el-menu-active-color: var(--eas-ink);
+  --el-menu-item-height: 40px;
+  --el-menu-base-level-padding: 20px;
   border-right: none;
+  padding-bottom: 12px;
+}
+.menu.el-menu--collapse {
+  width: 100%;
 }
 .menu :deep(.el-menu-item-group__title) {
-  padding-top: 12px;
+  padding: 16px 20px 6px;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.4;
+  color: var(--eas-ink-2);
 }
+.menu :deep(.el-menu-item-group__title:empty) {
+  display: none;
+}
+.menu :deep(.el-menu-item) {
+  position: relative;
+  height: 40px;
+  line-height: 40px;
+  font-size: var(--eas-fs-sm);
+}
+.menu :deep(.el-menu-item .el-icon) {
+  color: var(--eas-ink-2);
+}
+.menu :deep(.el-menu-item.is-active),
+.menu :deep(.el-menu-item.is-active:hover) {
+  background: var(--eas-surface);
+  font-weight: 600;
+}
+.menu :deep(.el-menu-item.is-active .el-icon) {
+  color: var(--eas-primary);
+}
+.menu :deep(.el-menu-item.is-active::before) {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--eas-primary);
+}
+.menu :deep(.el-menu-item:focus-visible) {
+  outline-offset: -2px;
+}
+
 .main-wrap {
+  position: relative;
   min-width: 0;
+}
+.layout-paper {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(100% - 52px);
+  pointer-events: none;
+  z-index: 0;
 }
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  gap: 8px;
+  background: var(--eas-surface);
+  border-bottom: 1px solid var(--eas-rule);
 }
 .header-title {
-  font-weight: 500;
+  margin-left: 4px;
+  font-weight: 600;
 }
 .icon-btn {
   display: inline-flex;
-  padding: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: none;
+  border-radius: var(--eas-radius-control);
   background: transparent;
   cursor: pointer;
-  color: inherit;
+  color: var(--eas-ink);
+  transition: background var(--eas-dur-fast) var(--eas-ease);
+}
+.icon-btn:hover {
+  background: var(--eas-paper);
 }
 .user {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--eas-radius-control);
   cursor: pointer;
-  outline: none;
+  transition: background var(--eas-dur-fast) var(--eas-ease);
+}
+.user:hover {
+  background: var(--eas-paper);
 }
 .avatar {
-  background: var(--el-color-primary-light-3);
-  font-size: 12px;
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
+  font-size: var(--eas-fs-xs);
+  font-weight: 600;
 }
 .user-card {
   padding: 10px 16px 6px;
   min-width: 180px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--eas-rule);
 }
 .user-card-name {
   font-weight: 600;
   margin-bottom: 2px;
 }
 .main {
-  background: var(--el-bg-color-page);
+  position: relative;
+  z-index: 1;
+  --el-main-padding: 24px;
+  background: transparent;
   overflow-y: auto;
 }
 @media (max-width: 768px) {
   .main {
-    padding: 12px;
+    --el-main-padding: 12px;
   }
 }
 </style>
@@ -241,5 +331,11 @@ function onCommand(cmd: string) {
 <style>
 .clickable-notification {
   cursor: pointer;
+}
+.nav-drawer.el-drawer {
+  background: var(--eas-paper-deep);
+}
+.nav-drawer .el-drawer__body {
+  padding: 0;
 }
 </style>
