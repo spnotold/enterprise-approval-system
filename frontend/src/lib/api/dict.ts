@@ -1,7 +1,9 @@
 import { http } from '../http'
-import type { DeptOption, ExpenseTypeOption, UserOption } from '../types'
+import type { DeptOption, ExpenseTypeOption, PublicConfig, UserOption } from '../types'
 
 export const dict = {
+  /** 公开接口，登录页据此判断是否展示演示账号 */
+  publicConfig: () => http.get<PublicConfig>('/public/config'),
   /** 公开接口，注册页使用 */
   publicDepartments: () => http.get<DeptOption[]>('/public/departments'),
   departments: () => http.get<DeptOption[]>('/dicts/departments'),

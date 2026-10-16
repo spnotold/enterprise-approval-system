@@ -106,6 +106,11 @@ export interface Availability {
   emailAvailable?: boolean | null
 }
 
+export interface PublicConfig {
+  /** 后端是否以 demo profile 运行；登录页据此决定是否展示演示账号 */
+  demo: boolean
+}
+
 export interface SseTicket {
   ticket: string
   expiresIn: number
