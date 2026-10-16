@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
+import edu.zju.eas.security.CurrentUser;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
 import static edu.zju.eas.service.admin.AdminSupport.*;
@@ -51,9 +54,15 @@ public class AdminQueryService {
         return page("SELECT *",where,"created_at DESC,id DESC",args,(r,n)->new AuditLogView(r.getLong("id"),r.getString("operator_name"),r.getString("action"),r.getString("target_type"),r.getString("target_id"),r.getString("before_data")==null?null:Jsons.read(r.getString("before_data"),com.fasterxml.jackson.databind.JsonNode.class),r.getString("after_data")==null?null:Jsons.read(r.getString("after_data"),com.fasterxml.jackson.databind.JsonNode.class),r.getString("reason"),r.getString("ip"),time(r,"created_at")),page,size);
     }
     public PageResponse<DeliveryView> deliveries(int page,int size,String status) {
-        require(Perms.ADMIN_CONFIG);String from=" FROM notification_delivery d JOIN notification n ON n.id=d.notification_id WHERE 1=1";List<Object> args=new ArrayList<>();
+        CurrentUser u=require(Perms.ADMIN_CONFIG);String from=" FROM notification_delivery d JOIN notification n ON n.id=d.notification_id LEFT JOIN application a ON a.id=n.application_id WHERE 1=1";List<Object> args=new ArrayList<>();
         if(status!=null && !status.isBlank()){from+=" AND d.status=?";args.add(status);}
-        return page("SELECT d.*,n.title",from,"d.id DESC",args,(r,n)->new DeliveryView(r.getLong("id"),r.getLong("notification_id"),r.getString("recipient_email"),r.getString("title"),r.getString("status"),r.getInt("attempts"),time(r,"next_retry_at"),r.getString("last_error"),time(r,"sent_at"),time(r,"created_at")),page,size);
+        return page("SELECT d.*,n.title,a.app_no,a.dept_id",from,"d.id DESC",args,(r,n)->new DeliveryView(r.getLong("id"),r.getLong("notification_id"),r.getString("recipient_email"),deliveryTitle(u,r),r.getString("status"),r.getInt("attempts"),time(r,"next_retry_at"),r.getString("last_error"),time(r,"sent_at"),time(r,"created_at")),page,size);
+    }
+
+    /** 投递查询只用于运维排障；未覆盖申请部门的 BIZ_CONTENT_READ 授权时，标题脱敏为不含业务标题的通用描述。 */
+    private static String deliveryTitle(CurrentUser u,ResultSet r) throws SQLException {
+        Long deptId=r.getObject("dept_id",Long.class);
+        return deptId==null||u.covers(Perms.GRANT_BIZ_CONTENT_READ,deptId)?r.getString("title"):"审批通知 #"+r.getString("app_no");
     }
     private <T> PageResponse<T> page(String select,String from,String order,List<Object> args,RowMapper<T> row,int page,int size) {
         page=AdminSupport.page(page);size=AdminSupport.size(size);long count=jdbc.queryForObject("SELECT count(*)"+from,Long.class,args.toArray());
