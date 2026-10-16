@@ -1,3 +1,339 @@
+commit c9e7d6b2386765471031cf403aa991dd3830b3bd
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:31:54 2026 -0400
+
+    docs: sync test counts and dev setup with review fixes
+    
+    Backend tests grew to 78 and web tests to 92 after the review fixes; both the
+    Testcontainers and the local PostgreSQL runs pass. The local development step
+    now warns that the template JWT_SECRET placeholder is rejected at startup.
+
+ README.md           |  2 +-
+ docs/test_report.md | 19 ++++++++++++-------
+ 2 files changed, 13 insertions(+), 8 deletions(-)
+
+commit c09a72ce65c017ec877c1c90aed8cb1b6c05d97d
+Merge: c6a36c4 1b30674
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:29:29 2026 +0800
+
+    Merge pull request #11 from spnotold/feature/fix-refresh-rotation-race
+    
+    fix(auth): 并发刷新时后到的请求走轮换宽限，不再清除共享的刷新 Cookie
+
+commit c6a36c4a5c5e6165355b3fe391f115092c919690
+Merge: c50fe15 936350b
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:27:09 2026 +0800
+
+    Merge pull request #10 from spnotold/feature/fix-approver-eligibility
+    
+    fix(flow): unify approver eligibility to require TASK_HANDLE
+
+commit 1b3067452eaef665ba22da3f459cc44989b4c9ed
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:24:47 2026 -0400
+
+    fix(auth): 并发刷新时后到的请求走轮换宽限，不再清除共享的刷新 Cookie
+    
+    两个标签页同时用同一刷新令牌刷新时，都读到 rotated_at 为空；先到的轮换成功，
+    后到的条件更新返回 0 行后直接 401，控制器随即清除 Cookie，可能删掉先到的请求
+    刚写入的新 Cookie，把用户踢下线。
+    
+    - 条件更新返回 0 行时重新读取该记录：刚被轮换的按已有宽限逻辑处理
+      （Web 端只补发访问令牌、不动 Cookie），超出宽限仍按重用撤销整族
+    - 刷新令牌属于另一个账号（expectedUserId 不一致）时不再清除 Cookie，
+      那是另一个标签页当前的登录；其余失效情况照旧清除
+
+ .../edu/zju/eas/controller/AuthController.java     |   3 +-
+ .../main/java/edu/zju/eas/service/AuthService.java |  51 ++++++----
+ .../edu/zju/eas/security/RefreshRotationTest.java  | 110 +++++++++++++++++++++
+ 3 files changed, 146 insertions(+), 18 deletions(-)
+
+commit 936350ba5aca5d82b0b4eac2a6b9ebd3a810f662
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:25:44 2026 -0400
+
+    fix(flow): unify approver eligibility to require TASK_HANDLE
+    
+    审批人解析与转办此前只看账号 ACTIVE，导致被撤销唯一角色（失去
+    TASK_HANDLE）的用户仍可被指定或转办为审批人，待办对其 403，流程卡死。
+    
+    将资格判断统一为「ACTIVE 且拥有 TASK_HANDLE 且非系统管理员」，抽到
+    FlowQueryMapper.eligibleApprover 供审批人解析（单人/多人）与转办复用，
+    避免两处口径再次分叉。解析不到合格审批人时走既有替代/兜底规则并在快照
+    记录替代说明；转办目标不合格时返回 422 TRANSFER_TARGET_INVALID。
+
+ .../edu/zju/eas/repository/FlowQueryMapper.java    | 16 +++++
+ .../edu/zju/eas/service/flow/ApproverResolver.java |  7 +-
+ .../java/edu/zju/eas/service/flow/FlowEngine.java  |  4 +-
+ .../edu/zju/eas/flow/ApproverEligibilityTest.java  | 76 ++++++++++++++++++++++
+ 4 files changed, 97 insertions(+), 6 deletions(-)
+
+commit c50fe15532758e9d219bf3b04081430e20703321
+Merge: 31a6807 66747a6
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:25:08 2026 +0800
+
+    Merge pull request #8 from spnotold/feature/fix-deliveries-title-leak
+    
+    fix(admin): mask application titles in delivery query without BIZ_CONTENT_READ
+
+commit 31a6807bb2df6f95636d5a05e9d407192519c150
+Merge: e22a84a 27fa064
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:24:49 2026 +0800
+
+    Merge pull request #9 from spnotold/feature/fix-grant-dates
+    
+    fix(grants): 创建授权提交日期转为带 +08:00 偏移的 ISO 时间
+
+commit 27fa064a5e3a77030c103c21fe2f0de4eacab81e
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:23:41 2026 -0400
+
+    fix(grants): submit grant validity dates as +08:00 ISO datetimes
+    
+    Web 管理端创建授权时，el-date-picker 的 YYYY-MM-DD 纯日期被后端
+    OffsetDateTime 反序列化拒绝，返回 400。提交前按上海时区折算：
+    生效日取当天 00:00，失效日含当天（存次日 00:00，与后端
+    valid_until > now 的严格比较及 Times.endExclusive 语义一致）。
+    列表有效期列相应显示最后有效日，与所选失效日期一致。
+    
+    补 MockMvc 测试：带 +08:00 ISO 日期的创建返回 200 且当天有效，
+    纯日期负载返回 400。
+
+ .../edu/zju/eas/admin/AdminTemplateStatsTest.java  | 24 ++++++++++++++++++++++
+ frontend/src/views/admin/Grants.vue                | 24 ++++++++++++++++++----
+ 2 files changed, 44 insertions(+), 4 deletions(-)
+
+commit e22a84a5507e7730551d32073618400b187ade2e
+Merge: 2d7fdd4 822de5a
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:20:52 2026 +0800
+
+    Merge pull request #7 from spnotold/feature/fix-docs-small
+    
+    docs: fix small doc errors and remove unused frontend/Dockerfile
+
+commit 2d7fdd42d41f8da0536552cfd61ef0de48621417
+Merge: b5b4fca 9735de8
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:20:21 2026 +0800
+
+    Merge pull request #6 from spnotold/feature/fix-transfer-reason-length
+    
+    fix(flow): 转办原因不再超出 approval_log.comment 列宽
+
+commit 66747a6914c49ec244ae566cd11ff5805a869747
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:20:11 2026 -0400
+
+    fix(admin): mask application titles in delivery query without BIZ_CONTENT_READ
+
+ .../zju/eas/service/admin/AdminQueryService.java   | 13 ++++-
+ .../edu/zju/eas/admin/DeliveriesTitleLeakTest.java | 60 ++++++++++++++++++++++
+ frontend/src/views/admin/Deliveries.vue            |  2 +-
+ 3 files changed, 72 insertions(+), 3 deletions(-)
+
+commit 9735de8e28b923150e51d3f49c46e332f0cd36c9
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:20:11 2026 -0400
+
+    fix(flow): keep transfer parties in log comment, truncating long reasons
+
+ backend/src/main/java/edu/zju/eas/service/flow/FlowEngine.java | 7 ++++---
+ backend/src/test/java/edu/zju/eas/flow/FlowRulesTest.java      | 8 ++++----
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+commit b5b4fca1c3a1057500cf59ff3f691df088ef91de
+Merge: 6cf18b3 f71fb75
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:19:10 2026 +0800
+
+    Merge pull request #5 from spnotold/feature/fix-admin-dept-head-scope
+    
+    fix(security): drop department read scope for admins acting as dept head
+
+commit 822de5a7ff1aa2664ff9fd1cc3359d80c67ef918
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:18:54 2026 -0400
+
+    chore: remove unused frontend/Dockerfile and its .dockerignore
+
+ frontend/.dockerignore |  2 --
+ frontend/Dockerfile    | 10 ----------
+ 2 files changed, 12 deletions(-)
+
+commit 09c95ceb1eaa0899f57510492c6d1eb2ae19d8e5
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:18:54 2026 -0400
+
+    docs: fix demo video resolution, README dir tree and mobile dev notes
+
+ README.md                           | 6 +++++-
+ docs/archive/DEVELOPMENT_HANDOFF.md | 4 ++--
+ docs/demo_video.md                  | 2 +-
+ 3 files changed, 8 insertions(+), 4 deletions(-)
+
+commit 6cf18b32d6193adef283f4a0b3a4075804951e4b
+Merge: f2570a0 e90c0eb
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:18:32 2026 +0800
+
+    Merge pull request #4 from spnotold/feature/fix-demo-accounts-visibility
+    
+    fix(auth): show demo accounts on login page only in demo mode
+
+commit e90c0ebe4f2db282cfb7991ee2ff7c9ad2523304
+Merge: 3f269ae f2570a0
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:18:13 2026 -0400
+
+    Merge remote-tracking branch 'origin/dev' into review/pr4
+    
+    # Conflicts:
+    #       README.md
+
+commit 2eb2196b786b83a5de8f584aad5324c1c2d60b01
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:18:08 2026 -0400
+
+    fix(flow): transfer reason no longer overflows approval_log.comment
+    
+    转办日志的 comment 由“由 X 转给 Y：”+原因拼接写入 approval_log.comment
+    (VARCHAR(500))，500 字合法原因会超出列宽导致 HTTP 500 与事务回滚。
+    改为 comment 只存原因，转办双方信息已完整记录在 assignee_history
+    与审计日志中。新增 500 字转办原因回归测试。
+
+ .../main/java/edu/zju/eas/service/flow/FlowEngine.java  |  4 +++-
+ .../src/test/java/edu/zju/eas/flow/FlowRulesTest.java   | 17 +++++++++++++++++
+ 2 files changed, 20 insertions(+), 1 deletion(-)
+
+commit f71fb750e4ff81a8c23cacb7d53ca48975ba00ac
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:18:03 2026 -0400
+
+    fix(security): drop department read scope for admins acting as dept head
+
+ .../main/java/edu/zju/eas/security/AuthInfoService.java    |  5 ++++-
+ .../test/java/edu/zju/eas/security/AccessControlTest.java  | 14 ++++++++++++++
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+
+commit f2570a0c9e6d280e3a6a7971d90ef19fe1797f11
+Merge: 7dc6b7f e6bb29f
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:17:37 2026 +0800
+
+    Merge pull request #3 from spnotold/feature/fix-jwt-placeholder-secret
+    
+    fix(security): reject template JWT_SECRET placeholder at startup
+
+commit 3f269aea59fed48e25903730e7569662b1642ff0
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:17:07 2026 -0400
+
+    fix(auth): show demo accounts on login page only in demo mode
+    
+    Expose the demo profile flag via the public GET /public/config endpoint; Web and mobile login pages render the demo account block only when it is true (hidden if the request fails).
+
+ README.md                                          |  2 +-
+ .../edu/zju/eas/controller/PublicController.java   | 12 ++++++-
+ .../edu/zju/eas/security/PublicConfigTest.java     | 38 ++++++++++++++++++++++
+ docs/user_guide.md                                 |  2 +-
+ frontend/src/lib/api/dict.ts                       |  4 ++-
+ frontend/src/lib/types.ts                          |  5 +++
+ frontend/src/views/Login.vue                       | 15 +++++++--
+ mobile/lib/api/dict.ts                             |  4 ++-
+ mobile/lib/types.ts                                |  5 +++
+ mobile/pages/login/index.vue                       | 19 ++++++++---
+ 10 files changed, 95 insertions(+), 11 deletions(-)
+
+commit 7dc6b7f27b0adcb3097143ea8689e5121f9d8110
+Merge: a7c26ad 6b1173e
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:16:54 2026 +0800
+
+    Merge pull request #2 from spnotold/feature/fix-number-field-precision
+    
+    fix(form): 统一 NUMBER 字段未配置 precision 时的缺省精度为 4 位小数
+
+commit e6bb29f5a4f7743fa62c2ec76cc7b38dff461609
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:16:50 2026 -0400
+
+    fix(security): reject template JWT_SECRET placeholder at startup
+    
+    TokenService only checked length, so deployments that copied template.env unchanged kept the public placeholder secret and anyone could mint admin tokens. Now refuse values containing `change_me` (case-insensitive) at bean init with a message pointing to `openssl rand -base64 48`. template.env comment and the README deploy step remind operators to replace the placeholder. Added a unit test covering the placeholder rejection, too-short values, and a genuine random secret.
+
+ README.md                                          |  2 +-
+ .../java/edu/zju/eas/security/TokenService.java    | 21 ++++++--
+ .../TokenServicePlaceholderSecretTest.java         | 59 ++++++++++++++++++++++
+ template.env                                       |  4 +-
+ 4 files changed, 81 insertions(+), 5 deletions(-)
+
+commit 6b1173e7b630e3ac8a7d77a8dbbb00f548b0354a
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:16:47 2026 -0400
+
+    fix(form): keep unconfigured number values free of trailing zeros
+
+ frontend/src/components/FormRenderer.vue | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+commit a7c26ad74481f2db552401b13bd4452f3b978627
+Merge: 3281fd9 5cb8f7f
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:15:21 2026 +0800
+
+    Merge pull request #1 from spnotold/feature/fix-mailpit-localhost
+    
+    fix(compose): bind mailpit web UI to 127.0.0.1
+
+commit 531fe7679b36b528bb9775ccc8c932daf22a186e
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:15:19 2026 -0400
+
+    fix(form): 统一 NUMBER 字段未配置 precision 时的缺省精度为 4 位小数
+    
+    前端 formSchema 校验、数字输入组件与移动端自定义表单此前按 0 位（整数）处理，
+    与后端 BusinessValidator 缺省允许 4 位小数不一致，导致输入 0.5 被客户端拒绝。
+    设计文档未规定缺省值，以后端权威校验为准，统一前后端缺省精度为 4。
+
+ frontend/src/components/FormRenderer.vue           |  4 +--
+ .../src/components/TemplateDesigner/FieldProps.vue |  4 +--
+ frontend/src/components/TemplateDesigner/utils.ts  |  4 +--
+ frontend/src/lib/formSchema.spec.ts                | 41 ++++++++++++++++++++++
+ frontend/src/lib/formSchema.ts                     |  2 +-
+ mobile/components/CustomFormRenderer.vue           |  2 +-
+ mobile/utils/customForm.ts                         |  2 +-
+ 7 files changed, 50 insertions(+), 9 deletions(-)
+
+commit 5cb8f7f861c7608ae485ceb176b7d93bf2865882
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:14:15 2026 -0400
+
+    fix(compose): bind mailpit web UI to 127.0.0.1
+    
+    mailpit 的 Web 界面原先发布到所有网卡且无认证，同一网络内任何人都能
+    看到系统发出的邮件内容。改为只绑定本机，远程访问走 ssh -L 转发。
+    同步更新 README、用户手册、设计文档中对 8025 端口的描述。
+
+ README.md               | 2 +-
+ docker-compose.yml      | 2 +-
+ docs/design_document.md | 2 +-
+ docs/user_guide.md      | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+commit 3281fd985b164c857ebdb45a9f148fa1893845ba
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 05:46:30 2026 -0400
+
+    docs: refresh git log export
+
+ docs/git_log.txt | 66 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 66 insertions(+)
+
 commit 4b44931d1b0174d1a3d5e68ced0c31d1fbc85398
 Merge: d5ac0d4 058029a
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>

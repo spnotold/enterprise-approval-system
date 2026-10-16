@@ -27,7 +27,7 @@ cd backend && mvn test
 
 两者都不可用时，集成测试报错（`Could not find a valid Docker environment`），不会被静默跳过。
 
-本机（Docker 29.8、Compose v5.6）三种情况都实际运行过：不设变量、经 Testcontainers 启动容器，62 项全部通过，测试结束后容器自动清理；用环境变量指向本机 PostgreSQL 16，62 项全部通过；在访问不到 Docker 的进程里不设变量，测试全部报错而不是显示通过。Spring Boot 3.3 自带的 Testcontainers 1.19 使用的 Docker API 版本过旧，Docker 29 会拒绝连接，`pom.xml` 中已将 Testcontainers 升级到 1.21.4。
+本机（Docker 29.8、Compose v5.6）三种情况都实际运行过：不设变量、经 Testcontainers 启动容器，78 项全部通过，测试结束后容器自动清理；用环境变量指向本机 PostgreSQL 16，78 项全部通过；在访问不到 Docker 的进程里不设变量，测试全部报错而不是显示通过。Spring Boot 3.3 自带的 Testcontainers 1.19 使用的 Docker API 版本过旧，Docker 29 会拒绝连接，`pom.xml` 中已将 Testcontainers 升级到 1.21.4。
 
 ## 2. 结果汇总
 
@@ -36,20 +36,25 @@ cd backend && mvn test
 | 后端 `CoreWorkflowIntegrationTest` | 13 | 13 | 0 |
 | 后端 `BusinessRulesTest` | 4 | 4 | 0 |
 | 后端 `ReviewRegressionTest` | 7 | 7 | 0 |
-| 后端 `FlowRulesTest` | 6 | 6 | 0 |
-| 后端 `AdminTemplateStatsTest` | 12 | 12 | 0 |
-| 后端 `AccessControlTest` | 5 | 5 | 0 |
+| 后端 `FlowRulesTest` | 7 | 7 | 0 |
+| 后端 `ApproverEligibilityTest` | 2 | 2 | 0 |
+| 后端 `AdminTemplateStatsTest` | 13 | 13 | 0 |
+| 后端 `DeliveriesTitleLeakTest` | 2 | 2 | 0 |
+| 后端 `AccessControlTest` | 6 | 6 | 0 |
+| 后端 `RefreshRotationTest` | 3 | 3 | 0 |
+| 后端 `TokenServicePlaceholderSecretTest` | 4 | 4 | 0 |
+| 后端 `PublicConfigTest` | 2 | 2 | 0 |
 | 后端 `TemplateVersionTest` | 1 | 1 | 0 |
 | 后端 `NotificationTest` | 1 | 1 | 0 |
 | 后端 `DemoDataTest` | 3 | 3 | 0 |
 | 后端 `MaintenanceJobsTest` | 3 | 3 | 0 |
 | 后端 `ReviewRound2Test` | 5 | 5 | 0 |
 | 后端 `AdminBootstrapTest` | 2 | 2 | 0 |
-| 后端合计 | **62** | **62** | **0** |
-| Web `npm run test` | 84 | 84 | 0 |
+| 后端合计 | **78** | **78** | **0** |
+| Web `npm run test` | 92 | 92 | 0 |
 | 移动端 `npm run test` | 20 | 20 | 0 |
 
-以上结果为 2026-10-16 的完整重跑。后端依据 12 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 62 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 通过，84 项测试通过；移动端 `npm run typecheck` 通过，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
+以上结果为 2026-10-16 的完整重跑。后端依据 17 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 78 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 通过，92 项测试通过；移动端 `npm run typecheck` 通过，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 
