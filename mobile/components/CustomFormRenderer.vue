@@ -44,7 +44,7 @@ function onText(f: FormField, e: Event | UniInputEvent): void {
 
 function onNumber(f: FormField, e: Event | UniInputEvent): void {
   const allowNeg = !f.rules?.min || f.rules.min.trim().startsWith('-')
-  const v = sanitizeDecimalInput(inputValue(e), allowNeg, f.rules?.precision ?? 0)
+  const v = sanitizeDecimalInput(inputValue(e), allowNeg, f.rules?.precision ?? 4)
   // 先回写原输入，下一帧归一化，保证多输入的小数位也会在原生输入框中清掉。
   setValue(f.key, inputValue(e))
   void nextTick(() => setValue(f.key, v === '' ? null : v))

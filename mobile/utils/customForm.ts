@@ -92,7 +92,7 @@ export function validateCustom(schema: FormSchema, values: Record<string, unknow
           add(f, `${f.label}必须是数字`)
           break
         }
-        const precision = rules.precision ?? 0
+        const precision = rules.precision ?? 4 // 与服务端一致：未配置精度时最多 4 位小数
         if (decimalPlaces(s) > precision) { add(f, precision === 0 ? `${f.label}必须是整数` : `${f.label}最多 ${precision} 位小数`); break }
         if (opts.full === false) break
         if (rules.min && (compareDecimal(s, rules.min) ?? 0) < 0) add(f, `${f.label}不能小于 ${rules.min}`)
