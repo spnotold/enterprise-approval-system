@@ -1,3 +1,21 @@
+commit e3136b035401583dc29c42c9a01160950a3e3dfa
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 18:03:11 -0400
+
+    fix: validate persisted date years before database writes
+
+commit c8bf56713a9f3a08cbb32ee58cabf01399e77062
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 18:00:55 -0400
+
+    fix(web): recover failed refresh inside approval dialog
+
+commit ec2209ef2590b8e8d2b2a8514f7e5fc396b400b9
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-15 17:57:21 -0400
+
+    docs: add acceptance recording and sync verified project handoff
+
 commit d8690698427728e8cb50974f41e9a8a0c0aa747a
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-15 17:54:12 -0400

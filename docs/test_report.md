@@ -29,7 +29,7 @@ cd backend && mvn test
 |---|---:|---:|---:|
 | 后端 `CoreWorkflowIntegrationTest` | 13 | 13 | 0 |
 | 后端 `BusinessRulesTest` | 4 | 4 | 0 |
-| 后端 `ReviewRegressionTest` | 6 | 6 | 0 |
+| 后端 `ReviewRegressionTest` | 7 | 7 | 0 |
 | 后端 `FlowRulesTest` | 6 | 6 | 0 |
 | 后端 `AdminTemplateStatsTest` | 12 | 12 | 0 |
 | 后端 `AccessControlTest` | 5 | 5 | 0 |
@@ -37,11 +37,11 @@ cd backend && mvn test
 | 后端 `NotificationTest` | 1 | 1 | 0 |
 | 后端 `DemoDataTest` | 3 | 3 | 0 |
 | 后端 `MaintenanceJobsTest` | 3 | 3 | 0 |
-| 后端合计 | **54** | **54** | **0** |
+| 后端合计 | **55** | **55** | **0** |
 | Web `npm run test` | 84 | 84 | 0 |
 | 移动端 `npm run test` | 20 | 20 | 0 |
 
-后端结果依据 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 54 项，失败 0、错误 0、跳过 0。Web `npm run lint`、`npm run build` 均通过；移动端 `npm run typecheck` 通过，同步 11 个文件，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
+后端结果依据 10 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 55 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 再次通过，84 项测试通过；移动端前次 `npm run typecheck` 通过，同步 11 个文件，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 
@@ -72,7 +72,7 @@ cd backend && mvn test
 
 **`BusinessRulesTest`（4 个）**：客户端不能覆盖申请人和总额；金额按分重算；同一报销单重复挂载票据会被拒绝；仅改扩展名的可执行文件会被拒绝。
 
-**`ReviewRegressionTest`（6 个）**：复制申请时按当前 Schema 清空不再符合规则的日期、选项、正则及附件规则字段，且源单不变；停用的同行人不复制；采购、差旅、报销、自定义四类业务在无附件权限时对附件元数据、ID、票据及 custom 值脱敏；超过 90 天的差旅草稿返回 400 而非 500；TEXT 200 字符和 TEXTAREA 2000 字符上限正确计入空白及 emoji；重复催办返回 `false`，详情冷却状态与通知记录一致，不重复发通知。
+**`ReviewRegressionTest`（7 个）**：复制申请时按当前 Schema 清空不再符合规则的日期、选项、正则及附件规则字段，且源单不变；停用的同行人不复制；采购、差旅、报销、自定义四类业务在无附件权限时对附件元数据、ID、票据及 custom 值脱敏，另验证采购附件顶层 ID 数组也会脱敏；超过 90 天的差旅草稿返回 400 而非 500；TEXT 200 字符和 TEXTAREA 2000 字符上限正确计入空白及 emoji；重复催办返回 `false`，详情冷却状态与通知记录一致，不重复发通知；采购 `expectedArrivalDate`、差旅 `startTime` / `endTime`、报销 `occurDate` 的年份限制在 0001–9999，越界值在写入数据库前被拒绝，避免 PostgreSQL 日期越界导致 500。
 
 **`FlowRulesTest`（6 个）**：部门负责人自审时走兜底审批人；撤回与批准并发、同一待办并发批准均只产生一个有效结果；幂等键重放不会重复创建流程；已结束申请不可再次审批或撤回；节点流转按配置推进。
 
@@ -98,11 +98,12 @@ cd backend && mvn test
 | 前端调用 `GET /tasks/pending-count` 无对应接口 | 接口地址交叉核对 | 新增接口 |
 | 幂等重放未返回 `Idempotent-Replayed` 头 | T12 | 重放时写响应头 |
 | 列表日期参数按本地化格式解析，`YYYY-MM-DD` 可能 400 | 接口核对 | `spring.mvc.format.date: iso` |
-| 审批操作实时刷新可能丢失已填写意见（M3） | Claude 复审与浏览器回归 | 同版本后台刷新保留弹窗；刷新失败时在弹窗内提示并提供“重新加载”，恢复后保留原意见且重新允许确认 |
+| 采购、差旅和报销日期字段可传 PostgreSQL 范围之外的年份并导致 500 | `ReviewRegressionTest#extremeDateYearsAreRejectedBeforeDatabaseWrites` | 对 `expectedArrivalDate`、`startTime` / `endTime`、`occurDate` 校验年份范围为 0001–9999，并在数据库写入前拒绝越界值 |
+| 审批操作实时刷新可能丢失已填写意见（M3） | Web 复审与浏览器回归 | 同版本后台刷新保留弹窗；刷新失败时在弹窗内提示并提供“重新加载”，恢复后保留原意见且重新允许确认 |
 
 ## 6. 浏览器实录与移动端走查
 
 - Web 浏览器实际走通用章审批闭环：`rd_emp_wang` 发起，`rd_head_li` 和 `fin_head_qian` 审批，王工查看完成结果。原始录像：[docs/demo/seal-approval-e2e.mp4](demo/seal-approval-e2e.mp4)，说明：[docs/demo_video.md](demo_video.md)。
 - 移动端实际通过 H5 登录、通知处理、同一申请详情和个人统计页面检查；统计 canvas 有 92,136 个非透明像素，页面无横向溢出。
 - Docker 部署和微信真机尚未验收；移动端双端构建通过不代表微信真机验收完成。
-- Web 审批异常恢复：在真实详情页打开驳回弹窗并填写意见，注入一次详情刷新网络异常；错误提示和“重新加载”在弹窗内可见，确认按钮暂停。恢复接口后点击“重新加载”，验证 textarea 仍是同一 DOM、意见全文不变、确认按钮恢复可用；测试未实际驳回该申请，注入已清理。
+- Web 复审反馈及审批异常恢复：刷新失败时弹窗无法重试的问题已修复。在真实详情页打开驳回弹窗并填写意见，注入一次详情刷新网络异常；错误提示和“重新加载”在弹窗内可见，确认按钮暂停。恢复接口后点击“重新加载”，验证 textarea 仍是同一 DOM、意见全文不变、确认按钮恢复可用；取消未提交的业务操作，注入已清理。最终复审反馈已处理并完成针对性回归。

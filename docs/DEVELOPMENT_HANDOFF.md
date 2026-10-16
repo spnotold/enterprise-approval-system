@@ -6,8 +6,8 @@
 
 | 检查 | 结果 |
 |---|---|
-| `backend`: `mvn test` | 真实 PostgreSQL 回归 54/54 通过，失败、错误、跳过均为 0；依据 `backend/target/surefire-reports/TEST*.xml`，含 T01–T16，见 [测试报告](test_report.md) |
-| `frontend`: `npm run build` / `lint` / `test` | 全部通过（84 项测试） |
+| `backend`: `mvn test` | 真实 PostgreSQL 回归 55/55 通过，失败、错误、跳过均为 0；依据 10 份 `backend/target/surefire-reports/TEST*.xml`，含 T01–T16，见 [测试报告](test_report.md) |
+| `frontend`: `npm run build` / `lint` / `test` | 再次全部通过（84 项测试） |
 | `mobile`: `npm run typecheck` / `test` / `build:h5` / `build:mp-weixin` | 全部通过（20 项测试、同步 11 个文件） |
 | Web 浏览器实录 | `rd_emp_wang` → `rd_head_li` → `fin_head_qian` → 王工，用章申请闭环通过；原始录像见 [demo/seal-approval-e2e.mp4](demo/seal-approval-e2e.mp4) |
 | 移动端 H5 走查 | 实际登录、通知处理、同单详情、个人统计验证；canvas 正常绘制且无横向溢出 |
@@ -18,13 +18,13 @@
 - Web：全部页面（申请表单、列表、详情、待办 / 已办、统计、通知、管理端）。
 - 移动端：16 个页面（工作台、四类申请、列表、详情、审批、通知、统计、我的）。
 - 文档、用户手册、总结、实验报告及演示录像说明已补齐；M3 实时刷新保留审批意见的问题已修复。
-- Web 复审反馈的刷新失败恢复路径已补齐：审批弹窗内可查看错误并重新加载，实际浏览器验证意见保留且恢复后可继续操作。
+- Web 复审反馈的刷新失败恢复路径已补齐：审批弹窗内可查看错误并重新加载，实际浏览器验证意见保留且恢复后可继续操作；最终复审反馈已处理并完成针对性回归。
+- 两轮 Claude 最终复审确认 H1 复制校验、H2 附件隐私、原 M1 长跨度、M2 默认文字上限、L1 关联信息和 L4 催办问题均已关闭，无新增中高缺陷。剩余 Low 极端年份问题已补充 0001–9999 校验，并完成完整 55 项真实 PostgreSQL 回归。
 
 ## 进行中 / 待办
 
 1. Docker 部署验收。
 2. 微信真机验收。
-3. Claude 后端修复最终复审待返回；Web 复审意见已处理并完成异常恢复验证。
 
 ## 本机运行（无 Docker 环境）
 
