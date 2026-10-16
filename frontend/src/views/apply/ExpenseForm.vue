@@ -168,9 +168,9 @@ async function loadLinkable() {
 function linkLabel(a: LinkableApplication): string {
   const type = APP_TYPE_LABEL[a.type]
   if (a.type === 'TRAVEL' && a.travel) {
-    return `${a.appNo} · ${type} · ${a.travel.destination ?? ''} ${fmtDate(a.travel.startTime)} ~ ${fmtDate(a.travel.endTime)}`
+    return `${a.appNo} ${type} ${a.travel.destination ?? ''} ${fmtDate(a.travel.startTime)} ~ ${fmtDate(a.travel.endTime)}`
   }
-  return `${a.appNo} · ${type} · ${a.title ?? ''}`
+  return `${a.appNo} ${type} ${a.title ?? ''}`
 }
 
 // ---------- 跨单疑似重复票据（保存后查询，只提示不拦截） ----------
@@ -231,6 +231,7 @@ const selectedRelated = computed(() =>
 <template>
   <FormShell
     title="报销申请"
+    description="关联差旅 / 采购单，上传票据报销"
     :app-no="draft.appNo.value"
     :loading="draft.loading.value"
     :load-error="draft.loadError.value"
@@ -285,14 +286,14 @@ const selectedRelated = computed(() =>
               <el-option v-for="a in linkOptions" :key="a.id" :value="a.id" :label="linkLabel(a)" />
             </el-select>
             <div v-if="selectedRelated.length" class="related-cards">
-              <el-card v-for="a in selectedRelated" :key="a.id" shadow="hover" class="related-card" body-style="padding:10px 12px">
+              <el-card v-for="a in selectedRelated" :key="a.id" shadow="never" class="related-card" body-style="padding:10px 12px">
                 <div class="related-head">
                   <el-tag size="small" disable-transitions>{{ APP_TYPE_LABEL[a.type] }}</el-tag>
                   <el-link type="primary" @click="router.push(`/applications/${a.id}`)">{{ a.appNo }}</el-link>
                 </div>
                 <div class="small">{{ a.title ?? '—' }}</div>
                 <template v-if="a.travel">
-                  <div class="muted small">{{ a.travel.origin ?? '' }} → {{ a.travel.destination ?? '' }}</div>
+                  <div class="muted small">{{ a.travel.origin ?? '' }} 至 {{ a.travel.destination ?? '' }}</div>
                   <div class="muted small">
                     {{ fmtDateTime(a.travel.startTime) }} ~ {{ fmtDateTime(a.travel.endTime) }}，{{ a.travel.naturalDays ?? '—' }} 天
                   </div>
@@ -339,13 +340,13 @@ const selectedRelated = computed(() =>
 .expense-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
 }
 .total-box {
   text-align: right;
 }
 .total {
-  font-size: 22px;
+  font-size: var(--eas-fs-lg);
 }
 .related {
   width: 100%;
@@ -355,6 +356,9 @@ const selectedRelated = computed(() =>
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 8px;
   margin-top: 8px;
+}
+.related-card {
+  border: 1px solid var(--eas-rule);
 }
 .related-head {
   display: flex;
