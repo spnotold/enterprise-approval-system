@@ -69,7 +69,15 @@ class DemoDataTest {
     @AfterAll
     void dropDatabase() {
         ((com.zaxxer.hikari.HikariDataSource) jdbc.getDataSource()).close();
-        admin().execute("DROP DATABASE IF EXISTS " + DB + " WITH (FORCE)");
+        // 尽力清理：autovacuum 进程可能短暂连在临时库上，非超级用户无法终止它，稍后重试；库名带随机后缀，残留不影响下次运行
+        for (int attempt = 0; attempt < 5; attempt++) {
+            try {
+                admin().execute("DROP DATABASE IF EXISTS " + DB + " WITH (FORCE)");
+                return;
+            } catch (org.springframework.dao.DataAccessException e) {
+                try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+            }
+        }
     }
 
     @Test
