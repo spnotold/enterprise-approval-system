@@ -121,6 +121,23 @@ class FlowRulesTest extends IntegrationTestBase {
     }
 
     @Test
+    void adminTransferWith500CharReasonSucceeds() throws Exception {
+        long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
+        Long task = pendingTask(app, "rd_head_li");
+        String reason = "转".repeat(500);
+        MvcResult r = call(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/tasks/" + task + "/transfer"),
+                "admin", map("toUserId", uid("ceo_zhao"), "reason", reason));
+        assertThat(r.getResponse().getStatus()).as(r.getResponse().getContentAsString()).isEqualTo(200);
+        // 原待办已转办，新待办派给 ceo_zhao
+        assertThat(pendingTask(app, "rd_head_li")).isNull();
+        assertThat(pendingTask(app, "ceo_zhao")).isNotNull();
+        // 日志保留转办双方，超长部分截断，不因拼接前缀超长回滚
+        String comment = jdbc.queryForObject(
+                "SELECT comment FROM approval_log WHERE application_id = ? AND action = 'TRANSFER'", String.class, app);
+        assertThat(comment).startsWith("由 李研 转给 ").endsWith("…").hasSize(500);
+    }
+
+    @Test
     void adminTransferKeepsNodeReadableAndAuditsOnce() throws Exception {
         long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
         Long task = pendingTask(app, "rd_head_li");
