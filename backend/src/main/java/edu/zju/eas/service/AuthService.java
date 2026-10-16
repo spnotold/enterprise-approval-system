@@ -45,6 +45,13 @@ public class AuthService {
     public record TokenPair(Long userId, String accessToken, int expiresIn, String refreshToken, int refreshExpiresIn) {
     }
 
+    /** 刷新令牌本身有效，但属于另一个账号（别的标签页已换账号登录）：拒绝，Cookie 是那个标签页的登录，不能清除 */
+    public static final class RefreshUserMismatchException extends BizException {
+        RefreshUserMismatchException() {
+            super(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
     @Transactional
     public Long register(RegisterRequest req) {
         // 唯一性检查；数据库 lower(username)、lower(email) 唯一索引兜底并发注册
@@ -122,30 +129,21 @@ public class AuthService {
         }
         // 另一个标签页已用这个 Cookie 登录了别的账号：拒绝且不轮换，避免以他人身份重放请求
         if (expectedUserId != null && !expectedUserId.equals(t.getUserId())) {
-            throw new BizException(ErrorCode.UNAUTHORIZED);
+            throw new RefreshUserMismatchException();
         }
         if (t.getRotatedAt() != null) {
-            boolean withinGrace = !t.getRotatedAt().toInstant().isBefore(clock.instant().minus(ROTATION_GRACE));
-            if (withinGrace && CLIENT_WEB.equals(client)) {
-                // 多个标签页几乎同时刷新：先到的已经轮换并写回 Cookie，后到的只补发访问令牌，不再轮换
-                SysUser u = userMapper.selectById(t.getUserId());
-                if (u != null && SysUser.ACTIVE.equals(u.getStatus())) {
-                    return new TokenPair(u.getId(), tokenService.issueAccess(u.getId(), u.getTokenVersion()),
-                            tokenService.accessTtlSeconds(), null, 0);
-                }
-            }
-            if (!withinGrace) {
-                refreshTokenMapper.revokeFamily(t.getFamilyId());
-                auditService.write(null, null, "REFRESH_TOKEN_REUSE", "USER", String.valueOf(t.getUserId()),
-                        null, Map.of("familyId", t.getFamilyId().toString()), "已轮换的刷新令牌被再次使用，撤销整族令牌");
-            }
-            throw new BizException(ErrorCode.UNAUTHORIZED);
+            return refreshRotated(t, client);
         }
         if (!t.getExpiresAt().toInstant().isAfter(clock.instant())) {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
         if (refreshTokenMapper.markRotated(t.getId()) == 0) {
-            throw new BizException(ErrorCode.UNAUTHORIZED);
+            // 读到未轮换之后被并发的刷新抢先轮换（或撤销）：按提交后的状态重新判断，刚轮换的同样走宽限
+            RefreshToken latest = refreshTokenMapper.selectById(t.getId());
+            if (latest == null || latest.getRevokedAt() != null || latest.getRotatedAt() == null) {
+                throw new BizException(ErrorCode.UNAUTHORIZED);
+            }
+            return refreshRotated(latest, client);
         }
         SysUser u = userMapper.selectById(t.getUserId());
         if (u == null || !SysUser.ACTIVE.equals(u.getStatus())) {
@@ -153,6 +151,25 @@ public class AuthService {
             throw new BizException(ErrorCode.ACCOUNT_DISABLED_OR_LOCKED);
         }
         return issuePair(u, client, t.getFamilyId());
+    }
+
+    /** 已轮换的令牌再次出现：宽限期内按并发刷新处理，超出宽限判定为泄露 */
+    private TokenPair refreshRotated(RefreshToken t, String client) {
+        boolean withinGrace = !t.getRotatedAt().toInstant().isBefore(clock.instant().minus(ROTATION_GRACE));
+        if (withinGrace && CLIENT_WEB.equals(client)) {
+            // 多个标签页几乎同时刷新：先到的已经轮换并写回 Cookie，后到的只补发访问令牌，不再轮换
+            SysUser u = userMapper.selectById(t.getUserId());
+            if (u != null && SysUser.ACTIVE.equals(u.getStatus())) {
+                return new TokenPair(u.getId(), tokenService.issueAccess(u.getId(), u.getTokenVersion()),
+                        tokenService.accessTtlSeconds(), null, 0);
+            }
+        }
+        if (!withinGrace) {
+            refreshTokenMapper.revokeFamily(t.getFamilyId());
+            auditService.write(null, null, "REFRESH_TOKEN_REUSE", "USER", String.valueOf(t.getUserId()),
+                    null, Map.of("familyId", t.getFamilyId().toString()), "已轮换的刷新令牌被再次使用，撤销整族令牌");
+        }
+        throw new BizException(ErrorCode.UNAUTHORIZED);
     }
 
     @Transactional
