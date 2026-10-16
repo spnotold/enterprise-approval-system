@@ -333,9 +333,9 @@ function onStat(v: boolean | string | number) {
           :step="1"
           step-strictly
           controls-position="right"
-          placeholder="0"
+          placeholder="4"
         />
-        <div class="muted small item-hint">0 表示只能填整数，最多 4 位小数。</div>
+        <div class="muted small item-hint">0 表示只能填整数，最多 4 位小数；不填默认 4 位。</div>
       </el-form-item>
       <div class="row2">
         <el-form-item label="最小值" :error="e('rules.min')" :data-path="p('rules.min')">

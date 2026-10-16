@@ -150,7 +150,7 @@ export function newField(type: FieldType, fields: FormField[]): FormField {
       { value: 'OPT2', label: '选项2' },
     ]
   }
-  if (type === 'NUMBER') f.rules = { precision: 0 }
+  if (type === 'NUMBER') f.rules = { precision: 4 }
   if (type === 'ATTACHMENT') f.rules = { maxCount: 5, maxSizeMb: 10 }
   return f
 }
@@ -379,7 +379,7 @@ export function regexProblem(pattern: string | null | undefined): string | null 
 export function decimalProblem(v: string | null | undefined, precision: number | undefined): string | null {
   if (v === null || v === undefined || v === '') return null
   if (parseDecimal(v) === null) return '请输入十进制数字，如 0.5'
-  if (decimalPlaces(v.trim()) > (precision ?? 0)) return `小数位数超过精度设置（${precision ?? 0} 位）`
+  if (decimalPlaces(v.trim()) > (precision ?? 4)) return `小数位数超过精度设置（${precision ?? 4} 位）`
   return null
 }
 

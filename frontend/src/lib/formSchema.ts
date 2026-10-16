@@ -93,7 +93,7 @@ export function validateField(
       const s = String(value).trim()
       const v = parseDecimal(s)
       if (v === null) return `${field.label}必须是数字`
-      const precision = r.precision ?? 0
+      const precision = r.precision ?? 4 // 与服务端一致：未配置精度时最多 4 位小数
       if (decimalPlaces(s) > precision) {
         return precision === 0 ? `${field.label}必须是整数` : `${field.label}最多 ${precision} 位小数`
       }
