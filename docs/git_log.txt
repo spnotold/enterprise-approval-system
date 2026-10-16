@@ -1,3 +1,15 @@
+commit bb19887d6c46e0b550f38a1a8b66ffbcc293acf3
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-16 01:47:34 -0400
+
+    fix(deploy): issues from deployment review
+
+commit b1f88c056d74d81c33a6be8306e5d5d069683893
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   2026-10-16 01:36:35 -0400
+
+    docs: refresh git log export
+
 commit 6700f004abc063bc1a0f84bae6c5652a7ef1bcaa
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   2026-10-16 01:36:27 -0400
