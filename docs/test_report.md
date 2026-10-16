@@ -37,11 +37,12 @@ cd backend && mvn test
 | 后端 `NotificationTest` | 1 | 1 | 0 |
 | 后端 `DemoDataTest` | 3 | 3 | 0 |
 | 后端 `MaintenanceJobsTest` | 3 | 3 | 0 |
-| 后端合计 | **55** | **55** | **0** |
+| 后端 `ReviewRound2Test` | 5 | 5 | 0 |
+| 后端合计 | **60** | **60** | **0** |
 | Web `npm run test` | 84 | 84 | 0 |
 | 移动端 `npm run test` | 20 | 20 | 0 |
 
-后端结果依据 10 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 55 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 再次通过，84 项测试通过；移动端前次 `npm run typecheck` 通过，同步 11 个文件，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
+后端结果依据 11 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 60 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 再次通过，84 项测试通过；移动端前次 `npm run typecheck` 通过，同步 11 个文件，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 
@@ -107,3 +108,17 @@ cd backend && mvn test
 - 移动端实际通过 H5 登录、通知处理、同一申请详情和个人统计页面检查；统计 canvas 有 92,136 个非透明像素，页面无横向溢出。
 - Docker 部署和微信真机尚未验收；移动端双端构建通过不代表微信真机验收完成。
 - Web 复审反馈及审批异常恢复：刷新失败时弹窗无法重试的问题已修复。在真实详情页打开驳回弹窗并填写意见，注入一次详情刷新网络异常；错误提示和“重新加载”在弹窗内可见，确认按钮暂停。恢复接口后点击“重新加载”，验证 textarea 仍是同一 DOM、意见全文不变、确认按钮恢复可用；取消未提交的业务操作，注入已清理。最终复审反馈已处理并完成针对性回归。
+
+## 7. 第二轮后端代码审查（gpt-6.1-sol）后的修复
+
+`review.ReviewRound2Test`（5 个）覆盖以下修复：
+
+| 问题 | 修复 |
+|---|---|
+| 给管理员追加员工角色后，管理员可接收转办并审批 | 持有 `SYS_ADMIN` 的账号一律去掉 `TASK_HANDLE`；批准、驳回再校验一次；转办目标不能是管理员；审批人解析跳过管理员 |
+| 会签节点可把他人的待办转给已投过票的人，同一人贡献两票 | 转办前检查目标是否已在该节点处理过 |
+| 非财务审批人可看到跨部门疑似重复票据所在申请的编号和状态 | 按 Q18 仅财务审批人可见对方编号与状态，其他人只看到提示 |
+| 管理员按授权范围列表、以关联摘要查看业务数据未留审计 | 列表与 LINKED 详情均写 `BIZ_CONTENT_READ` 审计 |
+| 金额字段传 `123.99` 被静默截断为 123 分 | 关闭 `ACCEPT_FLOAT_AS_INT`，小数金额返回 400 |
+| 自定义文本字段可传空数组；数字字段未配置精度时不限小数位 | 空数组按字段类型校验；数字默认最多 4 位小数 |
+

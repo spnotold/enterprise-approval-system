@@ -6,7 +6,7 @@
 
 | 检查 | 结果 |
 |---|---|
-| `backend`: `mvn test` | 真实 PostgreSQL 回归 55/55 通过，失败、错误、跳过均为 0；依据 10 份 `backend/target/surefire-reports/TEST*.xml`，含 T01–T16，见 [测试报告](test_report.md) |
+| `backend`: `mvn test` | 真实 PostgreSQL 回归 60/60 通过，失败、错误、跳过均为 0；依据 11 份 `backend/target/surefire-reports/TEST*.xml`，含 T01–T16，见 [测试报告](test_report.md) |
 | `frontend`: `npm run build` / `lint` / `test` | 再次全部通过（84 项测试） |
 | `mobile`: `npm run typecheck` / `test` / `build:h5` / `build:mp-weixin` | 全部通过（20 项测试、同步 11 个文件） |
 | Web 浏览器实录 | `rd_emp_wang` → `rd_head_li` → `fin_head_qian` → 王工，用章申请闭环通过；原始录像见 [demo/seal-approval-e2e.mp4](demo/seal-approval-e2e.mp4) |
@@ -20,6 +20,7 @@
 - 文档、用户手册、总结、实验报告及演示录像说明已补齐；M3 实时刷新保留审批意见的问题已修复。
 - Web 复审反馈的刷新失败恢复路径已补齐：审批弹窗内可查看错误并重新加载，实际浏览器验证意见保留且恢复后可继续操作；最终复审反馈已处理并完成针对性回归。
 - 两轮 Claude 最终复审确认 H1 复制校验、H2 附件隐私、原 M1 长跨度、M2 默认文字上限、L1 关联信息和 L4 催办问题均已关闭，无新增中高缺陷。剩余 Low 极端年份问题已补充 0001–9999 校验，并完成完整 55 项真实 PostgreSQL 回归。
+- 第二轮 gpt-6.1-sol 后端审查的 6 项必修问题（管理员审批隔离、会签转办重复投票、重复票据信息披露、管理员读取审计、小数金额截断、自定义字段默认限制）已修复，新增 5 项回归，后端共 60 项通过。
 
 ## 进行中 / 待办
 
