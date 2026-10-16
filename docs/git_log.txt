@@ -1,3 +1,126 @@
+commit 62017725753d8b39b39e435861faad1060a0c273
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 09:02:42 2026 -0400
+
+    docs: record 84 backend tests after the follow-up fixes
+
+ docs/test_report.md | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+commit b9f4422210c9865db9ec796bd285cc9b87068fb9
+Merge: 30c7cba c1fafe7
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:59:29 2026 +0800
+
+    Merge pull request #15 from spnotold/feature/fix-real-ip-behind-proxy
+    
+    fix(deploy): restore real client IP behind a trusted front proxy
+
+commit c1fafe7becd318b246383ca8bdd30efbb2b46c53
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:58:32 2026 -0400
+
+    fix(deploy): restore real client IP behind a trusted front proxy
+    
+    When another TLS-terminating reverse proxy sits in front of nginx,
+    $remote_addr is the proxy's address, so X-Real-IP is the same for every
+    user: the login/register IP rate limits become global and audit logs
+    only record the proxy.
+    
+    Add an opt-in TRUSTED_PROXY_CIDR (comma separated addresses/CIDRs).
+    An nginx entrypoint script turns it into set_real_ip_from /
+    real_ip_header X-Forwarded-For / real_ip_recursive on, so nginx itself
+    rewrites $remote_addr and the backend (RequestInfo) is unchanged.
+    When unset (default) no config is generated, so behaviour is identical
+    to before and forged X-Forwarded-For is ignored. Invalid entries make
+    the container fail to start instead of being silently dropped.
+
+ README.md                                          |  1 +
+ .../main/java/edu/zju/eas/common/RequestInfo.java  |  1 +
+ docker-compose.yml                                 |  2 ++
+ docs/design_document.md                            |  2 +-
+ nginx/Dockerfile                                   |  2 ++
+ nginx/default.conf                                 |  2 ++
+ nginx/trusted-proxy.sh                             | 29 ++++++++++++++++++++++
+ template.env                                       |  4 +++
+ 8 files changed, 42 insertions(+), 1 deletion(-)
+
+commit 30c7cbaae638243d67d3b4eeb79411e8c9262330
+Merge: b44e4cc 01f5131
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:57:05 2026 +0800
+
+    Merge pull request #14 from spnotold/feature/fix-smtp-auth-config
+    
+    fix(mail): propagate SMTP auth/TLS settings through compose and Spring
+
+commit 01f51315aeb374d04dac7238fd805a352b5e51e5
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:56:55 2026 -0400
+
+    docs: SMTP_AUTH is needed for every authenticated SMTP port
+
+ README.md    | 2 +-
+ template.env | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+commit b44e4cc7a1a41bfeb39f3c540b9bcc346e1acdcb
+Merge: a8c9daf 5e79e2a
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:56:19 2026 +0800
+
+    Merge pull request #13 from spnotold/feature/fix-admin-app-create
+    
+    fix(security): 系统管理员兼任业务角色时不获得 APP_CREATE
+
+commit b22430dedfc169570b58a597b2e6ca780b607d01
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:56:14 2026 -0400
+
+    fix(mail): propagate SMTP auth/TLS settings through compose and Spring
+
+ README.md                                          |  1 +
+ backend/src/main/resources/application.yml         | 11 +++++
+ .../java/edu/zju/eas/notify/SmtpConfigTest.java    | 57 ++++++++++++++++++++++
+ docker-compose.yml                                 |  5 ++
+ docs/design_document.md                            |  5 ++
+ template.env                                       |  9 +++-
+ 6 files changed, 87 insertions(+), 1 deletion(-)
+
+commit 5e79e2a4f4ead133086de798edb389b5ac46dd7e
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:55:37 2026 -0400
+
+    fix(security): 系统管理员兼任业务角色时不获得 APP_CREATE
+    
+    设计文档权限矩阵中系统管理员「新建、编辑、提交、撤回本人申请」为 —，
+    但管理员兼任部门负责人或被授予 EMPLOYEE 等业务角色时，会经角色并集
+    获得 APP_CREATE，从而能新建、提交申请。AuthInfoService 对 SYS_ADMIN
+    已移除 TASK_HANDLE、APP_READ_DEPT、STATS_DEPT，补上对 APP_CREATE 的
+    移除，并新增集成测试覆盖 /me 权限点与创建、提交接口的 403 行为。
+
+ .../main/java/edu/zju/eas/security/AuthInfoService.java    |  4 +++-
+ .../test/java/edu/zju/eas/security/AccessControlTest.java  | 14 ++++++++++++++
+ 2 files changed, 17 insertions(+), 1 deletion(-)
+
+commit a8c9dafecab39f5866376f32f811c401749400e2
+Merge: c09a72c 76ef295
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 20:32:09 2026 +0800
+
+    Merge pull request #12 from spnotold/feature/docs-post-review-fixes
+    
+    docs: sync test counts and dev setup with review fixes
+
+commit 76ef295f65294184d0e15146963cfe0997330e64
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 08:31:54 2026 -0400
+
+    docs: refresh git log export
+
+ docs/git_log.txt | 336 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 336 insertions(+)
+
 commit c9e7d6b2386765471031cf403aa991dd3830b3bd
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   Fri Oct 16 08:31:54 2026 -0400
