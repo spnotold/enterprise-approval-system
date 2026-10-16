@@ -37,4 +37,20 @@ public interface FlowQueryMapper {
                             WHERE ur.user_id = #{uid} AND r.code = 'SYS_ADMIN')
             """)
     boolean isSysAdmin(@Param("uid") Long uid);
+
+    /** 审批人资格：账号 ACTIVE、拥有 TASK_HANDLE 权限点、且不是系统管理员（审批权与管理权分离） */
+    @Select("""
+            SELECT EXISTS (
+                SELECT 1 FROM sys_user u
+                 WHERE u.id = #{uid} AND u.status = 'ACTIVE'
+                   AND EXISTS (SELECT 1 FROM user_role ur
+                               JOIN role_permission rp ON rp.role_id = ur.role_id
+                               JOIN permission p ON p.id = rp.permission_id
+                               WHERE ur.user_id = u.id AND p.code = 'TASK_HANDLE')
+                   AND NOT EXISTS (SELECT 1 FROM user_role ur2
+                                   JOIN role r2 ON r2.id = ur2.role_id
+                                   WHERE ur2.user_id = u.id AND r2.code = 'SYS_ADMIN')
+            )
+            """)
+    boolean eligibleApprover(@Param("uid") Long uid);
 }
