@@ -11,7 +11,7 @@
 | Web 前端 | Vitest：金额转换（元 ↔ 分）边界输入 |
 | 移动端 | Node test runner：表单校验、金额、自定义表单渲染工具函数 |
 
-有 Docker 的机器上直接运行，`TestDatabase` 用 Testcontainers 启动 `postgres:16-alpine`，所有测试类共用这一个容器：
+有 Docker 的机器上直接运行，`TestDatabase` 用 Testcontainers 启动 `postgres:16-alpine`，所有测试类共用这一个容器（运行用户需能访问 Docker，例如在 `docker` 组中）：
 
 ```bash
 cd backend && mvn test
@@ -25,7 +25,9 @@ export EAS_TEST_PG_USER=eas_test EAS_TEST_PG_PASSWORD=...
 cd backend && mvn test
 ```
 
-两者都不可用时，集成测试报错（`Could not find a valid Docker environment`），不会被静默跳过。本报告的结果来自第二种方式（本机没有 Docker 权限），并确认了不设变量、又没有 Docker 时测试全部报错而不是显示通过。
+两者都不可用时，集成测试报错（`Could not find a valid Docker environment`），不会被静默跳过。
+
+本机（Docker 29.8、Compose v5.6）三种情况都实际运行过：不设变量、经 Testcontainers 启动容器，62 项全部通过，测试结束后容器自动清理；用环境变量指向本机 PostgreSQL 16，62 项全部通过；在访问不到 Docker 的进程里不设变量，测试全部报错而不是显示通过。Spring Boot 3.3 自带的 Testcontainers 1.19 使用的 Docker API 版本过旧，Docker 29 会拒绝连接，`pom.xml` 中已将 Testcontainers 升级到 1.21.4。
 
 ## 2. 结果汇总
 

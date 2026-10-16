@@ -23,6 +23,7 @@
 enterprise-approval-system
 ├── .gitignore
 ├── docker-compose.yml      # 容器编排
+├── docker-compose.dev.yml  # 本地开发：发布依赖服务端口
 ├── README.md
 ├── template.env            # .env 模板
 ├── backend                 # 后端（Spring Boot）
@@ -50,19 +51,29 @@ enterprise-approval-system
 
 环境要求：JDK 17、Maven 3.9、Node.js 20、Docker。
 
-1. 启动依赖服务（数据库、MinIO、Mailpit）：
+1. 启动依赖服务（数据库、MinIO、Mailpit）。`docker-compose.dev.yml` 把它们的端口发布到本机 `127.0.0.1`（PostgreSQL 5432、MinIO 9000、SMTP 1025，被占用时在 `.env` 中设置 `DEV_PG_PORT`、`DEV_MINIO_PORT`、`DEV_SMTP_PORT`）：
 
    ```bash
    cp template.env .env
-   docker compose up -d postgres minio minio-init mailpit
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres minio minio-init mailpit
    ```
 
-2. 启动后端：
+   开发用的依赖服务和部署共用 Compose 项目名与数据卷。如果同一目录下已经在运行完整部署，上面的命令会给这些容器加上端口映射后重建。想和部署同时运行时，复制一份 `.env.dev`，在其中把 `MAILPIT_PORT` 和三个 `DEV_*_PORT` 改成未占用的端口，命令加上 `-p eas-dev --env-file .env.dev`，第 2 步改为读入 `../.env.dev`。
+
+2. 启动后端。先读入 `.env`，再把其中的变量对应到后端读取的名字（运行账号 `eas_app` 的密码 `DB_PASSWORD` 同名，不用改）：
 
    ```bash
    cd backend
+   set -a; . ../.env; set +a
+   DB_URL=jdbc:postgresql://localhost:${DEV_PG_PORT:-5432}/eas \
+   FLYWAY_PASSWORD=$DB_OWNER_PASSWORD \
+   MINIO_ENDPOINT=http://localhost:${DEV_MINIO_PORT:-9000} \
+   MINIO_ACCESS_KEY=$MINIO_APP_ACCESS_KEY MINIO_SECRET_KEY=$MINIO_APP_SECRET_KEY \
+   SMTP_HOST=localhost SMTP_PORT=${DEV_SMTP_PORT:-1025} \
    mvn spring-boot:run
    ```
+
+   后端监听 `http://localhost:8080/api`；`.env` 中的 `SPRING_PROFILES_ACTIVE=demo` 会加载演示账号（密码 `Demo@2026`）。
 
 3. 启动 Web 前端（开发服务器将 `/api` 代理到 `localhost:8080`）：
 

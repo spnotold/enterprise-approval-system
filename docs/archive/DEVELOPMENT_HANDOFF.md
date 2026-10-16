@@ -27,7 +27,9 @@
 
 1. 微信真机验收。
 
-## 本机运行（无 Docker 环境）
+## 本机运行（不用 Docker，使用 `~/tools` 本地工具链）
+
+本机装有 Docker（29.8），Compose 部署栈也在本机运行；下面是不经过 Docker、直接用本地工具链运行的方式。
 
 工具链和依赖服务见 `~/tools`：`source ~/tools/env.sh` 设置 JDK 17、Maven、PostgreSQL 16 客户端及数据库 / MinIO / SMTP 环境变量；`~/tools/start-services.sh` 启动 PostgreSQL、MinIO、Mailpit。
 

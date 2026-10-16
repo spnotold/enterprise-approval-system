@@ -95,7 +95,7 @@ Web 与移动端共用接口类型和金额工具，但各自实现页面。H5 �
 
 测试报告中已记录的后端、Web、移动端自动化测试及静态检查结果均为通过；各模块用例数量和场景明细以测试报告为准。
 
-后端集成测试针对 PostgreSQL 16 执行 Flyway 迁移和业务数据准备，重点检查安全边界、条件流转、金额与票据规则、模板版本、通知隔离、并发和幂等。数据库默认由 Testcontainers 启动，没有 Docker 时可用环境变量指定测试服务器；两者都不可用时测试报错而不是跳过。文件存储在集成测试中由 mock 替代，MinIO 的实际上传下载在 Docker Compose 部署验收中检查。
+后端集成测试针对 PostgreSQL 16 执行 Flyway 迁移和业务数据准备，重点检查安全边界、条件流转、金额与票据规则、模板版本、通知隔离、并发和幂等。数据库默认由 Testcontainers 启动，没有 Docker 时可用环境变量指定测试服务器；两者都不可用时测试报错而不是跳过。两种方式都已在本机实际运行并全部通过。文件存储在集成测试中由 mock 替代，MinIO 的实际上传下载在 Docker Compose 部署验收中检查。
 
 真实 PostgreSQL 全套回归已再次通过；Web 用章申请在真实后端上完成了提交、部门审批、印章审核与申请人查看最终结果的跨角色走查，见[验收录像](../demo_video.md)。移动 H5 验证了登录、完成通知、同单详情与统计图表。Docker Compose 部署已验收：`docker compose up -d --build` 后 5 个常驻服务正常运行（postgres、minio、backend 健康检查通过），minio-init 初始化后成功退出；经 nginx 验证了 Web / H5 页面、登录与 Cookie 续期、附件上传下载（MinIO）、SSE 推送和 Mailpit 收信；数据库运行账号没有建表和修改日志表的权限，MinIO 专用 key 只能访问 `eas-files` 桶；正式部署（profile 留空并设置 `EAS_ADMIN_PASSWORD`）只创建引导管理员、不加载演示账号；前面再加一层 HTTPS 反向代理时同源请求正常、跨域请求仍被拒绝。真实微信设备尚未验收。
 
