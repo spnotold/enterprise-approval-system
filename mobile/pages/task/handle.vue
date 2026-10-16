@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 审批：申请摘要与流程 + 底部“驳回 / 批准”双按钮
+// 审批：申请摘要与签批栏 + 底部“驳回 / 同意”双按钮；同意在面板里滑动确认
 import { computed, ref } from 'vue'
 import { onLoad, onPullDownRefresh, onUnload } from '@dcloudio/uni-app'
 import { api } from '@/lib/api'
@@ -18,6 +18,8 @@ const detail = ref<ApplicationDetail | null>(null)
 const notFound = ref(false)
 const done = ref(false)
 const sheet = ref<{ visible: boolean; mode: 'approve' | 'reject' }>({ visible: false, mode: 'approve' })
+/** 本次同意 / 驳回的节点：刷新后该签批格落章（只播一次） */
+const stampSeq = ref<number | null>(null)
 
 /** 当前用户在本单上仍有待处理的待办 */
 const myTask = computed(() => {
@@ -50,9 +52,10 @@ function open(mode: 'approve' | 'reject'): void {
 function onDone(r: ActionResult, mode: 'approve' | 'reject'): void {
   sheet.value.visible = false
   done.value = true
+  stampSeq.value = detail.value?.currentNodeSeq ?? null
   uni.$emit('eas:app-changed', appId.value)
   const next = r.currentNode?.assigneeName ? `，已流转至${r.currentNode.name}（${r.currentNode.assigneeName}）` : ''
-  toast(mode === 'approve' ? `已批准${r.status === 'APPROVED' ? '，审批完成' : next}` : '已驳回', 'none')
+  toast(mode === 'approve' ? `已同意${r.status === 'APPROVED' ? '，审批完成' : next}` : '已驳回', 'none')
   void load(true)
   setTimeout(() => uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/task/list' }) }), 1500)
 }
@@ -82,12 +85,12 @@ onPullDownRefresh(() => void load(true))
     <EmptyState v-if="notFound" text="无权查看或申请已不存在" />
     <template v-else-if="detail">
       <view v-if="!myTask" class="banner banner-warning">该待办已处理或已失效，当前无需你审批。</view>
-      <AppDetailBody :detail="detail" />
+      <AppDetailBody :detail="detail" :stamp-seq="stampSeq" />
     </template>
 
     <view v-if="detail && myTask" class="bottom-bar">
       <button class="btn btn-ghost-danger" :disabled="!canReject" @tap="open('reject')">驳回</button>
-      <button class="btn btn-primary" :disabled="!canApprove" @tap="open('approve')">批准</button>
+      <button class="btn btn-primary" :disabled="!canApprove" @tap="open('approve')">同意</button>
     </view>
 
     <ApproveSheet

@@ -1,0 +1,120 @@
+/*
+ * 申请表单共用样式（流转单）：只放表单页要覆盖全局 App.vue 的部分。
+ * 在各页面 / 组件的 <style scoped> 里用 @import 引入，这样选择器带上本组件的作用域，
+ * 优先级高于 App.vue 中的同名全局类，且不依赖 H5 才有的 :focus。
+ * 输入框聚焦用 @focus / @blur 切换 .is-focus（小程序没有 :focus 伪类）。
+ */
+
+/* 白底分组 */
+.card {
+  background: var(--eas-surface);
+  border-radius: var(--eas-radius-panel);
+  padding: 0 28rpx 12rpx;
+  margin-bottom: 16rpx;
+}
+
+/* 分组小标题：分组内第一行，下方一条细线 */
+.card-title {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+  margin-bottom: 4rpx;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  color: var(--eas-ink);
+  border-bottom: 1rpx solid var(--eas-rule);
+}
+
+/* 分组之间的小标题（卡片外） */
+.section-title {
+  margin: 24rpx 8rpx 16rpx;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  color: var(--eas-ink-2);
+}
+
+/* 输入框：纸色底 + 常驻边框，聚焦只换边框颜色，不改变尺寸 */
+.input,
+.textarea,
+.picker-value {
+  background: var(--eas-paper);
+  border: 2rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+  color: var(--eas-ink);
+}
+
+.input,
+.picker-value {
+  height: 88rpx;
+}
+
+.textarea {
+  min-height: 168rpx;
+}
+
+.is-error {
+  background: var(--eas-danger-tint) !important;
+  border-color: var(--eas-danger) !important;
+}
+
+.is-focus,
+.is-focus.is-error {
+  border-color: var(--eas-primary) !important;
+}
+
+/* 二选一 / 开关式选项 */
+.modes {
+  display: flex;
+  margin: 12rpx 0;
+}
+
+.mode {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  margin-left: 16rpx;
+  padding: 0 28rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink-2);
+  background: var(--eas-surface);
+  border: 2rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+}
+
+.mode:first-child {
+  margin-left: 0;
+}
+
+.mode.chosen {
+  color: var(--eas-primary);
+  font-weight: 600;
+  background: var(--eas-primary-tint);
+  border-color: var(--eas-primary);
+}
+
+.mode-auto {
+  flex: none;
+}
+
+/* 金额右对齐，数字等宽 */
+.amount,
+.kv-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.kv-amount {
+  text-align: right;
+  font-weight: 600;
+}
+
+.item-sum {
+  min-height: 72rpx;
+}
+
+/* 底部固定栏按钮的按压态（主按钮不能用 is-pressed，白字会看不清） */
+.press-primary {
+  background-color: var(--eas-primary-hover) !important;
+  border-color: var(--eas-primary-hover) !important;
+}

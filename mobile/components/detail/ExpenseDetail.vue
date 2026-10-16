@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 报销详情：合计、无票支出提示、关联申请卡片（可跳转）、明细卡片（无票整行橙色）、票据与疑似重复提示
+// 报销详情：合计、无票支出提示、关联申请卡片（可跳转）、费用明细逐行排布（无票行用土黄底）、票据与疑似重复提示
 import type { ExpenseView, InvoiceView } from '@/lib/types'
 import { formatCents } from '@/lib/money'
 import AttachmentPicker from '@/components/AttachmentPicker.vue'
@@ -34,8 +34,8 @@ function warnings(invoices: InvoiceView[]): Record<number, string> {
 
 <template>
   <view>
-    <view class="card">
-      <view class="card-title">报销信息</view>
+    <view class="panel">
+      <view class="panel-title">报销信息</view>
       <view class="kv">
         <text class="kv-label">报销合计</text>
         <text class="kv-value amount">¥{{ formatCents(data.totalAmountCents) }}</text>
@@ -50,43 +50,73 @@ function warnings(invoices: InvoiceView[]): Record<number, string> {
       </view>
     </view>
 
-    <view v-if="data.noInvoiceCount > 0" class="banner banner-warning">
-      含 {{ data.noInvoiceCount }} 条无票支出（合计 ¥{{ formatCents(data.noInvoiceAmountCents) }}）
+    <view v-if="data.noInvoiceCount > 0" class="note note-warning">
+      含 {{ data.noInvoiceCount }} 条无票支出，合计 <text class="num">¥{{ formatCents(data.noInvoiceAmountCents) }}</text>
     </view>
 
-    <view v-if="data.related.length" class="card">
-      <view class="card-title">关联申请</view>
-      <view v-for="r in data.related" :key="r.id" @tap="goDetail(r.id)">
+    <view v-if="data.related.length" class="panel">
+      <view class="panel-title">关联申请</view>
+      <view
+        v-for="r in data.related"
+        :key="r.id"
+        class="related"
+        hover-class="is-pressed"
+        :hover-stay-time="60"
+        @tap="goDetail(r.id)"
+      >
         <LinkedAppCard :app="r" />
       </view>
     </view>
 
-    <view class="section-title">费用明细（{{ data.items.length }}）</view>
-    <view v-for="(it, i) in data.items" :key="i" class="card" :class="{ 'no-invoice': it.noInvoice }">
-      <view class="row between">
-        <text class="bold flex1 ellipsis">{{ i + 1 }}. {{ textOr(it.expenseTypeName || it.expenseTypeCode) }}</text>
-        <text class="amount">{{ it.amountCents === null ? '—' : '¥' + formatCents(it.amountCents) }}</text>
+    <view class="panel">
+      <view class="panel-title">费用明细<text class="panel-sub">{{ data.items.length }} 条</text></view>
+      <view v-for="(it, i) in data.items" :key="i" class="line" :class="{ 'no-invoice': it.noInvoice }">
+        <view class="line-main">
+          <text class="line-name">{{ textOr(it.expenseTypeName || it.expenseTypeCode) }}</text>
+          <text class="line-amount">{{ it.amountCents === null ? '—' : '¥' + formatCents(it.amountCents) }}</text>
+        </view>
+        <view class="line-meta">
+          <text class="line-meta-item">{{ textOr(it.occurDate) }}</text>
+          <text class="line-meta-item">{{ textOr(it.purpose) }}</text>
+        </view>
+        <view v-if="it.noInvoice" class="line-note no-invoice-reason">
+          <text class="mark mark-warning no-invoice-mark">无票</text>{{ textOr(it.noInvoiceReason) }}
+        </view>
+        <AttachmentPicker
+          v-else-if="canReadAttachments"
+          :model-value="it.invoices.map((v) => v.attachment)"
+          :invoice-nos="it.invoices.map((v) => v.invoiceNo || '')"
+          :warnings="warnings(it.invoices)"
+          ref-type="EXPENSE_INVOICE"
+          with-invoice-no
+          readonly
+          empty-text="无票据"
+        />
+        <view v-else class="line-note">{{ it.invoices.length }} 张票据</view>
       </view>
-      <view class="muted">{{ textOr(it.occurDate) }} · {{ textOr(it.purpose) }}</view>
-      <view v-if="it.noInvoice" class="text-warning break">无票：{{ textOr(it.noInvoiceReason) }}</view>
-      <AttachmentPicker
-        v-else-if="canReadAttachments"
-        :model-value="it.invoices.map((v) => v.attachment)"
-        :invoice-nos="it.invoices.map((v) => v.invoiceNo || '')"
-        :warnings="warnings(it.invoices)"
-        ref-type="EXPENSE_INVOICE"
-        with-invoice-no
-        readonly
-        empty-text="无票据"
-      />
-      <view v-else class="muted">{{ it.invoices.length }} 张票据</view>
     </view>
   </view>
 </template>
 
+<style scoped src="./fields.css"></style>
 <style scoped>
-.no-invoice {
-  background: #fff8ec;
-  border-left: 8rpx solid #f59e0b;
+.related {
+  border-radius: var(--eas-radius-control);
+}
+
+/* 无票明细：土黄浅底铺满整行 */
+.line.no-invoice {
+  margin: 0 -28rpx;
+  padding-left: 28rpx;
+  padding-right: 28rpx;
+  background: var(--eas-warning-tint);
+}
+
+.no-invoice-reason {
+  color: var(--eas-warning-text);
+}
+
+.no-invoice-mark {
+  margin: 0 12rpx 0 0;
 }
 </style>

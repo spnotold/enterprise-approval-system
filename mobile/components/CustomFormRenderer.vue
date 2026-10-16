@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 自定义表单的移动端渲染：TEXT / TEXTAREA / NUMBER / AMOUNT / DATE / RADIO / ATTACHMENT 七种字段。
 // values、attachments 为父页面持有的响应式对象，这里直接按字段 key 写入。
-import { nextTick, reactive } from 'vue'
+import { nextTick, reactive, ref } from 'vue'
 import type { AttachmentMeta, FormField, FormSchema } from '@/lib/types'
 import AttachmentPicker from '@/components/AttachmentPicker.vue'
 import FormItem from '@/components/FormItem.vue'
@@ -21,6 +21,12 @@ const props = defineProps<{
 const emit = defineEmits<{ busy: [value: boolean] }>()
 
 const busyMap = reactive<Record<string, boolean>>({})
+// 当前聚焦的字段 key；小程序没有 :focus，用 @focus / @blur 切换样式类
+const focusKey = ref('')
+
+function ic(key: string): Record<string, boolean> {
+  return { 'is-error': !!props.errors.get(key), 'is-focus': focusKey.value === key }
+}
 
 function setValue(key: string, v: unknown): void {
   // eslint-disable-next-line vue/no-mutating-props
@@ -89,18 +95,20 @@ function textMax(f: FormField): number {
       <input
         v-if="f.type === 'TEXT'"
         class="input"
-        :class="{ 'is-error': !!errors.get(f.key) }"
+        :class="ic(f.key)"
         :type="f.rules?.patternPreset === 'MOBILE' ? 'number' : 'text'"
         :value="str(f.key)"
         :placeholder="f.placeholder || '请输入' + f.label"
         placeholder-class="placeholder"
         :maxlength="textMax(f)"
         @input="onText(f, $event)"
+        @focus="focusKey = f.key"
+        @blur="focusKey = ''"
       />
       <textarea
         v-else-if="f.type === 'TEXTAREA'"
         class="textarea"
-        :class="{ 'is-error': !!errors.get(f.key) }"
+        :class="ic(f.key)"
         :value="str(f.key)"
         :placeholder="f.placeholder || '请输入' + f.label"
         placeholder-class="placeholder"
@@ -108,11 +116,13 @@ function textMax(f: FormField): number {
         :auto-height="true"
         :show-confirm-bar="false"
         @input="onText(f, $event)"
+        @focus="focusKey = f.key"
+        @blur="focusKey = ''"
       />
       <input
         v-else-if="f.type === 'NUMBER'"
         class="input"
-        :class="{ 'is-error': !!errors.get(f.key) }"
+        :class="ic(f.key)"
         type="digit"
         :value="str(f.key)"
         :placeholder="
@@ -121,6 +131,8 @@ function textMax(f: FormField): number {
         "
         placeholder-class="placeholder"
         @input="onNumber(f, $event)"
+        @focus="focusKey = f.key"
+        @blur="focusKey = ''"
       />
       <MoneyInput
         v-else-if="f.type === 'AMOUNT'"
@@ -136,9 +148,9 @@ function textMax(f: FormField): number {
         :end="dateRange(f).end"
         @change="onDate(f, $event)"
       >
-        <view class="picker-value" :class="{ 'is-error': !!errors.get(f.key) }">
+        <view class="picker-value" :class="{ 'is-error': !!errors.get(f.key) }" hover-class="is-pressed" :hover-stay-time="60">
           <text :class="{ placeholder: !str(f.key) }">{{ str(f.key) || f.placeholder || '请选择日期' }}</text>
-          <uni-icons type="calendar" size="18" color="#8f959e" />
+          <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
         </view>
       </picker>
       <view v-else-if="f.type === 'RADIO'" class="radio-list">
@@ -147,6 +159,8 @@ function textMax(f: FormField): number {
           :key="o.value"
           class="radio-item"
           :class="{ checked: values[f.key] === o.value }"
+          hover-class="is-pressed"
+          :hover-stay-time="60"
           @tap="setValue(f.key, o.value)"
         >
           <view class="radio-dot" />
@@ -168,6 +182,8 @@ function textMax(f: FormField): number {
 </template>
 
 <style scoped>
+@import '../styles/form.css';
+
 .radio-list {
   display: flex;
   flex-wrap: wrap;
@@ -179,28 +195,29 @@ function textMax(f: FormField): number {
   min-height: 88rpx;
   padding: 0 28rpx 0 20rpx;
   margin: 0 16rpx 16rpx 0;
-  background: #f7f8fa;
-  border-radius: 12rpx;
-  border: 2rpx solid transparent;
-  font-size: 28rpx;
+  background: var(--eas-paper);
+  border-radius: var(--eas-radius-control);
+  border: 2rpx solid var(--eas-rule-strong);
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink);
 }
 
 .radio-item.checked {
-  border-color: #2f6bff;
-  background: #f0f5ff;
-  color: #2f6bff;
+  border-color: var(--eas-primary);
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
 }
 
 .radio-dot {
   width: 32rpx;
   height: 32rpx;
   border-radius: 50%;
-  border: 2rpx solid #c0c4cc;
+  border: 2rpx solid var(--eas-rule-strong);
   margin-right: 12rpx;
   box-sizing: border-box;
 }
 
 .radio-item.checked .radio-dot {
-  border: 10rpx solid #2f6bff;
+  border: 10rpx solid var(--eas-primary);
 }
 </style>
