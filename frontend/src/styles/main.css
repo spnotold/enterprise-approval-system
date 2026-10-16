@@ -1,7 +1,7 @@
+/* 全局样式（设计见 docs/ui_design.md，token 见 tokens.css）；类名被各页面共用，只改样式不改类名 */
 :root {
   --eas-gap: 16px;
-  --eas-header-height: 56px;
-  --eas-no-invoice-bg: #fdf3e6;
+  --eas-header-height: 52px;
 }
 
 html,
@@ -10,11 +10,23 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue',
-    Arial, sans-serif;
-  color: var(--el-text-color-primary);
-  background: var(--el-bg-color-page);
+  font-family: var(--eas-font-sans);
+  font-size: var(--eas-fs-sm);
+  line-height: 1.6;
+  color: var(--eas-ink);
+  background: var(--eas-paper);
+}
+
+/* 键盘焦点统一：2px 主色外框，偏移 2px */
+:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
+.el-button:focus-visible,
+.el-radio-button__original:focus-visible + .el-radio-button__inner,
+.el-checkbox__original:focus-visible + .el-checkbox__inner {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 
 /* 页面通用结构 */
@@ -32,12 +44,16 @@ body,
 }
 .page-title {
   margin: 0;
-  font-size: 20px;
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-xl);
   font-weight: 600;
+  line-height: 1.3;
+  color: var(--eas-ink);
 }
 .page-subtitle {
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
+  margin-top: 4px;
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-sm);
 }
 .toolbar {
   display: flex;
@@ -58,13 +74,14 @@ body,
   margin-top: 12px;
 }
 .muted {
-  color: var(--el-text-color-secondary);
+  color: var(--eas-ink-2);
 }
 .small {
-  font-size: 12px;
+  font-size: var(--eas-fs-xs);
 }
+/* 兼容旧类名：设计规范不再用等宽字体，单号、计数用正文字体 + 等宽数字 */
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
 }
 .nowrap {
   white-space: nowrap;
@@ -74,47 +91,125 @@ body,
   word-break: break-word;
 }
 .text-danger {
-  color: var(--el-color-danger);
+  color: var(--eas-danger);
 }
 .text-warning {
-  color: var(--el-color-warning);
+  color: var(--eas-warning-text);
 }
 .text-success {
-  color: var(--el-color-success);
+  color: var(--eas-success);
 }
 .flex-1 {
   flex: 1;
 }
 .section-title {
   margin: 0 0 12px;
-  font-size: 15px;
+  font-family: var(--eas-font-sans);
+  font-size: var(--eas-fs-md);
   font-weight: 600;
+  line-height: 1.4;
+  color: var(--eas-ink);
 }
 
 /* 表格单元格内的字段错误（明细行） */
 .cell-error .el-input__wrapper,
 .cell-error .el-select__wrapper,
 .cell-error .el-textarea__inner {
-  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+  box-shadow: 0 0 0 1px var(--eas-danger) inset;
 }
 .cell-error-msg,
 .field-error-msg {
-  color: var(--el-color-danger);
-  font-size: 12px;
+  color: var(--eas-danger);
+  font-size: var(--eas-fs-xs);
   line-height: 1.4;
   margin-top: 2px;
 }
 
-/* 无票明细整行橙色 */
-.el-table .row-no-invoice > td.el-table__cell {
-  background: var(--eas-no-invoice-bg) !important;
+/* ---------- 卡片：无阴影，1px 线框 ---------- */
+.el-card,
+.el-card.is-always-shadow,
+.el-card.is-hover-shadow:hover,
+.el-card.is-hover-shadow:focus {
+  --el-card-border-color: var(--eas-rule);
+  --el-card-border-radius: var(--eas-radius-panel);
+  box-shadow: none;
 }
-/* 最低报价 */
+.el-card {
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  background: var(--eas-surface);
+}
+.el-card__header {
+  border-bottom: 1px solid var(--eas-rule);
+}
+.el-card__header .section-title {
+  margin: 0;
+}
+.form-section-gap > .el-card + .el-card {
+  margin-top: var(--eas-gap);
+}
+
+/* ---------- 表格 ---------- */
+.el-table {
+  --el-table-header-bg-color: var(--eas-paper);
+  --el-table-header-text-color: var(--eas-ink-2);
+  --el-table-row-hover-bg-color: var(--eas-paper);
+  --el-table-border-color: var(--eas-rule);
+  --el-table-border: 1px solid var(--eas-rule);
+  --el-table-text-color: var(--eas-ink);
+  --el-table-current-row-bg-color: var(--eas-primary-tint);
+}
+.el-table th.el-table__cell {
+  font-size: var(--eas-fs-xs);
+  font-weight: 500;
+  background: var(--eas-paper);
+}
+.el-table th.el-table__cell > .cell {
+  font-weight: 500;
+}
+
+/* 行内操作：默认隐藏，行悬停或键盘聚焦时显示；触屏与窄屏常显 */
+.row-actions {
+  opacity: 0;
+  transition: opacity var(--eas-dur-fast) var(--eas-ease);
+}
+.el-table__row:hover .row-actions,
+.el-table__row.hover-row .row-actions,
+.el-table__row:focus-within .row-actions,
+.row-actions:focus-within {
+  opacity: 1;
+}
+@media (hover: none) {
+  .row-actions {
+    opacity: 1;
+  }
+}
+
+/* 无票明细整行淡黄；最低报价淡绿 */
+.el-table .row-no-invoice > td.el-table__cell {
+  background: var(--eas-warning-tint) !important;
+}
 .el-table .row-lowest > td.el-table__cell {
-  background: var(--el-color-success-light-9) !important;
+  background: var(--eas-success-tint) !important;
 }
 .el-table .row-selected > td.el-table__cell {
   font-weight: 600;
+}
+
+/* ---------- 按钮、标签 ---------- */
+.el-button:not(.is-disabled):not(.is-loading):active {
+  transform: translateY(1px);
+}
+.el-button--primary {
+  --el-button-bg-color: var(--eas-primary);
+  --el-button-border-color: var(--eas-primary);
+  --el-button-hover-bg-color: var(--eas-primary-hover);
+  --el-button-hover-border-color: var(--eas-primary-hover);
+  --el-button-active-bg-color: var(--eas-primary-hover);
+  --el-button-active-border-color: var(--eas-primary-hover);
+}
+.el-tag {
+  border-radius: var(--eas-radius-tag);
 }
 
 /* 表单底部固定操作栏 */
@@ -126,9 +221,8 @@ body,
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--el-bg-color);
-  border-top: 1px solid var(--el-border-color-lighter);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+  background: var(--eas-surface);
+  border-top: 1px solid var(--eas-rule);
 }
 
 @media (max-width: 768px) {
@@ -137,10 +231,10 @@ body,
   .toolbar .el-date-editor.el-input__wrapper {
     width: 100%;
   }
-}
-.el-card__header .section-title {
-  margin: 0;
-}
-.form-section-gap > .el-card + .el-card {
-  margin-top: var(--eas-gap);
+  .page-title {
+    font-size: var(--eas-fs-lg);
+  }
+  .row-actions {
+    opacity: 1;
+  }
 }

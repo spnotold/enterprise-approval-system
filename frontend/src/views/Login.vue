@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { api } from '@/lib/api'
 import { toApiError } from '@/lib/http'
 import { showError } from '@/lib/errors'
+import AuthShell from '@/components/AuthShell.vue'
 
 interface DemoAccount {
   username: string
@@ -103,131 +104,89 @@ function fillDemo(a: DemoAccount) {
 </script>
 
 <template>
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="brand">
-        <span class="logo">审</span>
-        <div>
-          <h1 class="brand-title">企业审批系统</h1>
-          <div class="muted small">登录以继续</div>
-        </div>
-      </div>
+  <AuthShell>
+    <h1 class="auth-title">登录</h1>
+    <p class="auth-sub">使用用户名或邮箱登录</p>
 
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        label-position="top"
-        size="large"
-        class="auth-form"
-        @submit.prevent="onSubmit"
-      >
-        <el-form-item label="用户名或邮箱" prop="account">
-          <el-input
-            v-model="form.account"
-            :prefix-icon="User"
-            placeholder="请输入用户名或邮箱"
-            autocomplete="username"
-            maxlength="100"
-            clearable
-          />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input
-            v-model="form.password"
-            :prefix-icon="Lock"
-            type="password"
-            placeholder="请输入密码"
-            autocomplete="current-password"
-            maxlength="64"
-            show-password
-          />
-        </el-form-item>
-
-        <el-alert
-          v-if="inlineError"
-          :title="inlineError.text"
-          :type="inlineError.type"
-          show-icon
-          :closable="false"
-          class="form-alert"
+    <el-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      label-position="top"
+      size="large"
+      class="auth-form"
+      @submit.prevent="onSubmit"
+    >
+      <el-form-item label="用户名或邮箱" prop="account">
+        <el-input
+          v-model="form.account"
+          :prefix-icon="User"
+          placeholder="请输入用户名或邮箱"
+          autocomplete="username"
+          maxlength="100"
+          clearable
         />
+      </el-form-item>
+      <el-form-item label="密码" prop="password">
+        <el-input
+          v-model="form.password"
+          :prefix-icon="Lock"
+          type="password"
+          placeholder="请输入密码"
+          autocomplete="current-password"
+          maxlength="64"
+          show-password
+        />
+      </el-form-item>
 
-        <el-button type="primary" native-type="submit" :loading="loading" class="submit">登 录</el-button>
-      </el-form>
+      <el-alert
+        v-if="inlineError"
+        :title="inlineError.text"
+        :type="inlineError.type"
+        show-icon
+        :closable="false"
+        class="form-alert"
+      />
 
-      <div class="switch-line">
-        还没有账号？<router-link to="/register" class="link">注册新账号</router-link>
-      </div>
+      <el-button type="primary" native-type="submit" :loading="loading" class="submit">登录</el-button>
+    </el-form>
 
-      <el-collapse v-if="demoMode" v-model="demoOpen" class="demo">
-        <el-collapse-item name="demo">
-          <template #title>
-            <span class="demo-title">演示账号</span>
-            <span class="muted small">（密码均为 {{ DEMO_PASSWORD }}，点击填入）</span>
-          </template>
-          <ul class="demo-list">
-            <li v-for="a in DEMO_ACCOUNTS" :key="a.username">
-              <button type="button" class="demo-item" @click="fillDemo(a)">
-                <span class="demo-head">
-                  <span class="mono">{{ a.username }}</span>
-                  <span class="demo-name">{{ a.name }}</span>
-                </span>
-                <span class="muted small">{{ a.desc }}</span>
-              </button>
-            </li>
-          </ul>
-        </el-collapse-item>
-      </el-collapse>
+    <div class="switch-line">
+      还没有账号？<router-link to="/register" class="link">注册新账号</router-link>
     </div>
-  </div>
+
+    <el-collapse v-if="demoMode" v-model="demoOpen" class="demo">
+      <el-collapse-item name="demo">
+        <template #title>
+          <span class="demo-title">演示账号</span>
+          <span class="muted small">密码均为 {{ DEMO_PASSWORD }}，点击一行填入</span>
+        </template>
+        <ul class="demo-list">
+          <li v-for="a in DEMO_ACCOUNTS" :key="a.username">
+            <button type="button" class="demo-item" @click="fillDemo(a)">
+              <span class="demo-head">
+                <span class="demo-name">{{ a.name }}</span>
+                <span class="demo-user">{{ a.username }}</span>
+              </span>
+              <span class="demo-desc">{{ a.desc }}</span>
+            </button>
+          </li>
+        </ul>
+      </el-collapse-item>
+    </el-collapse>
+  </AuthShell>
 </template>
 
 <style scoped>
-.auth-page {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-  box-sizing: border-box;
-  background:
-    radial-gradient(circle at 15% 20%, var(--el-color-primary-light-8), transparent 45%),
-    radial-gradient(circle at 85% 80%, var(--el-color-primary-light-9), transparent 50%),
-    var(--el-bg-color-page);
-}
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  padding: 32px 28px 20px;
-  box-sizing: border-box;
-  background: var(--el-bg-color);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-.logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--el-color-primary);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.brand-title {
-  margin: 0 0 2px;
-  font-size: 22px;
+.auth-title {
+  margin: 0;
+  font-size: var(--eas-fs-lg);
   font-weight: 600;
+  line-height: 1.4;
+}
+.auth-sub {
+  margin: 4px 0 24px;
+  color: var(--eas-ink-2);
 }
 .form-alert {
   margin-bottom: 16px;
@@ -237,29 +196,43 @@ function fillDemo(a: DemoAccount) {
 }
 .switch-line {
   margin-top: 16px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--el-text-color-regular);
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink-2);
 }
 .link {
-  color: var(--el-color-primary);
+  color: var(--eas-primary);
   text-decoration: none;
 }
 .link:hover {
   text-decoration: underline;
 }
+
+/* 演示账号：整行可点，悬停高亮 */
 .demo {
-  margin-top: 20px;
+  --el-collapse-header-height: 44px;
+  margin-top: 24px;
+  border-top: 1px solid var(--eas-rule);
+  border-bottom: none;
+}
+.demo :deep(.el-collapse-item__header) {
+  gap: 8px;
+  border-bottom: none;
+}
+.demo :deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+}
+.demo :deep(.el-collapse-item__content) {
+  padding-bottom: 8px;
 }
 .demo-title {
   font-weight: 600;
-  margin-right: 4px;
+  margin-right: 8px;
 }
 .demo-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 320px;
+  max-height: 300px;
   overflow-y: auto;
 }
 .demo-item {
@@ -268,9 +241,10 @@ function fillDemo(a: DemoAccount) {
   align-items: flex-start;
   gap: 2px;
   width: 100%;
-  padding: 8px 10px;
+  box-sizing: border-box;
+  padding: 8px 10px 8px 7px;
   border: none;
-  border-radius: 6px;
+  border-left: 3px solid transparent;
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -280,20 +254,30 @@ function fillDemo(a: DemoAccount) {
 }
 .demo-item:hover,
 .demo-item:focus-visible {
-  background: var(--el-fill-color-light);
-  outline: none;
+  background: var(--eas-paper);
+  border-left-color: var(--eas-primary);
+}
+.demo-item:focus-visible {
+  outline-offset: -2px;
+}
+.demo-item:active {
+  background: var(--eas-paper-deep);
 }
 .demo-head {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: baseline;
 }
 .demo-name {
   font-weight: 500;
 }
-@media (max-width: 480px) {
-  .auth-card {
-    padding: 24px 18px 16px;
-  }
+.demo-user {
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+.demo-desc {
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-xs);
 }
 </style>
