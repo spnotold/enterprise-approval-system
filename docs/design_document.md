@@ -2189,7 +2189,7 @@ server {
 }
 ```
 
-只有 nginx（80）对外开放端口；mailpit 的 Web 界面（8025）只绑定宿主机 `127.0.0.1`，仅本机可访问；数据库与 MinIO 只在 compose 内部网络可见。`.env` 中需要填写 `DB_OWNER_PASSWORD`、`DB_PASSWORD`、`MINIO_ROOT_USER`、`MINIO_ROOT_PASSWORD`、`MINIO_APP_ACCESS_KEY`、`MINIO_APP_SECRET_KEY`、`JWT_SECRET`。`.env` 不进 git，仓库只提供 `template.env`。
+只有 nginx（80）对外开放端口；mailpit 的 Web 界面（8025）只绑定宿主机 `127.0.0.1`，仅本机可访问；数据库与 MinIO 只在 compose 内部网络可见。`.env` 中需要填写 `DB_OWNER_PASSWORD`、`DB_PASSWORD`、`MINIO_ROOT_USER`、`MINIO_ROOT_PASSWORD`、`MINIO_APP_ACCESS_KEY`、`MINIO_APP_SECRET_KEY`、`JWT_SECRET`。`.env` 不进 git，仓库只提供 `template.env`。nginx 前面还有终止 TLS 的反向代理时，需在 `.env` 设置 `TRUSTED_PROXY_CIDR`（该代理的地址或网段，逗号分隔）：nginx 启动脚本据此生成 realip 配置，把 `$remote_addr` 还原为 `X-Forwarded-For` 中的真实客户端 IP，后端的 IP 限流与审计日志才能按真实用户区分；未设置（默认）时不信任任何 `X-Forwarded-For`。
 
 Flyway 脚本：
 
