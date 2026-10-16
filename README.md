@@ -56,7 +56,7 @@ enterprise-approval-system
 1. 启动依赖服务（数据库、MinIO、Mailpit）。`docker-compose.dev.yml` 把它们的端口发布到本机 `127.0.0.1`（PostgreSQL 5432、MinIO 9000、SMTP 1025，被占用时在 `.env` 中设置 `DEV_PG_PORT`、`DEV_MINIO_PORT`、`DEV_SMTP_PORT`）：
 
    ```bash
-   cp template.env .env
+   cp template.env .env    # 把 JWT_SECRET 换成 `openssl rand -base64 48` 的输出，保留模板占位值后端拒绝启动
    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres minio minio-init mailpit
    ```
 
