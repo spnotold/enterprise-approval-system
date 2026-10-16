@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 部门管理：新建、编辑（编码创建后不可修改）、删除（仍被引用时后端拒绝）、设置负责人（同步授予 / 回收“部门负责人”角色）
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -189,7 +190,7 @@ async function submitHead() {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">部门管理</h2>
@@ -202,10 +203,8 @@ async function submitHead() {
     </div>
 
     <el-card shadow="never">
-      <el-table v-loading="loading" :data="list" row-key="id" style="width: 100%">
-        <el-table-column prop="code" label="编码" min-width="110">
-          <template #default="{ row }"><span class="mono">{{ row.code }}</span></template>
-        </el-table-column>
+      <el-table v-loading="loading" :data="list" row-key="id" class="eas-row-table" style="width: 100%">
+        <el-table-column prop="code" label="编码" min-width="110" />
         <el-table-column prop="name" label="名称" min-width="130" />
         <el-table-column label="负责人" min-width="110">
           <template #default="{ row }">
@@ -213,7 +212,9 @@ async function submitHead() {
             <span v-else class="muted">未设置</span>
           </template>
         </el-table-column>
-        <el-table-column prop="userCount" label="用户数" width="90" align="right" />
+        <el-table-column label="用户数" width="90" align="right">
+          <template #default="{ row }"><span class="eas-tnum">{{ row.userCount }}</span></template>
+        </el-table-column>
         <el-table-column prop="sortOrder" label="排序" width="80" align="right" />
         <el-table-column label="创建时间" width="160">
           <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
@@ -295,6 +296,7 @@ async function submitHead() {
         <el-button @click="head.visible = false">取消</el-button>
         <el-button
           :type="head.userId === null && !headUnchanged ? 'danger' : 'primary'"
+          :plain="head.userId === null && !headUnchanged"
           :loading="acting"
           :disabled="headUnchanged"
           @click="submitHead"

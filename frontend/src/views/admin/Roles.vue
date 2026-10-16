@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 角色与权限（只读）：各角色的功能权限点与成员。角色授予 / 回收、主办人设置在用户管理中进行
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -52,7 +53,7 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">角色与权限</h2>
@@ -80,11 +81,11 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
           <template #title>
             <div class="role-title">
               <span class="role-name">{{ r.name }}</span>
-              <el-tag size="small" :type="r.code === 'SYS_ADMIN' ? 'danger' : 'info'" disable-transitions class="mono">
+              <el-tag size="small" :type="r.code === 'SYS_ADMIN' ? 'danger' : 'info'" disable-transitions>
                 {{ r.code }}
               </el-tag>
               <span class="muted small">{{ r.members.length }} 人</span>
-              <span v-if="primaryOf(r)" class="muted small">· 主办人：{{ primaryOf(r) }}</span>
+              <span v-if="primaryOf(r)" class="muted small">主办人：{{ primaryOf(r) }}</span>
             </div>
           </template>
 
@@ -99,7 +100,7 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
             <div class="perm-tags">
               <el-tag v-for="p in r.permissions" :key="p.code" effect="plain" disable-transitions class="perm-tag">
                 {{ p.name || PERMISSION_LABEL[p.code] || p.code }}
-                <span class="mono perm-code">{{ p.code }}</span>
+                <span class="perm-code">{{ p.code }}</span>
               </el-tag>
               <span v-if="r.permissions.length === 0" class="muted small">无</span>
             </div>
@@ -111,6 +112,7 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
               size="small"
               max-height="320"
               row-key="userId"
+              class="eas-row-table"
               style="width: 100%"
             >
               <el-table-column prop="realName" label="姓名" min-width="100" />

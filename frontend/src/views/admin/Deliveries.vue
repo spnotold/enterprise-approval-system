@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 邮件投递记录：MailDispatcher 发送通知邮件的状态、重试次数与最后错误
 import { Refresh } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
@@ -27,7 +28,7 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">邮件投递</h2>
@@ -44,11 +45,11 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
         <el-select v-model="filters.status" placeholder="投递状态" clearable @change="search">
           <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
         </el-select>
-        <el-button @click="reset">重置</el-button>
+        <el-button link type="primary" @click="reset">重置</el-button>
         <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="records" row-key="id" class="delivery-table">
+      <el-table v-loading="loading" :data="records" row-key="id" class="delivery-table eas-row-table">
         <el-table-column label="创建时间" width="160">
           <template #default="{ row }">{{ fmtDateTime(row.createdAt, true) }}</template>
         </el-table-column>
@@ -61,7 +62,9 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="attempts" label="尝试次数" width="90" align="right" />
+        <el-table-column label="尝试次数" width="90" align="right">
+          <template #default="{ row }"><span class="eas-tnum">{{ row.attempts }}</span></template>
+        </el-table-column>
         <el-table-column label="下次重试" width="160">
           <template #default="{ row }">{{ fmtDateTime(row.nextRetryAt, true) }}</template>
         </el-table-column>

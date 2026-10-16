@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 待办监控与转办：只显示单据元数据（管理员默认不能查看业务正文，因此不链接到申请详情）。
 // 审批人被停用时由管理员把其名下待办转给新审批人，需填写原因。
 import { reactive, ref } from 'vue'
@@ -99,7 +100,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">待办监控</h2>
@@ -131,12 +132,12 @@ async function submit() {
           已停用审批人名下的待办
         </el-button>
         <el-button type="primary" @click="search">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button link type="primary" @click="reset">重置</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="records" row-key="taskId" class="task-table">
-        <el-table-column label="申请编号" min-width="150">
-          <template #default="{ row }"><span class="mono">{{ row.appNo }}</span></template>
+      <el-table v-loading="loading" :data="records" row-key="taskId" class="task-table eas-row-table">
+        <el-table-column label="申请编号" min-width="190">
+          <template #default="{ row }"><span class="eas-tnum">{{ row.appNo }}</span></template>
         </el-table-column>
         <el-table-column label="类型" width="100">
           <template #default="{ row }">{{ APP_TYPE_LABEL[row.type as AppType] ?? row.type }}</template>
@@ -165,7 +166,7 @@ async function submit() {
         </el-table-column>
         <el-table-column label="已等待" width="130">
           <template #default="{ row }">
-            <span :class="{ 'text-danger': row.overdue }">{{ fmtHours(row.pendingHours) }}</span>
+            <span :class="['eas-tnum', { 'text-danger': row.overdue }]">{{ fmtHours(row.pendingHours) }}</span>
             <el-tag v-if="row.overdue" type="danger" size="small" class="ml6" disable-transitions>超时</el-tag>
           </template>
         </el-table-column>
@@ -194,7 +195,7 @@ async function submit() {
     <el-dialog v-model="dlg.visible" title="转办待办" width="min(560px, 94vw)" :close-on-click-modal="false">
       <template v-if="dlg.task">
         <el-descriptions :column="2" border size="small" class="task-info">
-          <el-descriptions-item label="申请编号"><span class="mono">{{ dlg.task.appNo }}</span></el-descriptions-item>
+          <el-descriptions-item label="申请编号"><span class="eas-tnum">{{ dlg.task.appNo }}</span></el-descriptions-item>
           <el-descriptions-item label="类型">{{ APP_TYPE_LABEL[dlg.task.type] ?? dlg.task.type }}</el-descriptions-item>
           <el-descriptions-item label="申请人">{{ dlg.task.applicantName }}</el-descriptions-item>
           <el-descriptions-item label="当前节点">{{ dlg.task.nodeName }}</el-descriptions-item>

@@ -50,14 +50,14 @@ const timeout = computed<number | undefined>({
   <el-form label-position="top" class="node-editor" :disabled="readonly" @submit.prevent>
     <div class="panel-title">
       节点属性
-      <span class="muted small">第 {{ index + 1 }} 个节点 · 标识 <span class="mono">{{ node.nodeKey }}</span></span>
+      <span class="muted small">第 {{ index + 1 }} 个节点 标识 {{ node.nodeKey }}</span>
     </div>
 
     <el-alert v-if="serverList.length" type="error" :closable="false" class="issue-alert">
       <template #title>本节点有 {{ serverList.length }} 个校验问题</template>
       <ul class="issue-ul">
         <li v-for="(it, k) in serverList" :key="k">
-          {{ it.message }}<span v-if="it.path" class="mono muted small">（{{ it.path }}）</span>
+          {{ it.message }}<span v-if="it.path" class="muted small">（{{ it.path }}）</span>
         </li>
       </ul>
     </el-alert>

@@ -47,12 +47,13 @@ const names = inject(USER_NAMES_KEY, undefined)
       tabindex="0"
       @click="emit('select', i)"
       @keydown.enter.self="emit('select', i)"
+      @keydown.space.self.prevent="emit('select', i)"
     >
       <div class="seq">{{ i + 1 }}</div>
       <div class="body">
         <div class="head">
           <span class="name">{{ n.name || '（未命名节点）' }}</span>
-          <span class="mono muted small">{{ n.nodeKey }}</span>
+          <span class="muted small">{{ n.nodeKey }}</span>
           <el-tag size="small" effect="plain">{{ NODE_MODE_LABEL[n.mode ?? 'SINGLE'] }}</el-tag>
           <el-tag v-if="n.condition" size="small" type="warning" effect="plain">条件</el-tag>
           <el-badge v-if="(issueCounts[i] ?? 0) > 0" :value="issueCounts[i]" type="danger" class="issue-badge" />
@@ -111,20 +112,22 @@ const names = inject(USER_NAMES_KEY, undefined)
   display: flex;
   gap: 10px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--eas-radius-panel);
   padding: 10px 12px;
   background: var(--el-bg-color);
   cursor: pointer;
   outline: none;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .node-card:hover {
-  border-color: var(--el-color-primary-light-5);
+  border-color: var(--eas-primary);
+  background: var(--eas-primary-tint);
 }
 .node-card:focus-visible {
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .node-card.is-selected {
   border-color: var(--el-color-primary);

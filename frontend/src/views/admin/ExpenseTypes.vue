@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 费用类型：新建、编辑（名称、启用、排序；编码不可修改）、删除（已被报销明细引用的只能停用）
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -162,7 +163,7 @@ async function remove(t: ExpenseTypeAdmin) {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">费用类型</h2>
@@ -175,10 +176,8 @@ async function remove(t: ExpenseTypeAdmin) {
     </div>
 
     <el-card shadow="never">
-      <el-table v-loading="loading" :data="sorted" row-key="id" style="width: 100%">
-        <el-table-column label="编码" min-width="120">
-          <template #default="{ row }"><span class="mono">{{ row.code }}</span></template>
-        </el-table-column>
+      <el-table v-loading="loading" :data="sorted" row-key="id" class="eas-row-table" style="width: 100%">
+        <el-table-column prop="code" label="编码" min-width="120" />
         <el-table-column prop="name" label="名称" min-width="120" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
@@ -199,7 +198,7 @@ async function remove(t: ExpenseTypeAdmin) {
             <el-button link type="primary" :disabled="acting" @click="openEdit(row as ExpenseTypeAdmin)">编辑</el-button>
             <el-button
               link
-              :type="row.enabled ? 'warning' : 'success'"
+              :type="row.enabled ? 'danger' : 'success'"
               :disabled="acting"
               @click="toggle(row as ExpenseTypeAdmin)"
             >

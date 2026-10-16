@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 注册审核：待审核（PENDING）用户。通过时确认所属部门并自动授予“员工”角色；拒绝需填写原因（终态）
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -101,7 +102,7 @@ async function reject(u: AdminUser) {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">注册审核</h2>
@@ -121,11 +122,11 @@ async function reject(u: AdminUser) {
           @clear="search"
         />
         <el-button type="primary" @click="search">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button link type="primary" @click="reset">重置</el-button>
         <el-button text @click="load">刷新</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="records" row-key="id" class="reg-table">
+      <el-table v-loading="loading" :data="records" row-key="id" class="reg-table eas-row-table">
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="realName" label="姓名" min-width="90" />
         <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 流程设计：编辑草稿版本（表单 + 节点），保存、校验、发布；无草稿时只读显示发布版本
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router'
@@ -347,7 +348,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div class="title-wrap">
         <el-button link :icon="Back" @click="router.push('/admin/templates')">模板列表</el-button>
@@ -358,7 +359,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             {{ detail.category === 'BUILTIN' ? '内置' : '自定义' }}
           </el-tag>
           <el-tag v-if="!detail.enabled" size="small" type="info">已停用</el-tag>
-          <span class="mono muted small">{{ detail.code }}</span>
+          <span class="muted small">{{ detail.code }}</span>
         </template>
       </div>
       <div v-if="detail" class="toolbar">
@@ -451,11 +452,11 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
               @keydown.enter="locateIssue(it)"
             >
               <el-tooltip :content="TPL_CODE_LABEL[it.code] ?? it.code" placement="top">
-                <el-tag type="danger" size="small" effect="plain" class="mono code-tag">{{ it.code }}</el-tag>
+                <el-tag type="danger" size="small" effect="plain" class="code-tag">{{ it.code }}</el-tag>
               </el-tooltip>
               <span class="issue-msg">{{ it.message }}</span>
               <span class="muted small issue-where">
-                {{ issueWhere(it) }}<template v-if="it.path"> · <span class="mono">{{ it.path }}</span></template>
+                {{ issueWhere(it) }}<template v-if="it.path"> {{ it.path }}</template>
               </span>
             </li>
           </ul>
@@ -491,7 +492,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
           <span class="section-head">版本历史</span>
           <span class="muted small">每个模板同一时刻至多一个草稿；已发布、已归档版本不可修改</span>
         </template>
-        <el-table :data="versions" size="small" empty-text="暂无版本">
+        <el-table :data="versions" size="small" empty-text="暂无版本" class="eas-row-table">
           <el-table-column label="版本" width="80">
             <template #default="{ row }">v{{ row.versionNo }}</template>
           </el-table-column>
@@ -590,7 +591,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
   flex-wrap: wrap;
   gap: 4px 10px;
   padding: 6px 8px;
-  border-radius: 4px;
+  border-radius: var(--eas-radius-control);
   cursor: pointer;
   outline: none;
 }

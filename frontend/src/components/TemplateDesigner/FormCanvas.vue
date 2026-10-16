@@ -43,13 +43,14 @@ const emit = defineEmits<{
       tabindex="0"
       @click="emit('select', i)"
       @keydown.enter.self="emit('select', i)"
+      @keydown.space.self.prevent="emit('select', i)"
     >
       <div class="card-head">
         <el-tag size="small" effect="plain">{{ FIELD_TYPE_LABEL[f.type] ?? f.type }}</el-tag>
         <span class="label">
           <span v-if="f.required" class="req">*</span>{{ f.label || '（未命名）' }}
         </span>
-        <span class="mono muted small key">{{ f.key || '—' }}</span>
+        <span class="muted small key">{{ f.key || '—' }}</span>
         <el-tag v-if="f.type === 'AMOUNT' && f.statAmount" size="small" type="success">统计金额</el-tag>
         <el-badge v-if="(issueCounts[i] ?? 0) > 0" :value="issueCounts[i]" type="danger" class="issue-badge" />
         <el-tooltip v-else-if="(warnCounts[i] ?? 0) > 0" :content="`有 ${warnCounts[i]} 处待完善`" placement="top">
@@ -127,20 +128,22 @@ const emit = defineEmits<{
 }
 .field-card {
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--eas-radius-panel);
   padding: 10px 12px;
   background: var(--el-bg-color);
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease);
   outline: none;
 }
 .field-card:hover {
-  border-color: var(--el-color-primary-light-5);
+  border-color: var(--eas-primary);
+  background: var(--eas-primary-tint);
 }
 .field-card:focus-visible {
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .field-card.is-selected {
   border-color: var(--el-color-primary);

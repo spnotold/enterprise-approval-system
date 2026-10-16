@@ -540,6 +540,7 @@ function onStat(v: boolean | string | number) {
   margin-top: 2px;
 }
 .mono :deep(input) {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--eas-font-sans);
+  font-variant-numeric: tabular-nums;
 }
 </style>

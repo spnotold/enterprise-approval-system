@@ -64,15 +64,15 @@ const ICONS: Record<FieldType, Component> = {
   gap: 8px;
   padding: 8px 12px;
   border: 1px dashed var(--el-border-color);
-  border-radius: 6px;
+  border-radius: var(--eas-radius-panel);
   background: var(--el-bg-color);
   color: var(--el-text-color-regular);
   font-size: 13px;
   cursor: pointer;
   text-align: left;
   transition:
-    border-color 0.15s,
-    color 0.15s;
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    color var(--eas-dur-fast) var(--eas-ease);
 }
 .lib-item:hover:not(:disabled) {
   border-color: var(--el-color-primary);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 数据范围授权：权限点 + 范围（指定部门 / 全部部门）+ 有效期 + 原因；回收只记录回收时间，不删除
 import { computed, reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -91,7 +92,7 @@ function fmtGrantUntil(iso: string): string {
 
 async function revoke(g: GrantView) {
   const reason = await promptReason({
-    title: `回收授权：${g.userName} · ${GRANT_PERMISSION_LABEL[g.permissionCode] ?? g.permissionCode}`,
+    title: `回收授权：${g.userName}（${GRANT_PERMISSION_LABEL[g.permissionCode] ?? g.permissionCode}）`,
     message: '回收后立即生效（记录回收时间与回收人，不删除授权记录）。请填写原因（将写入审计日志）。',
     confirmText: '回收',
     danger: true,
@@ -249,7 +250,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">授权管理</h2>
@@ -261,9 +262,9 @@ async function submit() {
     <el-alert type="info" :closable="false" show-icon>
       <template #title>权限点说明</template>
       <ul class="meaning-list">
-        <li><span class="mono">APP_READ@ALL</span> → 企业范围查询与统计；<span class="mono">APP_READ@DEPT</span> → 查询指定部门的申请</li>
-        <li><span class="mono">FIN_STATS_READ</span> → 财务统计</li>
-        <li><span class="mono">BIZ_CONTENT_READ</span> → 管理员查看业务正文（每次访问留痕）</li>
+        <li>APP_READ@ALL → 企业范围查询与统计；APP_READ@DEPT → 查询指定部门的申请</li>
+        <li>FIN_STATS_READ → 财务统计</li>
+        <li>BIZ_CONTENT_READ → 管理员查看业务正文（每次访问留痕）</li>
       </ul>
     </el-alert>
 
@@ -279,10 +280,10 @@ async function submit() {
           />
         </div>
         <el-switch v-model="filters.activeOnly" active-text="仅显示有效授权" @change="search" />
-        <el-button @click="reset">重置</el-button>
+        <el-button link type="primary" @click="reset">重置</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="records" row-key="id" class="grants-table">
+      <el-table v-loading="loading" :data="records" row-key="id" class="grants-table eas-row-table">
         <el-table-column prop="userName" label="用户" min-width="90" />
         <el-table-column label="权限点" min-width="190">
           <template #default="{ row }">
@@ -310,7 +311,7 @@ async function submit() {
               {{ GRANT_STATE[grantState(row as GrantView)].label }}
             </el-tag>
             <div v-if="row.revokedAt" class="muted small">
-              {{ row.revokedByName ?? '—' }} · {{ fmtDateTime(row.revokedAt) }}
+              {{ row.revokedByName ?? '—' }} {{ fmtDateTime(row.revokedAt) }}
             </div>
           </template>
         </el-table-column>

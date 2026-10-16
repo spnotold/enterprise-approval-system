@@ -1,0 +1,71 @@
+/* 管理页独立加载共享行样式，直接访问管理路由时也能获得悬停反馈。 */
+@import '../../styles/listRows.css';
+
+.admin-page {
+  font-variant-numeric: tabular-nums;
+}
+.admin-page .page-header {
+  align-items: flex-start;
+  gap: 12px;
+}
+.admin-page .page-subtitle {
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-sm);
+  margin-top: 4px;
+}
+.admin-page .el-card,
+.admin-page .el-collapse {
+  border-color: var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  box-shadow: none;
+}
+.admin-page .el-table {
+  --el-table-border-color: var(--eas-rule);
+  --el-table-header-bg-color: var(--eas-surface);
+  --el-table-text-color: var(--eas-ink);
+  --el-table-header-text-color: var(--eas-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.admin-page .el-button.is-link,
+.admin-page .el-link {
+  min-height: 32px;
+}
+.admin-page .mono {
+  font-family: var(--eas-font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.admin-page .toolbar > .el-button {
+  margin-left: 0;
+}
+.admin-page .toolbar > .el-input,
+.admin-page .toolbar > .el-select {
+  flex: 0 1 180px;
+  min-width: 120px;
+}
+.admin-page .toolbar > .el-date-editor.el-input__wrapper {
+  height: 32px;
+  box-sizing: border-box;
+}
+.admin-page .el-collapse-item__header {
+  color: var(--eas-ink);
+  border-color: var(--eas-rule);
+}
+.admin-page .el-collapse-item__wrap {
+  border-color: var(--eas-rule);
+}
+.admin-page .el-button:focus-visible,
+.admin-page .el-link:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
+@media (max-width: 768px) {
+  .admin-page .toolbar > .el-input,
+  .admin-page .toolbar > .el-select {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .admin-page .pager {
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+}

@@ -342,7 +342,7 @@ defineExpose({ locate })
           :closable="false"
           class="mb"
           :title="it.message"
-          :description="it.path ? `${it.code} · ${it.path}` : it.code"
+          :description="it.path ? `${it.code}（${it.path}）` : it.code"
         />
 
         <div class="cols" :class="{ 'no-lib': formLocked }">
@@ -398,7 +398,7 @@ defineExpose({ locate })
           :closable="false"
           class="mb"
           :title="it.message"
-          :description="it.path ? `${it.code} · ${it.path}` : it.code"
+          :description="it.path ? `${it.code}（${it.path}）` : it.code"
         />
 
         <div class="cols flow">
@@ -437,7 +437,12 @@ defineExpose({ locate })
 
 <style scoped>
 .tpl-designer {
+  font-variant-numeric: tabular-nums;
   min-width: 0;
+}
+.tpl-designer :deep(.mono) {
+  font-family: var(--eas-font-sans);
+  font-variant-numeric: tabular-nums;
 }
 .tab-label {
   display: inline-flex;
@@ -467,7 +472,7 @@ defineExpose({ locate })
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--eas-radius-panel);
   background: var(--el-bg-color);
 }
 .col-main {
@@ -505,7 +510,7 @@ defineExpose({ locate })
   }
 }
 .tpl-locate-flash {
-  border-radius: 6px;
-  animation: tpl-locate-flash 1.6s ease-out;
+  border-radius: var(--eas-radius-panel);
+  animation: tpl-locate-flash var(--eas-dur) var(--eas-ease);
 }
 </style>

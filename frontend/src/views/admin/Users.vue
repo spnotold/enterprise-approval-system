@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 用户管理：启用 / 停用、解锁、调整部门、角色授予与回收、角色主办人、重置密码。
 // 管理端写操作均需填写原因，写入审计日志。
 import { computed, h, onMounted, reactive, ref } from 'vue'
@@ -180,7 +181,7 @@ async function resetPassword(u: AdminUser) {
         {
           style:
             'display:block;padding:8px 12px;font-size:16px;letter-spacing:1px;user-select:all;' +
-            'background:var(--el-fill-color-light);border-radius:4px;word-break:break-all',
+            'background:var(--el-fill-color-light);border-radius:var(--eas-radius-control);word-break:break-all',
         },
         r.tempPassword,
       ),
@@ -208,7 +209,7 @@ function revokeRole(u: AdminUser, r: RoleBrief) {
   if (r.primaryHandler) extra.push('该用户是此角色的主办人，回收后该角色将没有主办人。')
   return withReason(
     {
-      title: `回收角色：${u.realName} · ${label}`,
+      title: `回收角色：${u.realName}（${label}）`,
       message: `${extra.join('')}请填写原因（将写入审计日志）。`,
       confirmText: '回收',
       danger: true,
@@ -222,7 +223,7 @@ function setPrimary(u: AdminUser, r: RoleBrief) {
   const label = ROLE_LABEL[r.code] ?? r.name
   return withReason(
     {
-      title: `设为主办人：${u.realName} · ${label}`,
+      title: `设为主办人：${u.realName}（${label}）`,
       message: '每个角色至多一名主办人，原主办人自动取消；按角色单人审批的节点由主办人处理。请填写原因（将写入审计日志）。',
       confirmText: '设为主办人',
     },
@@ -328,7 +329,7 @@ async function submitGrant() {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">用户管理</h2>
@@ -362,7 +363,7 @@ async function submitGrant() {
           <el-option v-for="d in dict.departments" :key="d.id" :value="d.id" :label="d.name" />
         </el-select>
         <el-button type="primary" @click="search">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button link type="primary" @click="reset">重置</el-button>
       </div>
 
       <el-alert
@@ -379,7 +380,7 @@ async function submitGrant() {
         </template>
       </el-alert>
 
-      <el-table v-loading="loading" :data="records" row-key="id" class="users-table">
+      <el-table v-loading="loading" :data="records" row-key="id" class="users-table eas-row-table">
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="realName" label="姓名" min-width="90" />
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
@@ -581,11 +582,11 @@ async function submitGrant() {
 .primary-badge {
   margin-left: 4px;
   padding: 0 4px;
-  border-radius: 3px;
-  font-size: 11px;
+  border-radius: var(--eas-radius-tag);
+  font-size: var(--eas-fs-xs);
   line-height: 16px;
-  color: #fff;
-  background: var(--el-color-warning);
+  color: var(--eas-warning-text);
+  background: var(--eas-warning-tint);
 }
 .role-caret {
   margin-left: 2px;
