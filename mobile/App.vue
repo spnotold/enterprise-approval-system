@@ -24,6 +24,8 @@ onHide(() => realtime.onAppHide())
 </script>
 
 <style>
+@import './styles/tokens.css';
+
 /* 全局样式：基准宽度 750rpx，触控目标不小于 88rpx */
 page {
   background-color: #f5f6f7;
