@@ -4,7 +4,6 @@ import {
   calcDotInfluence,
   calcDotOffset,
   calcDotRadius,
-  calcRippleProgress,
   easeCursor,
   interpolateRgba,
   isSettled,
@@ -222,25 +221,6 @@ describe('paperMath', () => {
     it('scales with an explicit max amplitude and guards against zero', () => {
       expect(rippleEmphasis(2.5, 2.5)).toBe(1)
       expect(rippleEmphasis(2.5, 0)).toBe(0)
-    })
-  })
-
-  describe('calcRippleProgress', () => {
-    it('computes ripple radius expanding to 90px and alpha fading to 0 over 500ms', () => {
-      const start = calcRippleProgress(0, 500, 90, 0.25)
-      expect(start.radius).toBe(0)
-      expect(start.alpha).toBe(0.25)
-      expect(start.done).toBe(false)
-
-      const mid = calcRippleProgress(250, 500, 90, 0.25)
-      expect(mid.radius).toBe(45)
-      expect(mid.alpha).toBeCloseTo(0.125, 3)
-      expect(mid.done).toBe(false)
-
-      const end = calcRippleProgress(500, 500, 90, 0.25)
-      expect(end.radius).toBe(90)
-      expect(end.alpha).toBe(0)
-      expect(end.done).toBe(true)
     })
   })
 })

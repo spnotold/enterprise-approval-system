@@ -182,24 +182,3 @@ export function rippleEmphasis(offset: number, maxAmplitude = RIPPLE_MAX_AMPLITU
   if (ratio >= 1) return 1
   return ratio
 }
-
-/**
- * 计算点击波纹细环的半径与透明度
- * 500ms 内半径 0 -> 90px，透明度 0.25 -> 0
- */
-export function calcRippleProgress(
-  elapsed: number,
-  duration = 500,
-  maxRadius = 90,
-  maxAlpha = 0.25,
-): { radius: number; alpha: number; done: boolean } {
-  if (elapsed >= duration || duration <= 0) {
-    return { radius: maxRadius, alpha: 0, done: true }
-  }
-  const progress = Math.max(0, elapsed / duration)
-  return {
-    radius: maxRadius * progress,
-    alpha: Number((maxAlpha * (1 - progress)).toFixed(3)),
-    done: false,
-  }
-}
