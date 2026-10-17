@@ -27,7 +27,7 @@ export const FIELD_TYPES: FieldType[] = ['TEXT', 'TEXTAREA', 'NUMBER', 'AMOUNT',
 
 export const FIELD_KEY_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/
 
-/** 字段标识保留字（与系统变量、申请主表字段冲突），不区分大小写 */
+/** 字段标识保留字（与系统变量、申请主表字段冲突），不区分大小写；须覆盖后端 TemplatePublishValidator.RESERVED */
 export const RESERVED_KEYS = [
   'amountCents',
   'naturalDays',
@@ -41,10 +41,16 @@ export const RESERVED_KEYS = [
   'applicantId',
   'deptId',
   'templateId',
+  'templateVersionId',
+  'applicationId',
   'formValues',
   'createdAt',
   'updatedAt',
   'submittedAt',
+  'finishedAt',
+  // constructor / prototype 防对象属性注入；__proto__ 已被 FIELD_KEY_RE（须以字母开头）排除
+  'constructor',
+  'prototype',
 ]
 
 export const TEXT_MAX: Record<'TEXT' | 'TEXTAREA', number> = { TEXT: 200, TEXTAREA: 2000 }
@@ -266,6 +272,10 @@ export function approverRuleProblem(rule: ApproverRule | null | undefined, mode:
     if (isMultiMode(mode)) return rule.userIds?.length ? null : '请至少选择一名审批人'
     return rule.userId != null ? null : '请选择审批人'
   }
+  if (rule.type === 'APPLICANT_DEPT_HEAD') {
+    // 后端同样拒绝：部门负责人规则在会签 / 或签下无法解析
+    return isMultiMode(mode) ? '部门负责人规则仅支持单人审批，会签 / 或签请改用指定用户或角色' : null
+  }
   if (rule.type === 'ROLE') return rule.roleCode ? null : '请选择角色'
   return null
 }
@@ -448,6 +458,8 @@ export function fieldProblems(field: FormField, index: number, fields: FormField
       opts.forEach((o, i) => {
         const v = (o.value ?? '').trim()
         if (!v || !(o.label ?? '').trim()) addErr(out, `options[${i}]`, `第 ${i + 1} 项的显示名和值都不能为空`)
+        // 后端要求选项值无首尾空白
+        else if ((o.value ?? '') !== v) addErr(out, `options[${i}]`, `第 ${i + 1} 项的选项值不能有首尾空格`)
         else if (seen.has(v)) addErr(out, `options[${i}]`, `第 ${i + 1} 项的值“${v}”重复`)
         seen.add(v)
       })
@@ -510,7 +522,8 @@ export function nodeProblems(node: NodeDef, vars: CondVar[]): ErrMap {
   const a = approverRuleProblem(node.approverRule, node.mode)
   if (a) addErr(out, 'approverRule', a)
   if (node.fallbackRule) {
-    const f = approverRuleProblem(node.fallbackRule, node.mode)
+    // 后端对替代规则固定按单人（SINGLE）解析与校验，不随节点模式变化
+    const f = approverRuleProblem(node.fallbackRule, 'SINGLE')
     if (f) addErr(out, 'fallbackRule', f)
   }
   if (node.timeoutHours != null && (!Number.isInteger(node.timeoutHours) || node.timeoutHours <= 0)) {
