@@ -41,7 +41,6 @@ interface KpiCard {
   value?: string
   unit?: string
   cents?: number
-  color?: string
   hint?: string
 }
 
@@ -50,21 +49,39 @@ const dict = useDictStore()
 const route = useRoute()
 const router = useRouter()
 
-// ---------- 配色：状态色与 StatusTag 一致（已通过的绿色加深以区分红绿色弱），全页统一 ----------
+// ---------- 配色：全部取自设计 token（docs/ui_design.md 第 2 节，frontend/src/styles/tokens.css） ----------
+
+/** 从全局 CSS 变量读色值，避免在图表配置里写死颜色 */
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
 
 const STATUS_ORDER: AppStatus[] = ['DRAFT', 'IN_APPROVAL', 'APPROVED', 'REJECTED', 'WITHDRAWN']
-const STATUS_COLOR: Record<AppStatus, string> = {
-  DRAFT: '#c0c4cc',
-  IN_APPROVAL: '#409eff',
-  APPROVED: '#2f8f1e',
-  REJECTED: '#f56c6c',
-  WITHDRAWN: '#606266',
-}
-/** 申请总数（不区分状态） */
-const COUNT_COLOR = '#6250d6'
+/** 图表按当前可见序列 / 扇区顺序使用第 2 节配色，不复用状态语义色。 */
+const CHART_COLORS = Array.from({ length: 6 }, (_, i) => cssVar(`--eas-chart-${i + 1}`))
 const TYPE_ORDER: AppType[] = ['PURCHASE', 'TRAVEL', 'EXPENSE', 'CUSTOM']
-const AXIS_TEXT = '#606266'
-const GRID_LINE = '#ebeef5'
+const AXIS_TEXT = cssVar('--eas-ink-2')
+const GRID_LINE = cssVar('--eas-rule')
+const SURFACE = cssVar('--eas-surface')
+const AXIS_LINE = { lineStyle: { color: GRID_LINE } }
+const CHART_BASE = {
+  color: CHART_COLORS,
+  // 不播放装饰性入场动画，同时覆盖 prefers-reduced-motion 场景。
+  animation: false,
+  textStyle: { fontFamily: cssVar('--eas-font-sans'), color: AXIS_TEXT },
+}
+const TOOLTIP: TooltipComponentOption = {
+  backgroundColor: SURFACE,
+  borderColor: GRID_LINE,
+  textStyle: { color: AXIS_TEXT, fontFamily: cssVar('--eas-font-sans') },
+  extraCssText: 'box-shadow: none; font-variant-numeric: tabular-nums;',
+  axisPointer: {
+    lineStyle: { color: GRID_LINE },
+    shadowStyle: { color: cssVar('--eas-paper-deep'), opacity: 0.5 },
+  },
+}
+const SERIES_EMPHASIS = { focus: 'series' as const }
+const SERIES_BLUR = { itemStyle: { opacity: 0.2 }, lineStyle: { opacity: 0.2 } }
 
 // ---------- 日期区间（上海时区） ----------
 
@@ -252,24 +269,28 @@ const LEGEND: LegendComponentOption = {
   itemWidth: 12,
   itemHeight: 8,
   textStyle: { color: AXIS_TEXT },
+  inactiveColor: cssVar('--eas-ink-3'),
+  inactiveBorderColor: GRID_LINE,
 }
 
 function statusPie(counts: Partial<Record<AppStatus, number>>): ChartOption | null {
   const data = STATUS_ORDER.filter((s) => (counts[s] ?? 0) > 0).map((s) => ({
     name: APP_STATUS_LABEL[s],
     value: counts[s] ?? 0,
-    itemStyle: { color: STATUS_COLOR[s] },
   }))
   if (!data.length) return null
   return {
-    tooltip: { trigger: 'item', formatter: pieTooltip },
+    ...CHART_BASE,
+    tooltip: { ...TOOLTIP, trigger: 'item', formatter: pieTooltip },
     legend: { ...LEGEND, top: undefined, bottom: 0 },
     series: [
       {
         type: 'pie',
         radius: ['45%', '70%'],
         center: ['50%', '45%'],
-        itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 4 },
+        itemStyle: { borderColor: SURFACE, borderWidth: 2, borderRadius: 4 },
+        emphasis: SERIES_EMPHASIS,
+        blur: SERIES_BLUR,
         label: { formatter: '{b} {c}', color: AXIS_TEXT },
         data,
       },
@@ -288,9 +309,9 @@ const deptTotalsCards = computed<KpiCard[]>(() => {
   if (!t) return []
   return [
     { label: '申请数', value: `${t.count}`, unit: '单' },
-    { label: '已通过', value: `${t.approvedCount}`, unit: '单', color: STATUS_COLOR.APPROVED },
-    { label: '已驳回', value: `${t.rejectedCount}`, unit: '单', color: STATUS_COLOR.REJECTED },
-    { label: '审批中', value: `${t.inApprovalCount}`, unit: '单', color: STATUS_COLOR.IN_APPROVAL },
+    { label: '已通过', value: `${t.approvedCount}`, unit: '单' },
+    { label: '已驳回', value: `${t.rejectedCount}`, unit: '单' },
+    { label: '审批中', value: `${t.inApprovalCount}`, unit: '单' },
     { label: '已通过金额', cents: t.approvedAmountCents, hint: '仅含已通过申请' },
     { label: '在途金额', cents: t.inProgressAmountCents, hint: '审批中申请，单独统计，不计入已通过金额' },
     { label: '通过率', value: pct(t.approvalRate), hint: '已通过 /（已通过 + 已驳回）' },
@@ -312,28 +333,37 @@ const deptTypeBar = computed<ChartOption | null>(() => {
   const countOf = (t: AppType, s: AppStatus) =>
     rows.filter((r) => r.type === t && r.status === s).reduce((n, r) => n + r.count, 0)
   return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: countTooltip(true) },
+    ...CHART_BASE,
+    tooltip: {
+      ...TOOLTIP,
+      trigger: 'axis',
+      axisPointer: { ...TOOLTIP.axisPointer, type: 'shadow' },
+      formatter: countTooltip(true),
+    },
     legend: LEGEND,
     grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
       data: types.map((t) => APP_TYPE_LABEL[t]),
+      axisLine: AXIS_LINE,
       axisLabel: { color: AXIS_TEXT },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
+      axisLine: AXIS_LINE,
       axisLabel: { color: AXIS_TEXT },
       splitLine: { lineStyle: { color: GRID_LINE } },
     },
-    series: statuses.map((s) => ({
+    series: statuses.map((s, i) => ({
       name: APP_STATUS_LABEL[s],
       type: 'bar' as const,
       stack: 'total',
       barMaxWidth: 48,
-      emphasis: { focus: 'series' as const },
-      itemStyle: { color: STATUS_COLOR[s], borderColor: '#fff', borderWidth: 1 },
+      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[i], borderWidth: 2 } },
+      blur: SERIES_BLUR,
+      itemStyle: { borderColor: SURFACE, borderWidth: 1 },
       data: types.map((t) => countOf(t, s)),
     })),
   }
@@ -368,7 +398,9 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
   const rows = deptMonthly.value
   if (!rows.some((r) => r.count > 0 || r.approvedAmountCents > 0)) return null
   return {
+    ...CHART_BASE,
     tooltip: {
+      ...TOOLTIP,
       trigger: 'axis',
       formatter: (params: TooltipComponentFormatterCallbackParams) => {
         const list = paramList(params)
@@ -388,6 +420,7 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
     xAxis: {
       type: 'category',
       data: rows.map((r) => r.month),
+      axisLine: AXIS_LINE,
       axisLabel: { color: AXIS_TEXT },
       axisTick: { show: false },
     },
@@ -396,14 +429,16 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         type: 'value',
         name: '申请数（单）',
         minInterval: 1,
-        nameTextStyle: { color: COUNT_COLOR },
+        nameTextStyle: { color: AXIS_TEXT },
+        axisLine: AXIS_LINE,
         axisLabel: { color: AXIS_TEXT },
         splitLine: { lineStyle: { color: GRID_LINE } },
       },
       {
         type: 'value',
         name: '已通过金额（元）',
-        nameTextStyle: { color: STATUS_COLOR.APPROVED },
+        nameTextStyle: { color: AXIS_TEXT },
+        axisLine: AXIS_LINE,
         axisLabel: { color: AXIS_TEXT, formatter: yuanAxis },
         splitLine: { show: false },
       },
@@ -415,7 +450,9 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         yAxisIndex: 0,
         symbolSize: 8,
         lineStyle: { width: 2 },
-        itemStyle: { color: COUNT_COLOR },
+        itemStyle: { color: CHART_COLORS[0] },
+        emphasis: SERIES_EMPHASIS,
+        blur: SERIES_BLUR,
         data: rows.map((r) => r.count),
       },
       {
@@ -424,7 +461,9 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         yAxisIndex: 1,
         symbolSize: 8,
         lineStyle: { width: 2 },
-        itemStyle: { color: STATUS_COLOR.APPROVED },
+        itemStyle: { color: CHART_COLORS[1] },
+        emphasis: SERIES_EMPHASIS,
+        blur: SERIES_BLUR,
         // 仅用于绘图：分转元
         data: rows.map((r) => r.approvedAmountCents / 100),
       },
@@ -443,9 +482,11 @@ const financeBar = computed<ChartOption | null>(() => {
   const rows = financeTypes.value
   if (!rows.some((r) => r.approvedAmountCents > 0 || r.itemCount > 0)) return null
   return {
+    ...CHART_BASE,
     tooltip: {
+      ...TOOLTIP,
       trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      axisPointer: { ...TOOLTIP.axisPointer, type: 'shadow' },
       formatter: (params: TooltipComponentFormatterCallbackParams) => {
         const r = rows[paramList(params)[0]?.dataIndex ?? -1]
         if (!r) return ''
@@ -459,12 +500,14 @@ const financeBar = computed<ChartOption | null>(() => {
     grid: { left: 8, right: 110, top: 8, bottom: 8, containLabel: true },
     xAxis: {
       type: 'value',
+      axisLine: AXIS_LINE,
       axisLabel: { color: AXIS_TEXT, formatter: yuanAxis },
       splitLine: { lineStyle: { color: GRID_LINE } },
     },
     yAxis: {
       type: 'category',
       data: rows.map((r) => r.name),
+      axisLine: AXIS_LINE,
       axisLabel: { color: AXIS_TEXT },
       axisTick: { show: false },
     },
@@ -473,7 +516,9 @@ const financeBar = computed<ChartOption | null>(() => {
         name: '已通过金额',
         type: 'bar',
         barMaxWidth: 24,
-        itemStyle: { color: STATUS_COLOR.APPROVED, borderRadius: [0, 4, 4, 0] },
+        itemStyle: { color: CHART_COLORS[0], borderRadius: [0, 4, 4, 0] },
+        emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[0], borderWidth: 2 } },
+        blur: SERIES_BLUR,
         label: {
           show: true,
           position: 'right',
@@ -498,33 +543,43 @@ function financeSummary(p: { data: FinanceDeptRow[] }): string[] {
 const enterpriseBar = computed<ChartOption | null>(() => {
   const rows = enterprise.data.value?.byDept ?? []
   if (!rows.length) return null
-  const series: { name: string; key: 'count' | 'approvedCount' | 'rejectedCount'; color: string }[] = [
-    { name: '申请数', key: 'count', color: COUNT_COLOR },
-    { name: '已通过', key: 'approvedCount', color: STATUS_COLOR.APPROVED },
-    { name: '已驳回', key: 'rejectedCount', color: STATUS_COLOR.REJECTED },
+  const series: { name: string; key: 'count' | 'approvedCount' | 'rejectedCount' }[] = [
+    { name: '申请数', key: 'count' },
+    { name: '已通过', key: 'approvedCount' },
+    { name: '已驳回', key: 'rejectedCount' },
   ]
   return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: countTooltip(false) },
+    ...CHART_BASE,
+    tooltip: {
+      ...TOOLTIP,
+      trigger: 'axis',
+      axisPointer: { ...TOOLTIP.axisPointer, type: 'shadow' },
+      formatter: countTooltip(false),
+    },
     legend: LEGEND,
     grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
       data: rows.map((r) => r.deptName),
+      axisLine: AXIS_LINE,
       axisLabel: { color: AXIS_TEXT, interval: 0, rotate: rows.length > 5 ? 30 : 0 },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
+      axisLine: AXIS_LINE,
       axisLabel: { color: AXIS_TEXT },
       splitLine: { lineStyle: { color: GRID_LINE } },
     },
-    series: series.map((s) => ({
+    series: series.map((s, i) => ({
       name: s.name,
       type: 'bar' as const,
       barMaxWidth: 28,
       barGap: '10%',
-      itemStyle: { color: s.color, borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: CHART_COLORS[i], borderRadius: [4, 4, 0, 0] },
+      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[i], borderWidth: 2 } },
+      blur: SERIES_BLUR,
       data: rows.map((r) => r[s.key]),
     })),
   }
@@ -595,7 +650,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
           </div>
           <div class="kpi">
             <span class="kpi-label">已通过金额</span>
-            <span class="kpi-value"><MoneyText :cents="personal.data.value.approvedAmountCents" /></span>
+            <span class="kpi-value kpi-money"><MoneyText :cents="personal.data.value.approvedAmountCents" /></span>
           </div>
         </div>
         <el-card shadow="never">
@@ -619,15 +674,14 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
         <el-button type="primary" @click="dept.ensure(true)">重试</el-button>
       </el-empty>
       <template v-else-if="dept.data.value">
-        <div class="muted small">
-          {{ dept.data.value.deptName }} · {{ dept.data.value.from }} 至 {{ dept.data.value.to }}
+        <div class="stats-meta muted small">
+          <span>{{ dept.data.value.deptName }}</span>
+          <span>{{ dept.data.value.from }} 至 {{ dept.data.value.to }}</span>
         </div>
         <div class="kpi-grid">
           <div v-for="c in deptTotalsCards" :key="c.label" class="kpi">
-            <span class="kpi-label">
-              <i v-if="c.color" class="dot" :style="{ background: c.color }" />{{ c.label }}
-            </span>
-            <span class="kpi-value">
+            <span class="kpi-label">{{ c.label }}</span>
+            <span class="kpi-value" :class="{ 'kpi-money': c.cents !== undefined }">
               <MoneyText v-if="c.cents !== undefined" :cents="c.cents" />
               <template v-else>{{ c.value }}<small v-if="c.unit">{{ c.unit }}</small></template>
             </span>
@@ -691,7 +745,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
                 </div>
                 <div class="kpi flat">
                   <span class="kpi-label">无票金额</span>
-                  <span class="kpi-value"><MoneyText :cents="finance.data.value.noInvoice.amountCents" /></span>
+                  <span class="kpi-value kpi-money"><MoneyText :cents="finance.data.value.noInvoice.amountCents" /></span>
                 </div>
                 <div class="kpi flat">
                   <span class="kpi-label">无票金额占比</span>
@@ -701,7 +755,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
                     :percentage="Math.min(100, Math.round(finance.data.value.noInvoice.ratio * 1000) / 10)"
                     :show-text="false"
                     :stroke-width="6"
-                    color="#e6a23c"
+                    color="var(--eas-warning)"
                   />
                 </div>
               </div>
@@ -807,6 +861,27 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
 </template>
 
 <style scoped>
+.page {
+  font-family: var(--eas-font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.page-title {
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-xl);
+}
+.page-subtitle {
+  font-size: var(--eas-fs-xs);
+}
+.stats-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+:deep(.el-card) {
+  border-color: var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  box-shadow: none;
+}
 .range-picker {
   max-width: 100%;
 }
@@ -844,16 +919,19 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   flex-direction: column;
   gap: 4px;
   padding: 14px 16px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  background: var(--eas-surface);
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
   color: inherit;
   text-decoration: none;
 }
-.kpi-link:hover,
+.kpi-link:hover {
+  border-color: var(--eas-primary);
+  background: var(--eas-paper);
+}
 .kpi-link:focus-visible {
-  border-color: var(--el-color-primary);
-  outline: none;
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .kpi.flat {
   padding: 0;
@@ -868,34 +946,31 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
 }
 .kpi-value {
-  font-size: 24px;
+  font-size: var(--eas-fs-xl);
   font-weight: 600;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-primary);
+  color: var(--eas-ink);
+}
+.kpi-money {
+  text-align: right;
 }
 .kpi-value small {
   margin-left: 4px;
-  font-size: 13px;
+  font-size: var(--eas-fs-xs);
   font-weight: normal;
-  color: var(--el-text-color-secondary);
-}
-.dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  color: var(--eas-ink-2);
 }
 @media (max-width: 768px) {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .kpi-value {
-    font-size: 20px;
+    font-size: var(--eas-fs-lg);
   }
   .dept-select {
     width: 100%;

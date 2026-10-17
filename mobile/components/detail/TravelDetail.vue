@@ -14,10 +14,9 @@ defineProps<{
 
 <template>
   <view>
-    <view class="card">
-      <view class="card-title">
-        行程信息
-        <text v-if="data.lateReport" class="tag tag-orange">事后补报</text>
+    <view class="panel">
+      <view class="panel-title">
+        行程信息<text v-if="data.lateReport" class="mark mark-warning">事后补报</text>
       </view>
       <view class="kv">
         <text class="kv-label">行程</text>
@@ -25,15 +24,15 @@ defineProps<{
       </view>
       <view class="kv">
         <text class="kv-label">开始时间</text>
-        <text class="kv-value">{{ fmtDateTime(data.startTime) }}</text>
+        <text class="kv-value num">{{ fmtDateTime(data.startTime) }}</text>
       </view>
       <view class="kv">
         <text class="kv-label">结束时间</text>
-        <text class="kv-value">{{ fmtDateTime(data.endTime) }}</text>
+        <text class="kv-value num">{{ fmtDateTime(data.endTime) }}</text>
       </view>
       <view class="kv">
         <text class="kv-label">时长</text>
-        <text class="kv-value bold">
+        <text class="kv-value num">
           {{ data.naturalDays === null ? '—' : data.naturalDays + ' 天（自然日）' }}
           <text v-if="data.durationHours"> / 实际 {{ data.durationHours }} 小时</text>
         </text>
@@ -56,15 +55,30 @@ defineProps<{
           <text v-if="!data.companions.length">无</text>
           <view v-for="(c, i) in data.companions" :key="i">
             {{ c.userId ? c.userName || '系统用户' : c.name }}
-            <text v-if="c.userId && c.deptName" class="muted">（{{ c.deptName }}）</text>
-            <text v-if="!c.userId" class="muted">（非系统用户）</text>
+            <text v-if="c.userId && c.deptName" class="companion-note">{{ c.deptName }}</text>
+            <text v-if="!c.userId" class="companion-note">非系统用户</text>
           </view>
         </view>
       </view>
     </view>
-    <view v-if="canReadAttachments" class="card">
-      <view class="card-title">附件</view>
-      <AttachmentPicker :model-value="data.attachments" ref-type="TRAVEL_ATTACHMENT" readonly />
+    <view v-if="canReadAttachments" class="panel">
+      <view class="panel-title">附件</view>
+      <view class="attach">
+        <AttachmentPicker :model-value="data.attachments" ref-type="TRAVEL_ATTACHMENT" readonly />
+      </view>
     </view>
   </view>
 </template>
+
+<style scoped src="./fields.css"></style>
+<style scoped>
+.companion-note {
+  margin-left: 16rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+
+.attach {
+  padding-bottom: 16rpx;
+}
+</style>

@@ -62,7 +62,7 @@ function remove(i: number) {
             @update:model-value="selected = $index"
             ><span class="sr-only">拟选</span></el-radio
           >
-          <el-tag v-else-if="selected === $index" type="primary" effect="dark" size="small" disable-transitions>拟选</el-tag>
+          <span v-else-if="selected === $index" class="picked">拟选</span>
         </template>
       </el-table-column>
       <el-table-column label="供应商" min-width="150">
@@ -129,7 +129,7 @@ function remove(i: number) {
           </template>
         </template>
       </el-table-column>
-      <el-table-column v-if="!readonly || showAttachments" label="报价单 / 截图" min-width="230">
+      <el-table-column v-if="!readonly || showAttachments" label="报价单 / 截图" min-width="218">
         <template #default="{ row, $index }">
           <div :class="{ 'cell-error': err($index, 'attachmentIds') }">
             <AttachmentUploader
@@ -167,6 +167,11 @@ function remove(i: number) {
 .tags:empty {
   display: none;
 }
+.picked {
+  color: var(--eas-primary);
+  font-size: var(--eas-fs-xs);
+  font-weight: 600;
+}
 .table-foot {
   display: flex;
   align-items: center;
@@ -174,7 +179,7 @@ function remove(i: number) {
   margin-top: 8px;
 }
 .link {
-  color: var(--el-color-primary);
+  color: var(--eas-primary);
   word-break: break-all;
 }
 .sr-only {

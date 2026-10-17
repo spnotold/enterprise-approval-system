@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 审计日志（只追加）：按动作、对象、操作人、日期筛选；“前后对比”以 JSON 差异显示修改前后的值
 import { computed, onMounted, ref } from 'vue'
 import { Search } from '@element-plus/icons-vue'
@@ -81,7 +82,7 @@ function hasData(r: AuditLogView): boolean {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">审计日志</h2>
@@ -116,10 +117,10 @@ function hasData(r: AuditLogView): boolean {
           @update:model-value="onRange"
         />
         <el-button type="primary" :icon="Search" @click="search">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button link type="primary" @click="reset">重置</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="records" row-key="id" class="audit-table">
+      <el-table v-loading="loading" :data="records" row-key="id" class="audit-table eas-row-table">
         <el-table-column label="时间" width="170">
           <template #default="{ row }">{{ fmtDateTime(row.createdAt, true) }}</template>
         </el-table-column>
@@ -127,13 +128,12 @@ function hasData(r: AuditLogView): boolean {
           <template #default="{ row }">{{ row.operatorName ?? '系统' }}</template>
         </el-table-column>
         <el-table-column label="动作" min-width="160">
-          <template #default="{ row }"><span class="mono">{{ row.action }}</span></template>
+          <template #default="{ row }">{{ row.action }}</template>
         </el-table-column>
         <el-table-column label="对象" min-width="170">
           <template #default="{ row }">
             <el-link
               underline="never"
-              class="mono"
               title="只看该对象的记录"
               @click="filterTarget(row as AuditLogView)"
             >
@@ -145,7 +145,7 @@ function hasData(r: AuditLogView): boolean {
           <template #default="{ row }">{{ row.reason ?? '—' }}</template>
         </el-table-column>
         <el-table-column label="IP" min-width="120">
-          <template #default="{ row }"><span class="mono">{{ row.ip ?? '—' }}</span></template>
+          <template #default="{ row }">{{ row.ip ?? '—' }}</template>
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="100">
           <template #default="{ row }">
@@ -177,11 +177,11 @@ function hasData(r: AuditLogView): boolean {
         <el-descriptions :column="2" border size="small" class="diff-meta">
           <el-descriptions-item label="时间">{{ fmtDateTime(current.createdAt, true) }}</el-descriptions-item>
           <el-descriptions-item label="操作人">{{ current.operatorName ?? '系统' }}</el-descriptions-item>
-          <el-descriptions-item label="动作"><span class="mono">{{ current.action }}</span></el-descriptions-item>
+          <el-descriptions-item label="动作">{{ current.action }}</el-descriptions-item>
           <el-descriptions-item label="对象">
-            <span class="mono">{{ current.targetType }}<template v-if="current.targetId"> #{{ current.targetId }}</template></span>
+            {{ current.targetType }}<template v-if="current.targetId"> #{{ current.targetId }}</template>
           </el-descriptions-item>
-          <el-descriptions-item label="IP"><span class="mono">{{ current.ip ?? '—' }}</span></el-descriptions-item>
+          <el-descriptions-item label="IP">{{ current.ip ?? '—' }}</el-descriptions-item>
           <el-descriptions-item label="原因">
             <span class="pre-wrap">{{ current.reason ?? '—' }}</span>
           </el-descriptions-item>

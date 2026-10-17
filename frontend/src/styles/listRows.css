@@ -1,0 +1,109 @@
+/* 待办与申请列表共享的行交互，设计依据 docs/ui_design.md 第 6 节。 */
+/* 行悬停 / 行内聚焦：行底 --eas-paper */
+.eas-row-table {
+  --el-table-row-hover-bg-color: var(--eas-paper);
+}
+.eas-row-table .el-table__body tr:hover > td.el-table__cell,
+.eas-row-table .el-table__body tr.hover-row > td.el-table__cell,
+.eas-row-table .el-table__body tr:focus-within > td.el-table__cell {
+  background-color: var(--eas-paper);
+}
+
+/* 行首左侧 3px --eas-primary 竖线（画在第一列单元格上） */
+.eas-row-table .el-table__body tr:is(:hover, :focus-within) > td.el-table__cell:first-child {
+  box-shadow: inset 3px 0 0 var(--eas-primary);
+}
+
+/* 整行可点的表格 */
+.eas-row-clickable .el-table__body .el-table__row {
+  cursor: pointer;
+}
+
+/* 行尾操作：默认透明，行悬停 / 行内聚焦时显示；触屏与 768px 以下常显 */
+.eas-row-table .row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--eas-dur-fast, 120ms) var(--eas-ease, ease);
+}
+.eas-row-table .row-actions .el-button + .el-button {
+  margin-left: 0;
+}
+.eas-row-table .el-table__row:hover .row-actions,
+.eas-row-table .el-table__row:focus-within .row-actions,
+.eas-row-table .row-actions:focus-within {
+  opacity: 1;
+}
+@media (hover: none), (max-width: 768px) {
+  .eas-row-table .row-actions {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eas-row-table .row-actions {
+    transition: none;
+  }
+}
+
+/* 数字 / 编号：正文字体 + 等宽数字 */
+.eas-tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.eas-row-clickable tr.el-table__row:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: -2px;
+}
+.eas-row-table .app-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-family: var(--eas-font-sans);
+}
+.eas-row-table .el-button.is-link {
+  min-height: 32px;
+}
+/* 宽屏一行，空间紧张时控件等比收窄；窄屏按可用宽度换行。 */
+.list-filters {
+  flex-wrap: nowrap;
+}
+.list-filters > .el-input,
+.list-filters > .el-select {
+  width: 180px;
+  min-width: 108px;
+  flex: 0 1 180px;
+}
+.list-filters > .el-date-editor.el-input__wrapper {
+  width: 260px;
+  min-width: 230px;
+  flex: 0 1 260px;
+  height: 32px;
+  box-sizing: border-box;
+}
+.list-filters > .el-button {
+  margin-left: 0;
+}
+@media (max-width: 1100px) {
+  .list-filters {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 768px) {
+  .list-filters > .el-input,
+  .list-filters > .el-select,
+  .list-filters > .el-date-editor.el-input__wrapper {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* 固定列用分隔线标明边界，不叠加阴影。 */
+.eas-row-table .el-table-fixed-column--left.is-last-column::before,
+.eas-row-table .el-table-fixed-column--right.is-first-column::before {
+  box-shadow: none;
+}
+.eas-row-table .el-table-fixed-column--right.is-first-column {
+  border-left: 1px solid var(--eas-rule);
+}

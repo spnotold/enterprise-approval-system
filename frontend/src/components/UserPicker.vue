@@ -103,7 +103,16 @@ function onChange(v: number | number[] | null) {
       :disabled="exclude.includes(u.id)"
     >
       <span>{{ u.realName }}</span>
-      <span class="muted small" style="margin-left: 8px">{{ u.username }}{{ u.deptName ? ` · ${u.deptName}` : '' }}</span>
+      <span class="option-meta">{{ u.username }}</span>
+      <span v-if="u.deptName" class="option-meta">{{ u.deptName }}</span>
     </el-option>
   </el-select>
 </template>
+
+<style scoped>
+.option-meta {
+  margin-left: 8px;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+</style>

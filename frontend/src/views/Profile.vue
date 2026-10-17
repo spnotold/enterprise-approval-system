@@ -152,7 +152,7 @@ async function changePassword() {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page profile">
     <div class="page-header">
       <div>
         <h2 class="page-title">个人信息</h2>
@@ -166,7 +166,7 @@ async function changePassword() {
         <el-card v-loading="refreshing" shadow="never">
           <template #header><span class="card-title">基本信息</span></template>
           <el-descriptions :column="isMobile ? 1 : 2" border>
-            <el-descriptions-item label="用户名"><span class="mono">{{ me.username }}</span></el-descriptions-item>
+            <el-descriptions-item label="用户名">{{ me.username }}</el-descriptions-item>
             <el-descriptions-item label="姓名">{{ me.realName }}</el-descriptions-item>
             <el-descriptions-item label="邮箱">{{ me.email }}</el-descriptions-item>
             <el-descriptions-item label="所属部门">{{ me.deptName ?? '未分配' }}</el-descriptions-item>
@@ -291,7 +291,11 @@ async function changePassword() {
   flex-direction: column;
   gap: 16px;
 }
+.profile {
+  max-width: 1200px;
+}
 .card-title {
+  font-size: var(--eas-fs-md);
   font-weight: 600;
 }
 .tags {
@@ -300,7 +304,7 @@ async function changePassword() {
   gap: 6px;
 }
 .primary-mark {
-  color: var(--el-color-warning);
+  color: var(--eas-warning-text);
 }
 .full {
   width: 100%;

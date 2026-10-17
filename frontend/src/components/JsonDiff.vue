@@ -214,30 +214,31 @@ const rawAfter = computed(() => pretty(afterValue.value))
 .jd-chip {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--eas-radius-control);
   font-size: 12px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--eas-rule);
   background: var(--el-fill-color-lighter);
 }
 .jd-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-control);
 }
 .jd-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--eas-fs-xs);
 }
 .jd-table th,
 .jd-table td {
   padding: 6px 10px;
   text-align: left;
   vertical-align: top;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--eas-rule);
 }
 .jd-table th {
-  background: var(--el-fill-color-light);
+  background: var(--eas-paper);
+  color: var(--eas-ink-2);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -275,10 +276,10 @@ const rawAfter = computed(() => pretty(afterValue.value))
   color: var(--el-color-danger);
 }
 .jd-changed .jd-kind {
-  color: var(--el-color-warning);
+  color: var(--eas-warning-text);
 }
 .jd-same {
-  color: var(--el-text-color-secondary);
+  color: var(--eas-ink-3);
 }
 .jd-empty {
   text-align: center !important;
@@ -293,7 +294,7 @@ const rawAfter = computed(() => pretty(afterValue.value))
   min-width: 0;
 }
 .jd-raw-title {
-  font-size: 13px;
+  font-size: var(--eas-fs-sm);
   font-weight: 600;
   margin-bottom: 6px;
 }
@@ -307,8 +308,8 @@ const rawAfter = computed(() => pretty(afterValue.value))
   white-space: pre-wrap;
   word-break: break-word;
   background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-control);
 }
 @media (max-width: 768px) {
   .jd-raw {

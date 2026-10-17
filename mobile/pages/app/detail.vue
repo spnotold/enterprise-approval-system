@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// 申请详情：业务信息、附件、纵向流程时间线、审批日志；
-// 底部操作栏严格按 allowedActions 显示：编辑 / 删除 / 提交 / 撤回 / 复制并修改 / 催办 / 批准 / 驳回
+// 申请详情：单据头与签批栏、业务信息、附件、纵向流程时间线、审批日志；
+// 底部操作栏严格按 allowedActions 显示：编辑 / 删除 / 提交 / 撤回 / 复制并修改 / 催办 / 同意 / 驳回
 import { computed, ref } from 'vue'
 import { onLoad, onPullDownRefresh, onUnload } from '@dcloudio/uni-app'
 import { api } from '@/lib/api'
@@ -23,6 +23,8 @@ const id = ref(0)
 const detail = ref<ApplicationDetail | null>(null)
 const notFound = ref(false)
 const sheet = ref<{ visible: boolean; mode: 'approve' | 'reject' }>({ visible: false, mode: 'approve' })
+/** 本次同意 / 驳回的节点：刷新后该签批格落章（只播一次） */
+const stampSeq = ref<number | null>(null)
 
 /** 操作在底部栏中的顺序：次要在左，主要在右 */
 const ORDER: AppAction[] = ['DELETE', 'EDIT', 'COPY', 'URGE', 'WITHDRAW', 'SUBMIT', 'REJECT', 'APPROVE']
@@ -198,7 +200,8 @@ function showMore(): void {
 
 function onApproved(r: ActionResult, mode: 'approve' | 'reject'): void {
   sheet.value.visible = false
-  afterAction(r, mode === 'approve' ? '已批准' : '已驳回')
+  stampSeq.value = detail.value?.currentNodeSeq ?? null
+  afterAction(r, mode === 'approve' ? '已同意' : '已驳回')
 }
 
 // 实时提醒：正在看的这张单有新通知时自动刷新
@@ -234,7 +237,7 @@ onPullDownRefresh(() => void load(true))
 <template>
   <view class="page" :class="{ 'page--bar': actions.length }">
     <EmptyState v-if="notFound" text="无权查看或申请已不存在" />
-    <AppDetailBody v-else-if="detail" :detail="detail" />
+    <AppDetailBody v-else-if="detail" :detail="detail" :stamp-seq="stampSeq" />
 
     <view v-if="detail && actions.length" class="bottom-bar">
       <button v-if="moreActions.length" class="btn more-btn" @tap="showMore">更多</button>

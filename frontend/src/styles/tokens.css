@@ -1,0 +1,156 @@
+/* 设计 token（见 docs/ui_design.md）：组件里只用这些变量，不写死色值 */
+:root {
+  /* 底色与文字 */
+  --eas-paper: #f2f3f0;
+  --eas-paper-deep: #e8eae5;
+  --eas-surface: #ffffff;
+  --eas-ink: #22303a;
+  --eas-ink-2: #5e6b73;
+  --eas-ink-3: #6c777e;
+  --eas-rule: #daddd8;
+  --eas-rule-strong: #c4c9c3;
+
+  /* 语义色 */
+  --eas-primary: #3e5c76;
+  --eas-primary-hover: #324a5e;
+  --eas-primary-tint: #eceff1;
+  --eas-success: #4f7a5c;
+  --eas-success-tint: #edf2ef;
+  --eas-danger: #9c4a3e;
+  --eas-danger-tint: #f5edec;
+  --eas-warning: #a27b2c;
+  --eas-warning-text: #826223;
+  --eas-warning-tint: #f6f2ea;
+  --eas-muted: #7a858c;
+  --eas-muted-tint: #f2f3f4;
+
+  /* 字体 */
+  --eas-font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --eas-font-serif: 'Source Han Serif SC', 'Noto Serif CJK SC', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+
+  /* 字号阶 */
+  --eas-fs-xs: 12px;
+  --eas-fs-sm: 14px;
+  --eas-fs-md: 16px;
+  --eas-fs-lg: 21px;
+  --eas-fs-xl: 28px;
+
+  /* 形状 */
+  --eas-radius-panel: 6px;
+  --eas-radius-control: 4px;
+  --eas-radius-tag: 2px;
+  --eas-shadow-float: 0 8px 24px rgba(34, 48, 58, 0.12);
+
+  /* 动效 */
+  --eas-ease: cubic-bezier(0.2, 0, 0, 1);
+  --eas-dur-fast: 120ms;
+  --eas-dur: 200ms;
+  --eas-dur-stamp: 240ms;
+
+  /* 图表序列色 */
+  --eas-chart-1: #3e5c76;
+  --eas-chart-2: #4f7a5c;
+  --eas-chart-3: #a27b2c;
+  --eas-chart-4: #9c4a3e;
+  --eas-chart-5: #7a858c;
+  --eas-chart-6: #8a9fb3;
+
+  /* ---------- Element Plus 主题覆盖 ---------- */
+  --el-color-primary: #3e5c76;
+  --el-color-primary-light-3: #788d9f;
+  --el-color-primary-light-5: #9eaeba;
+  --el-color-primary-light-7: #c5ced6;
+  --el-color-primary-light-8: #d8dee4;
+  --el-color-primary-light-9: #eceff1;
+  --el-color-primary-dark-2: #324a5e;
+
+  --el-color-success: #4f7a5c;
+  --el-color-success-light-3: #84a28d;
+  --el-color-success-light-5: #a7bcae;
+  --el-color-success-light-7: #cad7ce;
+  --el-color-success-light-8: #dce4de;
+  --el-color-success-light-9: #edf2ef;
+  --el-color-success-dark-2: #3f624a;
+
+  --el-color-warning: #a27b2c;
+  --el-color-warning-light-3: #bea36b;
+  --el-color-warning-light-5: #d0bd96;
+  --el-color-warning-light-7: #e3d7c0;
+  --el-color-warning-light-8: #ece5d5;
+  --el-color-warning-light-9: #f6f2ea;
+  --el-color-warning-dark-2: #826223;
+
+  --el-color-danger: #9c4a3e;
+  --el-color-danger-light-3: #ba8078;
+  --el-color-danger-light-5: #cea49e;
+  --el-color-danger-light-7: #e1c9c5;
+  --el-color-danger-light-8: #ebdbd8;
+  --el-color-danger-light-9: #f5edec;
+  --el-color-danger-dark-2: #7d3b32;
+  --el-color-error: #9c4a3e;
+  --el-color-error-light-3: #ba8078;
+  --el-color-error-light-5: #cea49e;
+  --el-color-error-light-7: #e1c9c5;
+  --el-color-error-light-8: #ebdbd8;
+  --el-color-error-light-9: #f5edec;
+  --el-color-error-dark-2: #7d3b32;
+
+  --el-color-info: #7a858c;
+  --el-color-info-light-3: #a2aaae;
+  --el-color-info-light-5: #bcc2c6;
+  --el-color-info-light-7: #d7dadc;
+  --el-color-info-light-8: #e4e7e8;
+  --el-color-info-light-9: #f2f3f4;
+  --el-color-info-dark-2: #626a70;
+
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f2f3f0;
+  --el-bg-color-overlay: #ffffff;
+  --el-text-color-primary: #22303a;
+  --el-text-color-regular: #22303a;
+  --el-text-color-secondary: #5e6b73;
+  --el-text-color-placeholder: #8b959b;
+  --el-text-color-disabled: #a9b0b4;
+  --el-border-color: #c4c9c3;
+  --el-border-color-light: #daddd8;
+  --el-border-color-lighter: #daddd8;
+  --el-border-color-extra-light: #e8eae5;
+  --el-border-color-dark: #b3b9b2;
+  --el-border-color-darker: #9fa69e;
+  --el-fill-color: #e8eae5;
+  --el-fill-color-light: #f2f3f0;
+  --el-fill-color-lighter: #f6f7f4;
+  --el-fill-color-extra-light: #f9faf8;
+  --el-fill-color-blank: #ffffff;
+  --el-mask-color: rgba(242, 243, 240, 0.8);
+
+  --el-font-family: var(--eas-font-sans);
+  --el-font-size-base: 14px;
+  --el-border-radius-base: 4px;
+  --el-border-radius-small: 2px;
+  --el-border-radius-round: 20px;
+  --el-box-shadow: var(--eas-shadow-float);
+  --el-box-shadow-light: var(--eas-shadow-float);
+  --el-box-shadow-lighter: var(--eas-shadow-float);
+  --el-box-shadow-dark: var(--eas-shadow-float);
+  --el-transition-duration: 0.2s;
+  --el-transition-duration-fast: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --eas-dur-fast: 0ms;
+    --eas-dur: 0ms;
+    --eas-dur-stamp: 0ms;
+    --el-transition-duration: 0s;
+    --el-transition-duration-fast: 0s;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

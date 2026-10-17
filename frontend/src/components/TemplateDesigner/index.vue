@@ -105,12 +105,15 @@ function ensureFields(): FormField[] {
   return formSchema.value.fields
 }
 
-async function addField(type: FieldType) {
+async function addField(type: FieldType, targetIndex?: number) {
   if (formLocked.value) return
   const list = ensureFields()
-  list.push(newField(type, list))
-  selectedField.value = list.length - 1
-  await scrollToPath(`fields[${list.length - 1}]`)
+  const field = newField(type, list)
+  const insertAt =
+    typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex <= list.length ? targetIndex : list.length
+  list.splice(insertAt, 0, field)
+  selectedField.value = insertAt
+  await scrollToPath(`fields[${insertAt}]`)
 }
 
 function moveItem<T>(list: T[], i: number, delta: -1 | 1, sel: { value: number | null }) {
@@ -122,12 +125,31 @@ function moveItem<T>(list: T[], i: number, delta: -1 | 1, sel: { value: number |
   else if (sel.value === j) sel.value = i
 }
 
+function reorderItem<T>(list: T[], from: number, to: number, sel: { value: number | null }) {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return
+  const [it] = list.splice(from, 1)
+  list.splice(to, 0, it)
+  if (sel.value === from) sel.value = to
+  else if (sel.value != null) {
+    if (from < sel.value && to >= sel.value) sel.value--
+    else if (from > sel.value && to <= sel.value) sel.value++
+  }
+}
+
 function moveField(i: number, delta: -1 | 1) {
   moveItem(ensureFields(), i, delta, selectedField)
 }
 
+function reorderField(from: number, to: number) {
+  reorderItem(ensureFields(), from, to, selectedField)
+}
+
 function moveNode(i: number, delta: -1 | 1) {
   moveItem(ensureNodes(), i, delta, selectedNode)
+}
+
+function reorderNode(from: number, to: number) {
+  reorderItem(ensureNodes(), from, to, selectedNode)
 }
 
 function afterRemove(i: number, sel: { value: number | null }, len: number) {
@@ -342,7 +364,7 @@ defineExpose({ locate })
           :closable="false"
           class="mb"
           :title="it.message"
-          :description="it.path ? `${it.code} · ${it.path}` : it.code"
+          :description="it.path ? `${it.code}（${it.path}）` : it.code"
         />
 
         <div class="cols" :class="{ 'no-lib': formLocked }">
@@ -361,6 +383,8 @@ defineExpose({ locate })
               "
               @select="(i) => (selectedField = i)"
               @move="moveField"
+              @reorder="reorderField"
+              @drop-type="addField"
               @remove="removeField"
             />
           </section>
@@ -398,7 +422,7 @@ defineExpose({ locate })
           :closable="false"
           class="mb"
           :title="it.message"
-          :description="it.path ? `${it.code} · ${it.path}` : it.code"
+          :description="it.path ? `${it.code}（${it.path}）` : it.code"
         />
 
         <div class="cols flow">
@@ -412,6 +436,7 @@ defineExpose({ locate })
               :warn-counts="nodeWarnCounts"
               @select="(i) => (selectedNode = i)"
               @move="moveNode"
+              @reorder="reorderNode"
               @remove="removeNode"
               @add="addNode"
             />
@@ -437,7 +462,16 @@ defineExpose({ locate })
 
 <style scoped>
 .tpl-designer {
+  font-variant-numeric: tabular-nums;
   min-width: 0;
+}
+.tpl-designer :deep(.mono) {
+  font-family: var(--eas-font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.tpl-designer :deep(.el-button.is-link) {
+  min-width: 32px;
+  min-height: 32px;
 }
 .tab-label {
   display: inline-flex;
@@ -467,7 +501,7 @@ defineExpose({ locate })
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--eas-radius-panel);
   background: var(--el-bg-color);
 }
 .col-main {
@@ -505,7 +539,7 @@ defineExpose({ locate })
   }
 }
 .tpl-locate-flash {
-  border-radius: 6px;
-  animation: tpl-locate-flash 1.6s ease-out;
+  border-radius: var(--eas-radius-panel);
+  animation: tpl-locate-flash 1.6s var(--eas-ease);
 }
 </style>

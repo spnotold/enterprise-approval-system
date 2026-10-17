@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 批准 / 驳回面板：批准意见可选；驳回理由必填 5-500 字。
+// 同意 / 驳回面板：同意意见可选；驳回理由必填 5-500 字。按钮与结果提示用同一个动词（同意 → 已同意）。
 // 幂等键在弹窗打开时生成，同一弹窗内的重试复用同一个键。
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { api } from '@/lib/api'
@@ -23,7 +23,9 @@ const props = withDefaults(
   { canApprove: true, canReject: true, refreshing: false, refreshError: null },
 )
 
-const emit = defineEmits<{ done: [r: ActionResult]; refresh: [] }>()
+// submit：请求发出时带上待办 id 和本次提交的结果（成功为 ActionResult，失败或取消为 undefined）。
+// 结果 Promise 不依赖面板存活，父组件据此登记 / 确认落章，并在提交期间暂停自动刷新。
+const emit = defineEmits<{ done: [r: ActionResult]; refresh: []; submit: [s: { taskId: number; result: Promise<ActionResult | undefined> }] }>()
 
 type Mode = 'APPROVE' | 'REJECT'
 const visible = ref(false)
@@ -61,7 +63,7 @@ async function confirm() {
   const generation = sessionGeneration()
   const taskId = props.taskId
   const appVersion = props.appVersion
-  const r = await run({
+  const pending = run({
     idemKey: idemKey.value,
     action: (key) => {
       if (!mounted || generation !== sessionGeneration()) throw new ApiError({ code: 40101, message: '登录身份或页面已变化，请重新打开申请' }, 401)
@@ -74,13 +76,15 @@ async function confirm() {
       mode.value === 'REJECT'
         ? '已驳回'
         : res.status === 'APPROVED'
-          ? '已批准，审批流程结束'
-          : `已批准，下一审批人：${res.currentNode?.assigneeName ?? '—'}`,
+          ? '已同意，审批流程结束'
+          : `已同意，下一审批人：${res.currentNode?.assigneeName ?? '—'}`,
     onConflict: () => {
       visible.value = false
       emit('refresh')
     },
   })
+  emit('submit', { taskId, result: pending })
+  const r = await pending
   if (r) {
     visible.value = false
     emit('done', r)
@@ -90,12 +94,12 @@ async function confirm() {
 
 <template>
   <div class="approve-panel">
-    <el-button v-if="canApprove" :disabled="disabled || loading" type="success" @click="open('APPROVE')">批准</el-button>
-    <el-button v-if="canReject" :disabled="disabled || loading" type="danger" plain @click="open('REJECT')">驳回</el-button>
+    <el-button v-if="canReject" :disabled="disabled || loading" class="reject-button" @click="open('REJECT')">驳回</el-button>
+    <el-button v-if="canApprove" :disabled="disabled || loading" type="primary" @click="open('APPROVE')">同意</el-button>
 
     <el-dialog
       v-model="visible"
-      :title="mode === 'APPROVE' ? '批准申请' : '驳回申请'"
+      :title="mode === 'APPROVE' ? '同意申请' : '驳回申请'"
       width="min(520px, 94vw)"
       append-to-body
       :close-on-click-modal="!loading"
@@ -146,8 +150,8 @@ async function confirm() {
       <template #footer>
         <el-button v-if="refreshError" :loading="refreshing" :disabled="refreshing || loading" @click="emit('refresh')">重新加载</el-button>
         <el-button :disabled="loading" @click="visible = false">取消</el-button>
-        <el-button :type="mode === 'APPROVE' ? 'success' : 'danger'" :loading="loading" :disabled="disabled" @click="confirm">
-          {{ mode === 'APPROVE' ? '确认批准' : '确认驳回' }}
+        <el-button :type="mode === 'APPROVE' ? 'primary' : 'danger'" :loading="loading" :disabled="disabled" @click="confirm">
+          {{ mode === 'APPROVE' ? '同意' : '驳回' }}
         </el-button>
       </template>
     </el-dialog>
@@ -161,5 +165,12 @@ async function confirm() {
 }
 .approve-panel .el-button + .el-button {
   margin-left: 0;
+}
+/* 驳回：次要描边按钮，悬停才露出赭色 */
+.reject-button:not(.is-disabled):hover,
+.reject-button:not(.is-disabled):focus-visible {
+  border-color: var(--eas-danger);
+  color: var(--eas-danger);
+  background: var(--eas-danger-tint);
 }
 </style>

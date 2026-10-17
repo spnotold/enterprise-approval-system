@@ -1,12 +1,12 @@
 <script setup lang="ts">
-// 审批节点列表：按顺序依次审批；上移 / 下移、添加、删除、选中编辑
-import { inject } from 'vue'
+// 审批节点列表：按顺序依次审批；上移 / 下移、拖拽重排、添加、删除、选中编辑
+import { inject, ref } from 'vue'
 import { ArrowDown, ArrowUp, Delete, Plus, WarningFilled } from '@element-plus/icons-vue'
 import type { NodeDef } from '@/lib/types'
 import { NODE_MODE_LABEL } from '@/lib/labels'
 import { MAX_NODES, MIN_NODES, USER_NAMES_KEY, approverRuleText, conditionText, uidOf, type CondVar } from './utils'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     nodes: NodeDef[]
     selected: number | null
@@ -23,9 +23,46 @@ const emit = defineEmits<{
   move: [index: number, delta: -1 | 1]
   remove: [index: number]
   add: []
+  reorder: [from: number, to: number]
 }>()
 
 const names = inject(USER_NAMES_KEY, undefined)
+const dropTargetIndex = ref<number | null>(null)
+
+function onNodeDragStart(e: DragEvent, index: number) {
+  if (props.readonly || !e.dataTransfer) return
+  e.dataTransfer.setData('application/x-eas-node-index', String(index))
+  e.dataTransfer.setData('text/plain', String(index))
+  e.dataTransfer.effectAllowed = 'move'
+}
+
+function onNodeDragOver(e: DragEvent, index: number) {
+  if (props.readonly) return
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  dropTargetIndex.value = index
+}
+
+function onNodeDragLeave(_e: DragEvent, index: number) {
+  if (dropTargetIndex.value === index) {
+    dropTargetIndex.value = null
+  }
+}
+
+function onNodeDrop(e: DragEvent, index: number) {
+  if (props.readonly) return
+  e.preventDefault()
+  dropTargetIndex.value = null
+  const nodeIndex = e.dataTransfer?.getData('application/x-eas-node-index')
+  if (nodeIndex !== undefined && nodeIndex !== '') {
+    const from = Number(nodeIndex)
+    if (!Number.isNaN(from) && from !== index) {
+      emit('reorder', from, index)
+    }
+  }
+}
 </script>
 
 <template>
@@ -41,18 +78,28 @@ const names = inject(USER_NAMES_KEY, undefined)
       v-for="(n, i) in nodes"
       :key="uidOf(n)"
       class="node-card"
-      :class="{ 'is-selected': selected === i, 'has-issue': (issueCounts[i] ?? 0) > 0 }"
+      :class="{
+        'is-selected': selected === i,
+        'has-issue': (issueCounts[i] ?? 0) > 0,
+        'is-drop-target': dropTargetIndex === i,
+      }"
       :data-path="`nodes[${i}]`"
+      :draggable="!readonly"
       role="button"
       tabindex="0"
       @click="emit('select', i)"
       @keydown.enter.self="emit('select', i)"
+      @keydown.space.self.prevent="emit('select', i)"
+      @dragstart="onNodeDragStart($event, i)"
+      @dragover.stop="onNodeDragOver($event, i)"
+      @dragleave.stop="onNodeDragLeave($event, i)"
+      @drop.stop="onNodeDrop($event, i)"
     >
       <div class="seq">{{ i + 1 }}</div>
       <div class="body">
         <div class="head">
           <span class="name">{{ n.name || '（未命名节点）' }}</span>
-          <span class="mono muted small">{{ n.nodeKey }}</span>
+          <span class="muted small">{{ n.nodeKey }}</span>
           <el-tag size="small" effect="plain">{{ NODE_MODE_LABEL[n.mode ?? 'SINGLE'] }}</el-tag>
           <el-tag v-if="n.condition" size="small" type="warning" effect="plain">条件</el-tag>
           <el-badge v-if="(issueCounts[i] ?? 0) > 0" :value="issueCounts[i]" type="danger" class="issue-badge" />
@@ -111,20 +158,26 @@ const names = inject(USER_NAMES_KEY, undefined)
   display: flex;
   gap: 10px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--eas-radius-panel);
   padding: 10px 12px;
   background: var(--el-bg-color);
   cursor: pointer;
   outline: none;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .node-card:hover {
-  border-color: var(--el-color-primary-light-5);
+  border-color: var(--eas-primary);
+  background: var(--eas-primary-tint);
+}
+.node-card.is-drop-target {
+  border: 2px dashed var(--eas-primary) !important;
+  background: var(--eas-primary-tint) !important;
 }
 .node-card:focus-visible {
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .node-card.is-selected {
   border-color: var(--el-color-primary);
@@ -168,7 +221,7 @@ const names = inject(USER_NAMES_KEY, undefined)
   word-break: break-all;
 }
 .line {
-  font-size: 13px;
+  font-size: var(--eas-fs-sm);
   line-height: 1.5;
   word-break: break-all;
 }

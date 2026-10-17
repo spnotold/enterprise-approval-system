@@ -1,0 +1,66 @@
+/* 设计 token（见 docs/ui_design.md）：页面与组件只用这些变量，不写死色值 */
+page {
+  /* 底色与文字 */
+  --eas-paper: #f2f3f0;
+  --eas-paper-deep: #e8eae5;
+  --eas-surface: #ffffff;
+  --eas-ink: #22303a;
+  --eas-ink-2: #5e6b73;
+  --eas-ink-3: #6c777e;
+  --eas-placeholder: #8b959b;
+  --eas-rule: #daddd8;
+  --eas-rule-strong: #c4c9c3;
+
+  /* 语义色 */
+  --eas-primary: #3e5c76;
+  --eas-primary-hover: #324a5e;
+  --eas-primary-tint: #eceff1;
+  --eas-success: #4f7a5c;
+  --eas-success-tint: #edf2ef;
+  --eas-danger: #9c4a3e;
+  --eas-danger-tint: #f5edec;
+  --eas-warning: #a27b2c;
+  --eas-warning-text: #826223;
+  --eas-warning-tint: #f6f2ea;
+  --eas-muted: #7a858c;
+  --eas-muted-tint: #f2f3f4;
+
+  /* 字体 */
+  --eas-font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, -apple-system,
+    'Helvetica Neue', sans-serif;
+  --eas-font-serif: 'Source Han Serif SC', 'Noto Serif CJK SC', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+
+  /* 字号阶 */
+  --eas-fs-xs: 24rpx;
+  --eas-fs-sm: 28rpx;
+  --eas-fs-md: 32rpx;
+  --eas-fs-lg: 40rpx;
+  --eas-fs-xl: 52rpx;
+
+  /* 形状 */
+  --eas-radius-panel: 12rpx;
+  --eas-radius-control: 8rpx;
+  --eas-radius-tag: 4rpx;
+  --eas-shadow-float: 0 16rpx 48rpx rgba(34, 48, 58, 0.12);
+
+  /* 动效 */
+  --eas-ease: cubic-bezier(0.2, 0, 0, 1);
+  --eas-dur-fast: 120ms;
+  --eas-dur: 200ms;
+  --eas-dur-stamp: 240ms;
+}
+
+/* 通用按压态：配合 hover-class="is-pressed" hover-stay-time="60" 使用 */
+.is-pressed {
+  background-color: var(--eas-paper-deep) !important;
+  transform: scale(0.985);
+  transition: transform var(--eas-dur-fast) var(--eas-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  page {
+    --eas-dur-fast: 0ms;
+    --eas-dur: 0ms;
+    --eas-dur-stamp: 0ms;
+  }
+}
