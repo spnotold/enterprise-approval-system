@@ -56,8 +56,15 @@ const permissions = computed(() => ({
   canHandle: canHandle.value,
 }))
 
-async function loadAll(): Promise<void> {
-  await loadAllSections(apis, state, permissions.value)
+// onLoad 与 onShow 首次进入会同时触发：进行中的加载复用同一个 Promise，避免重复请求
+let inflight: Promise<void> | null = null
+function loadAll(): Promise<void> {
+  if (!inflight) {
+    inflight = loadAllSections(apis, state, permissions.value).finally(() => {
+      inflight = null
+    })
+  }
+  return inflight
 }
 
 function retryPending(): void {
