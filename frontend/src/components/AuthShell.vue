@@ -86,6 +86,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
     </aside>
 
     <main class="auth-main">
+      <div class="auth-box">
+        <div class="brand-compact">
+          <span class="logo" aria-hidden="true">审</span>
+          <span class="brand-name">企业审批系统</span>
+        </div>
+        <slot />
+      </div>
+
+      <!-- 放在表单之后：Tab 先进入表单，再到分栏手柄（手柄绝对定位，不受文档顺序影响） -->
       <div
         class="auth-split"
         role="separator"
@@ -104,14 +113,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
         @keydown="onSplitKeydown"
       >
         <span class="auth-split-grip" aria-hidden="true" />
-      </div>
-
-      <div class="auth-box">
-        <div class="brand-compact">
-          <span class="logo" aria-hidden="true">审</span>
-          <span class="brand-name">企业审批系统</span>
-        </div>
-        <slot />
       </div>
     </main>
   </div>
