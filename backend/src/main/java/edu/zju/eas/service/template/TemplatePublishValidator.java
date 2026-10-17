@@ -203,7 +203,7 @@ public class TemplatePublishValidator {
     }
     private static LocalDate date(String value) {
         if(value==null) return null;
-        if(value.matches("TODAY([+-]\\d{1,6})?")) return LocalDate.now(Times.ZONE).plusDays(value.length()==5?0:Integer.parseInt(value.substring(5)));
+        if(value.matches("TODAY([+-]\\d{1,4})?")) return LocalDate.now(Times.ZONE).plusDays(value.length()==5?0:Integer.parseInt(value.substring(5)));
         return LocalDate.parse(value);
     }
     private static boolean blank(String s){return s==null || s.isBlank();}
