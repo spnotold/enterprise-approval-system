@@ -156,6 +156,23 @@ class AdminTemplateStatsTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE action='TEMPLATE_PUBLISH'",Long.class)).isZero();
     }
 
+    @Test void todayOffsetDigitsAreLimitedToFour() throws Exception {
+        long id=custom();templates.createDraft(id);
+        templates.saveDraft(id,new Draft(
+                Jsons.read("{\"fields\":[{\"key\":\"start\",\"label\":\"开始\",\"type\":\"DATE\",\"rules\":{\"earliest\":\"TODAY+30000\"}}]}",FormSchema.class),
+                draft("初审").nodeConfig()));
+        mvc.perform(post("/admin/templates/{id}/publish",id).contentType("application/json").content("{\"changeNote\":\"六位偏移\"}"))
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value(42201));
+        assertThat(templates.get(id).published()).isNull();
+
+        templates.saveDraft(id,new Draft(
+                Jsons.read("{\"fields\":[{\"key\":\"start\",\"label\":\"开始\",\"type\":\"DATE\",\"rules\":{\"earliest\":\"TODAY+9999\"}}]}",FormSchema.class),
+                draft("初审").nodeConfig()));
+        mvc.perform(post("/admin/templates/{id}/publish",id).contentType("application/json").content("{\"changeNote\":\"四位偏移\"}"))
+                .andExpect(status().isOk());
+        assertThat(templates.get(id).published()).isNotNull();
+    }
+
     @Test void builtinsCannotChangeFormAndDraftCreationIsSerialized() throws Exception {
         templates.createDraft(1L);
         assertThatThrownBy(()->templates.saveDraft(1L,draft("越界"))).isInstanceOf(BizException.class);
