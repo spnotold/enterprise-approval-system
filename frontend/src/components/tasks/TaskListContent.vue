@@ -21,6 +21,7 @@ const route = useRoute()
 const router = useRouter()
 const notice = useNoticeStore()
 const { isMobile } = useBreakpoint()
+const { isMobile: isCompact } = useBreakpoint('(max-width: 1439px)')
 const pending = computed(() => props.kind === 'pending')
 const title = computed(() => pending.value ? '我的待办' : '我的已办')
 const typeOptions = toOptions(APP_TYPE_LABEL)
@@ -107,25 +108,25 @@ function switchKind() {
         class="list-body eas-row-table eas-row-clickable"
         @row-click="onRowClick"
       >
-        <el-table-column label="申请编号" min-width="190">
+        <el-table-column label="申请编号" min-width="170">
           <template #default="{ row }"><router-link :to="target(row as TaskItem)" class="app-link eas-tnum">{{ row.appNo }}</router-link><el-tag v-if="pending && row.overdue" type="danger" size="small" class="overdue">已超时</el-tag></template>
         </el-table-column>
-        <el-table-column label="类型 / 模板" min-width="150">
+        <el-table-column label="类型 / 模板" min-width="120">
           <template #default="{ row }"><div>{{ APP_TYPE_LABEL[row.type as AppType] }}</div><div v-if="row.type === 'CUSTOM'" class="muted small">{{ row.templateName }}</div></template>
         </el-table-column>
-        <el-table-column prop="title" label="标题" min-width="190" show-overflow-tooltip><template #default="{ row }">{{ row.title || '—' }}</template></el-table-column>
-        <el-table-column label="申请人 / 部门" min-width="140"><template #default="{ row }"><div>{{ row.applicant.realName }}</div><div class="muted small">{{ row.deptName || '—' }}</div></template></el-table-column>
-        <el-table-column label="金额" width="145" align="right"><template #default="{ row }"><MoneyText :cents="row.amountCents" /></template></el-table-column>
-        <el-table-column prop="nodeName" label="审批节点" min-width="140" />
-        <el-table-column label="任务状态" width="100">
+        <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.title || '—' }}</template></el-table-column>
+        <el-table-column label="申请人 / 部门" min-width="110"><template #default="{ row }"><div>{{ row.applicant.realName }}</div><div class="muted small">{{ row.deptName || '—' }}</div></template></el-table-column>
+        <el-table-column label="金额" width="130" align="right"><template #default="{ row }"><MoneyText :cents="row.amountCents" /></template></el-table-column>
+        <el-table-column prop="nodeName" label="审批节点" min-width="120" show-overflow-tooltip />
+        <el-table-column v-if="!pending" label="任务状态" width="100">
           <template #default="{ row }">
-            <span class="dot-status"><i class="dot" :class="`st-${String(row.status).toLowerCase()}`" />{{ TASK_STATUS_LABEL[row.status as keyof typeof TASK_STATUS_LABEL] ?? row.status }}</span>
+            <span class="dot-status" :class="`st-${String(row.status).toLowerCase()}`"><i class="dot" />{{ TASK_STATUS_LABEL[row.status as keyof typeof TASK_STATUS_LABEL] ?? row.status }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="申请状态" width="105"><template #default="{ row }"><StatusTag :status="row.appStatus" size="small" :show-node="false" /></template></el-table-column>
-        <el-table-column label="提交时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.submittedAt) }}</template></el-table-column>
-        <el-table-column v-if="pending" label="分配时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template></el-table-column>
-        <el-table-column v-else label="处理时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.actedAt) }}</template></el-table-column>
+        <el-table-column v-if="!(pending && isCompact)" label="申请状态" width="105"><template #default="{ row }"><StatusTag :status="row.appStatus" size="small" :show-node="false" /></template></el-table-column>
+        <el-table-column v-if="!isCompact" label="提交时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.submittedAt) }}</template></el-table-column>
+        <el-table-column v-if="pending && !isCompact" label="分配时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template></el-table-column>
+        <el-table-column v-else-if="!pending && !isCompact" label="处理时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.actedAt) }}</template></el-table-column>
         <el-table-column v-if="!pending" label="处理意见" min-width="200" show-overflow-tooltip><template #default="{ row }"><span :class="{ 'text-danger': row.status === 'REJECTED' }">{{ row.comment || '—' }}</span></template></el-table-column>
         <el-table-column label="操作" width="105" :fixed="isMobile ? false : 'right'">
           <template #default="{ row }">
@@ -151,12 +152,12 @@ function switchKind() {
 .list-body { margin-top: 16px; }
 .app-link { color: var(--el-color-primary); text-decoration: none; }
 .overdue { margin-left: 6px; }
-/* 任务状态：6px 圆点 + 文字 */
+/* 任务状态：6px 圆点 + 文字；状态类设置 --dot 变量驱动颜色 */
 .dot-status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.dot-status .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--eas-muted); }
-.st-pending { background: var(--eas-primary); }
-.st-approved { background: var(--eas-success); }
-.st-rejected { background: var(--eas-danger); }
-.st-canceled { background: var(--eas-muted); }
-.st-transferred { background: var(--eas-warning); }
+.dot-status .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--dot, var(--eas-muted)); }
+.st-pending { --dot: var(--eas-primary); }
+.st-approved { --dot: var(--eas-success); }
+.st-rejected { --dot: var(--eas-danger); }
+.st-canceled { --dot: var(--eas-muted); }
+.st-transferred { --dot: var(--eas-warning); }
 </style>

@@ -25,6 +25,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const dict = useDictStore()
 const { isMobile } = useBreakpoint()
+const { isMobile: isCompact } = useBreakpoint('(max-width: 1439px)')
 
 const TITLES: Record<ListScope, { title: string; sub: string }> = {
   mine: { title: '我的申请', sub: '包含草稿；草稿可编辑、删除，审批中可撤回，已驳回 / 已撤回可复制修改后重新提交。' },
@@ -172,31 +173,31 @@ const EMPTY_TEXT: Record<ListScope, string> = {
         class="app-table eas-row-table eas-row-clickable"
         @row-click="onRowClick"
       >
-        <el-table-column label="编号" width="190" :fixed="isMobile ? false : 'left'">
+        <el-table-column label="编号" width="170" :fixed="isMobile ? false : 'left'">
           <template #default="{ row }">
             <router-link :to="target(row as ApplicationSummary)" class="app-link eas-tnum">{{ row.appNo }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column label="标题" min-width="180" show-overflow-tooltip>
+        <el-table-column label="标题" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">{{ row.title || '（未填写标题）' }}</template>
         </el-table-column>
         <el-table-column label="类型" width="120" show-overflow-tooltip>
           <template #default="{ row }">{{ row.templateName || APP_TYPE_LABEL[row.type as AppType] }}</template>
         </el-table-column>
-        <el-table-column v-if="scope !== 'mine'" label="申请人" width="120">
+        <el-table-column v-if="scope !== 'mine'" label="申请人" width="100">
           <template #default="{ row }">{{ row.applicant.realName }}</template>
         </el-table-column>
-        <el-table-column v-if="scope !== 'mine'" label="部门" width="110" prop="deptName" />
-        <el-table-column label="金额" width="130" align="right">
+        <el-table-column v-if="scope !== 'mine' && !isCompact" label="部门" width="110" prop="deptName" />
+        <el-table-column label="金额" width="120" align="right">
           <template #default="{ row }"><MoneyText :cents="row.amountCents" /></template>
         </el-table-column>
-        <el-table-column label="状态" min-width="260">
+        <el-table-column label="状态" min-width="200" show-overflow-tooltip>
           <template #default="{ row }"><StatusTag :status="row.status" :current-node="row.currentNode" size="small" /></template>
         </el-table-column>
-        <el-table-column label="提交时间" width="150">
+        <el-table-column v-if="!isCompact" label="提交时间" width="150">
           <template #default="{ row }">{{ fmtDateTime(row.submittedAt) }}</template>
         </el-table-column>
-        <el-table-column v-if="scope === 'mine'" label="更新时间" width="150">
+        <el-table-column v-if="scope === 'mine' && !isCompact" label="更新时间" width="150">
           <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" :width="scope === 'mine' ? 190 : 80" :fixed="isMobile ? false : 'right'">
