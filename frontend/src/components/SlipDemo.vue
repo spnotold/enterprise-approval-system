@@ -240,4 +240,34 @@ onBeforeUnmount(() => {
   color: var(--eas-ink-2);
   font-size: var(--eas-fs-xs);
 }
+
+/* 左栏变窄时竖排：容器是 AuthShell 里的 .auth-aside（跨组件匹配祖先容器） */
+/* 360–599：单列、最大宽度 320px；「已通过」章仍在最后一格下方右侧，
+   给说明文字让出空间，避免压住它 */
+@container auth-aside (360px <= inline-size < 600px) {
+  .slip {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 320px;
+  }
+  .slip-note {
+    margin-top: 48px;
+  }
+}
+/* < 360：再收紧——格子内边距 8px 10px，「同意」章缩小 */
+@container auth-aside (inline-size < 360px) {
+  .slip {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 320px;
+  }
+  .cell {
+    padding: 8px 10px;
+  }
+  .cell-stamp {
+    padding: 1px 3px;
+    margin-top: -9px;
+  }
+  .slip-note {
+    margin-top: 48px;
+  }
+}
 </style>
