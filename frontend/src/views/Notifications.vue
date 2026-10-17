@@ -133,7 +133,7 @@ watch(
     <div class="page-header">
       <div>
         <h2 class="page-title">通知中心</h2>
-        <div class="page-subtitle">审批进度、新待办与系统消息；点击通知查看对应申请</div>
+        <div class="page-subtitle">点击通知可查看对应申请。</div>
       </div>
       <div class="toolbar">
         <el-button :icon="Refresh" :loading="loading" @click="list.load()">刷新</el-button>
@@ -160,7 +160,7 @@ watch(
       <div v-else v-loading="loading">
         <ListEmpty
           v-if="!records.length"
-          :description="filters.unreadOnly ? '没有未读通知。新的审批通知到达时会出现在这里。' : '暂无通知。新的审批通知到达时会出现在这里。'"
+          :description="filters.unreadOnly ? '没有未读通知' : '暂无通知'"
         />
         <ul v-else class="notice-list">
           <li

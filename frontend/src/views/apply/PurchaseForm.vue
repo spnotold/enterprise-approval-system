@@ -330,7 +330,7 @@ function beforeToday(d: Date) {
             type="error"
             :closable="false"
             show-icon
-            title="单一来源采购：审批人会在页头看到红色提示。请说明原因（至少 20 字），并附说明材料或在说明中写明依据。"
+            title="单一来源采购需说明原因（至少 20 字），并附说明材料或写明依据。"
             style="margin-bottom: 12px"
           />
           <el-form-item label="单一来源说明" required :error="err('singleSourceReason')">

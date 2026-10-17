@@ -51,7 +51,6 @@ onMounted(async () => {
 <template>
   <div class="apply-home">
     <h2 class="home-title">发起申请</h2>
-    <p class="home-sub">选择申请类型，先保存为草稿，确认无误后提交审批。</p>
 
     <div class="panel">
       <el-skeleton v-if="loading" :rows="4" animated />
@@ -122,17 +121,12 @@ onMounted(async () => {
   max-width: 1200px;
 }
 .home-title {
-  margin: 0;
+  margin: 0 0 16px;
   font-family: var(--eas-font-serif);
   font-size: var(--eas-fs-xl);
   font-weight: 600;
   line-height: 1.4;
   color: var(--eas-ink);
-}
-.home-sub {
-  margin: 4px 0 16px;
-  font-size: var(--eas-fs-sm);
-  color: var(--eas-ink-2);
 }
 .panel {
   padding: 0 24px;

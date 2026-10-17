@@ -122,23 +122,63 @@ export function isSettled(
   )
 }
 
+/** 点击涟漪波前扩散速度（px/ms），约 1000ms 扩散到 240px */
+export const RIPPLE_SPEED = 0.24
+
+/** 点击涟漪总时长（ms） */
+export const RIPPLE_DURATION = 1000
+
+/** 点击涟漪波长（px） */
+export const RIPPLE_WAVELENGTH = 36
+
+/** 点击涟漪高斯包络宽度（px） */
+export const RIPPLE_SIGMA = 48
+
+/** 点击涟漪最大振幅（px） */
+export const RIPPLE_MAX_AMPLITUDE = 5
+
 /**
- * 计算点击波纹细环的半径与透明度
- * 500ms 内半径 0 -> 90px，透明度 0.25 -> 0
+ * 涟漪波前半径：以 0.24px/ms 向外扩散
  */
-export function calcRippleProgress(
-  elapsed: number,
-  duration = 500,
-  maxRadius = 90,
-  maxAlpha = 0.25,
-): { radius: number; alpha: number; done: boolean } {
-  if (elapsed >= duration || duration <= 0) {
-    return { radius: maxRadius, alpha: 0, done: true }
-  }
-  const progress = Math.max(0, elapsed / duration)
-  return {
-    radius: maxRadius * progress,
-    alpha: Number((maxAlpha * (1 - progress)).toFixed(3)),
-    done: false,
-  }
+export function rippleRadius(t: number): number {
+  if (t <= 0) return 0
+  return RIPPLE_SPEED * t
+}
+
+/**
+ * 涟漪振幅随时间线性衰减：A = A₀ · (1 − t/T)，t ≥ T 时为 0
+ */
+export function rippleAmplitude(t: number): number {
+  if (t >= RIPPLE_DURATION) return 0
+  if (t <= 0) return RIPPLE_MAX_AMPLITUDE
+  return RIPPLE_MAX_AMPLITUDE * (1 - t / RIPPLE_DURATION)
+}
+
+/**
+ * 单个涟漪对点的径向位移（正数向外）
+ * offset = A · sin(2π·(r − d)/λ) · exp(−((r − d)/σ)²)，仅波后区域 d ≤ r 非零
+ * @param d 点到涟漪圆心的距离
+ * @param r 波前半径（由 rippleRadius 得到）
+ * @param t 涟漪已进行的毫秒数
+ */
+export function rippleOffset(d: number, r: number, t: number): number {
+  if (t < 0 || t >= RIPPLE_DURATION) return 0
+  if (d > r) return 0
+  const amp = rippleAmplitude(t)
+  if (amp <= 0) return 0
+  const phase = r - d
+  const envelope = Math.exp(-((phase / RIPPLE_SIGMA) ** 2))
+  return amp * Math.sin((2 * Math.PI * phase) / RIPPLE_WAVELENGTH) * envelope
+}
+
+/**
+ * 由径向位移得到 0..1 的强调强度（|offset| / A₀），
+ * 用于放大（最大 1.8 倍）与向 primary 的颜色插值（透明度最高 0.5）
+ */
+export function rippleEmphasis(offset: number, maxAmplitude = RIPPLE_MAX_AMPLITUDE): number {
+  if (maxAmplitude <= 0) return 0
+  const ratio = Math.abs(offset) / maxAmplitude
+  if (ratio <= 0) return 0
+  if (ratio >= 1) return 1
+  return ratio
 }

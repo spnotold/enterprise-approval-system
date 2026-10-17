@@ -1,13 +1,17 @@
 import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import {
+  RIPPLE_DURATION,
   calcDotInfluence,
   calcDotOffset,
   calcDotRadius,
-  calcRippleProgress,
   easeCursor,
   interpolateRgba,
   isSettled,
   parseHexColor,
+  rippleAmplitude,
+  rippleEmphasis,
+  rippleOffset,
+  rippleRadius,
   type Rgba,
 } from './paperMath'
 
@@ -30,7 +34,40 @@ export interface PaperFieldOptions {
 export interface RippleItem {
   x: number
   y: number
-  startTime: number
+  /** 涟漪起点时间戳（performance.now()） */
+  t0: number
+}
+
+/** 同时存在的涟漪上限，超出时丢弃最早的 */
+export const MAX_ACTIVE_RIPPLES = 3
+
+/** 涟漪向 primary 插值时透明度上限（0.5，低于光标跟随的 0.55） */
+const RIPPLE_MAX_DOT_ALPHA = 0.5
+
+/**
+ * 纯函数：追加涟漪；超过上限时丢弃最早的
+ */
+export function pushRipple(
+  ripples: RippleItem[],
+  ripple: RippleItem,
+  max = MAX_ACTIVE_RIPPLES,
+): RippleItem[] {
+  const next = [...ripples, ripple]
+  if (max > 0 && next.length > max) {
+    next.splice(0, next.length - max)
+  }
+  return next
+}
+
+/**
+ * 纯函数：移除超过生命周期的涟漪（默认 1000ms）
+ */
+export function pruneRipples(
+  ripples: RippleItem[],
+  now: number,
+  duration = RIPPLE_DURATION,
+): RippleItem[] {
+  return ripples.filter((ripple) => now - ripple.t0 < duration)
 }
 
 export interface PaperClickAncestor {
@@ -197,6 +234,25 @@ export function resolvePaperColors(baseProp = 'paper') {
   }
 }
 
+/** 每帧涟漪状态草稿（复用对象，避免逐帧分配） */
+interface RippleFrame {
+  x: number
+  y: number
+  elapsed: number
+  radius: number
+  amplitude: number
+}
+
+/** 每帧需要重绘的点草稿（复用对象，避免逐帧分配） */
+interface DynamicDot {
+  x0: number
+  y0: number
+  x: number
+  y: number
+  emphasis: number
+  rippleTint: boolean
+}
+
 export function usePaperField(
   canvasRef: Ref<HTMLCanvasElement | null>,
   options: PaperFieldOptions = {},
@@ -208,6 +264,8 @@ export function usePaperField(
   const maxDotRadius = options.maxDotRadius ?? 1.8
   const lightRadius = options.lightRadius ?? 220
   const maxLightAlpha = options.maxLightAlpha ?? 0.35
+  // 涟漪脏矩形余量：覆盖擦除圆半径与位移后点半径
+  const rippleDotPadding = Math.max(maxDotRadius, dotRadius + 1.5) + 1
 
   const isDegraded = ref(false)
 
@@ -231,6 +289,8 @@ export function usePaperField(
   let fadeStartTime: number | null = null
   let fadeStartStrength = 0
   let activeRipples: RippleItem[] = []
+  const rippleFrames: RippleFrame[] = []
+  const dynamicDots: DynamicDot[] = []
 
   // 尺寸缓存
   let width = 0
@@ -337,70 +397,142 @@ export function usePaperField(
     ctx.scale(dpr, dpr)
 
     const curStrength = cursorStrength
+    const hasCursor = curStrength > 0.001
 
-    if (curStrength > 0.001) {
-      const activeRadius = radius
-      const minX = Math.max(0, Math.floor((curX - activeRadius) / spacing) * spacing)
-      const maxX = Math.min(width, Math.ceil((curX + activeRadius) / spacing) * spacing)
-      const minY = Math.max(0, Math.floor((curY - activeRadius) / spacing) * spacing)
-      const maxY = Math.min(height, Math.ceil((curY + activeRadius) / spacing) * spacing)
-
-      // 1. 擦除动态区域内的静态点（用底色圆盖住原点位）
-      ctx.fillStyle = colors.baseColor
-      ctx.beginPath()
-      for (let x0 = minX; x0 <= maxX; x0 += spacing) {
-        for (let y0 = minY; y0 <= maxY; y0 += spacing) {
-          const d = Math.hypot(x0 - curX, y0 - curY)
-          if (d < activeRadius) {
-            ctx.moveTo(x0 + dotRadius + 1.5, y0)
-            ctx.arc(x0, y0, dotRadius + 1.5, 0, Math.PI * 2)
-          }
-        }
+    // 收集本帧活跃的涟漪状态（波前 0.24px/ms，振幅线性衰减）
+    let rippleCount = 0
+    for (const ripple of activeRipples) {
+      const elapsed = now - ripple.t0
+      if (elapsed < 0 || elapsed >= RIPPLE_DURATION) continue
+      let frame = rippleFrames[rippleCount]
+      if (!frame) {
+        frame = { x: 0, y: 0, elapsed: 0, radius: 0, amplitude: 0 }
+        rippleFrames[rippleCount] = frame
       }
-      ctx.fill()
-
-      // 2. 绘制白色径向光（半径 220px，透明度 ≤ 0.35）
-      const glowR = lightRadius
-      const gradient = ctx.createRadialGradient(curX, curY, 0, curX, curY, glowR)
-      const lightAlpha = maxLightAlpha * curStrength
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${lightAlpha.toFixed(3)})`)
-      gradient.addColorStop(0.5, `rgba(255, 255, 255, ${(lightAlpha * 0.4).toFixed(3)})`)
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
-
-      ctx.fillStyle = gradient
-      ctx.fillRect(curX - glowR, curY - glowR, glowR * 2, glowR * 2)
-
-      // 3. 绘制受光标吸引与变大、变黛蓝的点
-      for (let x0 = minX; x0 <= maxX; x0 += spacing) {
-        for (let y0 = minY; y0 <= maxY; y0 += spacing) {
-          const d = Math.hypot(x0 - curX, y0 - curY)
-          if (d < activeRadius) {
-            const influence = calcDotInfluence(d, activeRadius) * curStrength
-            const { x, y } = calcDotOffset(x0, y0, curX, curY, d, maxOffset, influence)
-            const r = calcDotRadius(dotRadius, maxDotRadius, influence)
-            const col = interpolateRgba(colors.baseDotColor, colors.primaryDotColor, influence)
-
-            ctx.fillStyle = `rgba(${col.r}, ${col.g}, ${col.b}, ${col.a})`
-            ctx.beginPath()
-            ctx.arc(x, y, r, 0, Math.PI * 2)
-            ctx.fill()
-          }
-        }
-      }
+      frame.x = ripple.x
+      frame.y = ripple.y
+      frame.elapsed = elapsed
+      frame.radius = rippleRadius(elapsed)
+      frame.amplitude = rippleAmplitude(elapsed)
+      rippleCount++
     }
 
-    // 4. 绘制点击波纹细环
-    if (activeRipples.length > 0) {
-      ctx.lineWidth = 1
-      for (const ripple of activeRipples) {
-        const elapsed = now - ripple.startTime
-        const { radius: r, alpha, done } = calcRippleProgress(elapsed, 500, 90, 0.25)
-        if (!done && alpha > 0.005) {
-          ctx.strokeStyle = `rgba(${colors.primaryRgb.r}, ${colors.primaryRgb.g}, ${colors.primaryRgb.b}, ${alpha})`
-          ctx.beginPath()
-          ctx.arc(ripple.x, ripple.y, r, 0, Math.PI * 2)
-          ctx.stroke()
+    if (hasCursor || rippleCount > 0) {
+      // 1. 脏矩形 = 光标影响区 ∪ 各涟漪（当前半径 + 振幅 + 点半径余量）外接矩形
+      let dirtyMinX = Number.POSITIVE_INFINITY
+      let dirtyMaxX = Number.NEGATIVE_INFINITY
+      let dirtyMinY = Number.POSITIVE_INFINITY
+      let dirtyMaxY = Number.NEGATIVE_INFINITY
+      const extendDirty = (cx: number, cy: number, half: number) => {
+        dirtyMinX = Math.min(dirtyMinX, cx - half)
+        dirtyMaxX = Math.max(dirtyMaxX, cx + half)
+        dirtyMinY = Math.min(dirtyMinY, cy - half)
+        dirtyMaxY = Math.max(dirtyMaxY, cy + half)
+      }
+      if (hasCursor) extendDirty(curX, curY, radius)
+      for (let i = 0; i < rippleCount; i++) {
+        const frame = rippleFrames[i]
+        extendDirty(frame.x, frame.y, frame.radius + frame.amplitude + rippleDotPadding)
+      }
+
+      const minX = Math.max(0, Math.floor(dirtyMinX / spacing) * spacing)
+      const maxX = Math.min(width, Math.ceil(dirtyMaxX / spacing) * spacing)
+      const minY = Math.max(0, Math.floor(dirtyMinY / spacing) * spacing)
+      const maxY = Math.min(height, Math.ceil(dirtyMaxY / spacing) * spacing)
+
+      // 2. 收集需要重绘的点：位移 = 光标吸附位移 + 各涟漪径向位移之和
+      let dotCount = 0
+      for (let x0 = minX; x0 <= maxX; x0 += spacing) {
+        for (let y0 = minY; y0 <= maxY; y0 += spacing) {
+          let cursorDist = 0
+          let cursorInfluence = 0
+          if (hasCursor) {
+            cursorDist = Math.hypot(x0 - curX, y0 - curY)
+            if (cursorDist < radius) {
+              cursorInfluence = calcDotInfluence(cursorDist, radius) * curStrength
+            }
+          }
+
+          let rippleDx = 0
+          let rippleDy = 0
+          let rippleStrength = 0
+          for (let i = 0; i < rippleCount; i++) {
+            const frame = rippleFrames[i]
+            const dx = x0 - frame.x
+            const dy = y0 - frame.y
+            const dist = Math.hypot(dx, dy)
+            if (dist > frame.radius) continue
+            const offset = rippleOffset(dist, frame.radius, frame.elapsed)
+            const emphasis = rippleEmphasis(offset)
+            if (emphasis > rippleStrength) rippleStrength = emphasis
+            if (dist > 0) {
+              rippleDx += (dx / dist) * offset
+              rippleDy += (dy / dist) * offset
+            }
+          }
+
+          if (cursorInfluence <= 0 && rippleStrength <= 0) continue
+
+          let dot = dynamicDots[dotCount]
+          if (!dot) {
+            dot = { x0: 0, y0: 0, x: 0, y: 0, emphasis: 0, rippleTint: false }
+            dynamicDots[dotCount] = dot
+          }
+          let x = x0
+          let y = y0
+          if (cursorInfluence > 0) {
+            const attracted = calcDotOffset(x0, y0, curX, curY, cursorDist, maxOffset, cursorInfluence)
+            x = attracted.x
+            y = attracted.y
+          }
+          dot.x0 = x0
+          dot.y0 = y0
+          dot.x = x + rippleDx
+          dot.y = y + rippleDy
+          dot.emphasis = Math.max(cursorInfluence, rippleStrength)
+          dot.rippleTint = rippleStrength > cursorInfluence
+          dotCount++
         }
+      }
+
+      // 3. 用底色圆擦掉原点位上的静态点
+      if (dotCount > 0) {
+        const eraseRadius = dotRadius + 1.5
+        ctx.fillStyle = colors.baseColor
+        ctx.beginPath()
+        for (let i = 0; i < dotCount; i++) {
+          const dot = dynamicDots[i]
+          ctx.moveTo(dot.x0 + eraseRadius, dot.y0)
+          ctx.arc(dot.x0, dot.y0, eraseRadius, 0, Math.PI * 2)
+        }
+        ctx.fill()
+      }
+
+      // 4. 光标附近的白色径向光（半径 220px，透明度 ≤ 0.35）
+      if (hasCursor) {
+        const glowR = lightRadius
+        const gradient = ctx.createRadialGradient(curX, curY, 0, curX, curY, glowR)
+        const lightAlpha = maxLightAlpha * curStrength
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${lightAlpha.toFixed(3)})`)
+        gradient.addColorStop(0.5, `rgba(255, 255, 255, ${(lightAlpha * 0.4).toFixed(3)})`)
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+
+        ctx.fillStyle = gradient
+        ctx.fillRect(curX - glowR, curY - glowR, glowR * 2, glowR * 2)
+      }
+
+      // 5. 重绘动态点：强调强度取光标影响与涟漪强调的较大值
+      const rippleDotColor: Rgba = { ...colors.primaryRgb, a: RIPPLE_MAX_DOT_ALPHA }
+      for (let i = 0; i < dotCount; i++) {
+        const dot = dynamicDots[i]
+        const tint = dot.rippleTint ? rippleDotColor : colors.primaryDotColor
+        const col = interpolateRgba(colors.baseDotColor, tint, dot.emphasis)
+        const r = calcDotRadius(dotRadius, maxDotRadius, dot.emphasis)
+
+        ctx.fillStyle = `rgba(${col.r}, ${col.g}, ${col.b}, ${col.a})`
+        ctx.beginPath()
+        ctx.arc(dot.x, dot.y, r, 0, Math.PI * 2)
+        ctx.fill()
       }
     }
 
@@ -449,8 +581,8 @@ export function usePaperField(
       curY = targetY
     }
 
-    // 3. 点击环更新与清理
-    activeRipples = activeRipples.filter((r) => now - r.startTime < 500)
+    // 3. 涟漪清理（每个涟漪 1000ms 后移除）
+    activeRipples = pruneRipples(activeRipples, now)
 
     // 4. 绘制本帧
     renderFrame(now)
@@ -506,10 +638,10 @@ export function usePaperField(
     targetY = e.clientY - rect.top
 
     if (isBackgroundClick(e, containerEl)) {
-      activeRipples.push({
+      activeRipples = pushRipple(activeRipples, {
         x: targetX,
         y: targetY,
-        startTime: performance.now(),
+        t0: performance.now(),
       })
       startLoop()
     }
