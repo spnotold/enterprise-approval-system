@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 登录 / 注册共用外壳：左侧是安静的说明区（用一排签批格示意流转，窄屏隐藏），右侧是白底表单
 import PaperField from '@/components/PaperField.vue'
+import SlipDemo from '@/components/SlipDemo.vue'
 </script>
 
 <template>
@@ -10,21 +11,7 @@ import PaperField from '@/components/PaperField.vue'
       <div class="aside-inner">
         <span class="logo" aria-hidden="true">审</span>
         <p class="aside-title">企业审批系统</p>
-        <p class="aside-text">采购、差旅、报销等申请在线提交，按流程逐级审批，每一级的处理人、意见和时间都留在单据上。</p>
-        <ol class="slip" aria-hidden="true">
-          <li class="cell">
-            <span class="cell-name">部门负责人</span>
-            <span class="cell-state">已同意</span>
-          </li>
-          <li class="cell current">
-            <span class="cell-name">财务审批</span>
-            <span class="cell-state">处理中</span>
-          </li>
-          <li class="cell">
-            <span class="cell-name">企业负责人</span>
-            <span class="cell-state">待流转</span>
-          </li>
-        </ol>
+        <SlipDemo />
       </div>
     </aside>
 
@@ -87,50 +74,11 @@ import PaperField from '@/components/PaperField.vue'
   line-height: 1;
 }
 .aside-title {
-  margin: 20px 0 12px;
+  margin: 20px 0 0;
   font-family: var(--eas-font-serif);
   font-size: var(--eas-fs-xl);
   font-weight: 600;
   line-height: 1.3;
-}
-.aside-text {
-  margin: 0;
-  color: var(--eas-ink-2);
-  line-height: 1.8;
-}
-
-/* 签批格示意：已办实线、当前虚线、未到留空 */
-.slip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 32px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  background: var(--eas-surface);
-  border: 1px solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-tag);
-}
-.cell.current {
-  background: var(--eas-primary-tint);
-  border: 1px dashed var(--eas-primary);
-}
-.cell-name {
-  font-size: var(--eas-fs-sm);
-  font-weight: 500;
-}
-.cell-state {
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-2);
-}
-.cell.current .cell-state {
-  color: var(--eas-primary);
 }
 
 .auth-main {
