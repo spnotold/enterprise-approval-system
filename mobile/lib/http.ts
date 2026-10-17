@@ -60,6 +60,7 @@ export interface RequestOptions {
 
 interface AuthHooks {
   getAccessToken(): string | null
+  sessionGeneration(): number
   /** 用刷新令牌换新令牌；失败时 reject */
   refresh(): Promise<void>
   /** 令牌彻底失效：清空本地状态并回到登录页 */
@@ -68,6 +69,7 @@ interface AuthHooks {
 
 let hooks: AuthHooks = {
   getAccessToken: () => null,
+  sessionGeneration: () => 0,
   refresh: () => Promise.reject(new Error('未登录')),
   onAuthFailure: () => {},
 }
@@ -77,19 +79,25 @@ export function setAuthHooks(h: AuthHooks): void {
 }
 
 let refreshing: Promise<void> | null = null
+let refreshingGeneration = -1
 
-/** 多个请求同时过期时只刷新一次 */
+export const sessionGeneration = () => hooks.sessionGeneration()
+
+/** 同一会话的多个请求同时过期时只刷新一次；新会话不等待旧刷新 */
 export function refreshOnce(): Promise<void> {
-  if (!refreshing) {
-    refreshing = hooks.refresh().finally(() => {
-      refreshing = null
+  const gen = sessionGeneration()
+  if (!refreshing || refreshingGeneration !== gen) {
+    refreshingGeneration = gen
+    const pending = hooks.refresh().finally(() => {
+      if (refreshing === pending) refreshing = null
     })
+    refreshing = pending
   }
   return refreshing
 }
 
-export function authFailed(): void {
-  hooks.onAuthFailure()
+export function authFailed(gen = sessionGeneration()): void {
+  if (gen === sessionGeneration()) hooks.onAuthFailure()
 }
 
 /** 上传 / 下载等不走 http 对象的请求使用的公共请求头 */
@@ -176,11 +184,14 @@ function isPublicAuthUrl(url: string): boolean {
 }
 
 async function request<T>(method: Method, url: string, body: unknown, opts: RequestOptions = {}): Promise<T> {
+  const gen = sessionGeneration()
   const tokenAtSend = hooks.getAccessToken()
   try {
     return await send<T>(method, url, body, opts)
   } catch (err) {
     const e = toApiError(err)
+    // 旧会话的失败不刷新、不重放，也不清空新会话。
+    if (gen !== sessionGeneration()) throw e
     if (e.code === 40102 && !isPublicAuthUrl(url)) {
       // 发出请求后令牌已被其他请求刷新过，直接重放即可
       const current = hooks.getAccessToken()
@@ -188,19 +199,20 @@ async function request<T>(method: Method, url: string, body: unknown, opts: Requ
         try {
           await refreshOnce()
         } catch {
-          hooks.onAuthFailure()
+          authFailed(gen)
           throw e
         }
       }
+      if (gen !== sessionGeneration()) throw e
       try {
         return await send<T>(method, url, body, opts)
       } catch (err2) {
         const e2 = toApiError(err2)
-        if (e2.code === 40101 || e2.code === 40102) hooks.onAuthFailure()
+        if (e2.code === 40101 || e2.code === 40102) authFailed(gen)
         throw e2
       }
     }
-    if (e.code === 40101 && !isPublicAuthUrl(url)) hooks.onAuthFailure()
+    if (e.code === 40101 && !isPublicAuthUrl(url)) authFailed(gen)
     throw e
   }
 }

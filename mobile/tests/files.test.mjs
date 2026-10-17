@@ -7,7 +7,7 @@ function harness(responses) {
   let refreshes = 0, token = 'before'
   class ApiError extends Error { constructor(body) { super(body.message); this.code = body.code } }
   const http = {
-    ApiError, authFailed() {}, authHeaders: () => ({ Authorization: token }), currentAccessToken: () => token,
+    ApiError, authFailed() {}, sessionGeneration: () => 0, authHeaders: () => ({ Authorization: token }), currentAccessToken: () => token,
     refreshOnce: async () => { refreshes++; token = 'after' }, toApiError: e => e,
     parseResponse: (status, data) => { const body = JSON.parse(data); if (status === 401) throw new ApiError(body); return body.data },
   }
@@ -43,4 +43,57 @@ test('取消上传会调用 UploadTask.abort，取消不触发刷新重试', asy
   handle.abort()
   await assert.rejects(handle.promise, /已取消上传/)
   assert.equal(h.tasks[0].aborted, true); assert.equal(h.refreshes(), 0)
+})
+
+function sessionHarness() {
+  let gen = 0, refreshes = 0, failures = 0
+  const uploads = [], downloads = [], waiting = []
+  const http = loadTs('lib/http.ts', { './config': { API_BASE: '/api', CLIENT_HEADERS: {} } })
+  http.setAuthHooks({
+    getAccessToken: () => `token-${gen}`, sessionGeneration: () => gen,
+    refresh: () => { refreshes++; return new Promise((resolve, reject) => waiting.push({ resolve, reject })) },
+    onAuthFailure: () => { failures++ },
+  })
+  const files = loadTs('lib/files.ts', { './config': { API_BASE: '/api' }, './http': http }, {
+    uni: {
+      uploadFile: options => { uploads.push(options); return { abort() {}, onProgressUpdate() {} } },
+      downloadFile: options => { downloads.push(options) },
+    },
+  })
+  return { files, uploads, downloads, waiting, switchAccount: () => { gen++ }, refreshes: () => refreshes, failures: () => failures }
+}
+const tick = () => new Promise(resolve => setImmediate(resolve))
+
+test('旧账号上传或下载的 401 不以新账号刷新、重传或触发退出', async () => {
+  for (const upload of [true, false]) {
+    const h = sessionHarness()
+    const pending = upload ? h.files.uploadFile(local, 'CUSTOM_FIELD').promise : h.files.downloadAttachment(1)
+    const rejected = assert.rejects(pending, e => e.code === 40102)
+    h.switchAccount()
+    if (upload) h.uploads[0].success({ statusCode: 401, data: JSON.stringify({ code: 40102 }) })
+    else h.downloads[0].success({ statusCode: 401 })
+    await rejected
+    assert.equal(h.uploads.length + h.downloads.length, 1)
+    assert.equal(h.refreshes(), 0)
+    assert.equal(h.failures(), 0)
+  }
+})
+
+test('上传或下载等待刷新期间切换账号，旧刷新成功或失败均不重传、不退出新账号', async () => {
+  for (const upload of [true, false]) {
+    for (const success of [true, false]) {
+      const h = sessionHarness()
+      const pending = upload ? h.files.uploadFile(local, 'CUSTOM_FIELD').promise : h.files.downloadAttachment(1)
+      const rejected = assert.rejects(pending, e => e.code === 40102)
+      if (upload) h.uploads[0].success({ statusCode: 401, data: JSON.stringify({ code: 40102 }) })
+      else h.downloads[0].success({ statusCode: 401 })
+      await tick()
+      h.switchAccount()
+      if (success) h.waiting[0].resolve()
+      else h.waiting[0].reject(new Error('旧刷新失败'))
+      await rejected
+      assert.equal(h.uploads.length + h.downloads.length, 1)
+      assert.equal(h.failures(), 0)
+    }
+  }
 })

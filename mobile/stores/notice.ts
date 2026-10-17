@@ -21,6 +21,9 @@ const state = reactive({
   lastId: 0,
 })
 
+// 初始化与重置时递增，丢弃上次会话尚未完成的初始化响应。
+let generation = 0
+
 // 增量接口除 id > since 外还会返回最近 60 秒内创建的通知（ID 不按提交顺序），按 ID 去重
 const seen = new Set<number>()
 const SEEN_LIMIT = 500
@@ -64,10 +67,12 @@ export const notice = {
 
   /** 登录后初始化：记下已有的通知（不再弹出提示）与未读数 */
   async init(): Promise<void> {
+    const gen = ++generation
     const [page, cnt] = await Promise.all([
       api.notifications.list({ page: 1, size: 20 }),
       api.notifications.unreadCount(),
     ])
+    if (gen !== generation) return
     for (const r of page.records) markSeen(r.id)
     notice.setUnread(cnt.count)
   },
@@ -93,6 +98,7 @@ export const notice = {
   },
 
   reset(): void {
+    generation++
     state.unread = 0
     state.lastId = 0
     seen.clear()

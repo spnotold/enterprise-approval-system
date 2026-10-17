@@ -27,6 +27,18 @@ const state = reactive({
   me: null as Me | null,
 })
 
+// 会话代次：开始登录、登录成功与清空时递增，丢弃旧会话的晚到响应。
+let generation = 0
+export const sessionGeneration = () => generation
+
+export class SessionChangedError extends Error {
+  constructor() {
+    super('登录状态已变化，请重新登录')
+    Object.setPrototypeOf(this, SessionChangedError.prototype)
+    this.name = 'SessionChangedError'
+  }
+}
+
 let meLoading: Promise<Me | null> | null = null
 const logoutListeners: (() => void)[] = []
 const loginListeners: (() => void)[] = []
@@ -44,6 +56,7 @@ function setUserId(id: number | null): void {
 }
 
 function clearLocal(): void {
+  generation++
   setTokens(null, null)
   setUserId(null)
   state.me = null
@@ -94,11 +107,17 @@ export const auth = {
   },
 
   async login(account: string, password: string): Promise<Me> {
+    const gen = ++generation
     const r = await api.auth.login({ account, password }, CLIENT_HEADERS)
+    if (gen !== generation) throw new SessionChangedError()
+    const loginGen = ++generation
+    state.me = null
+    meLoading = null
     setTokens(r.accessToken, r.refreshToken ?? null)
     setUserId(r.userId ?? null)
     redirecting = false
     const me = await api.me.get()
+    if (loginGen !== generation) throw new SessionChangedError()
     state.me = me
     setUserId(me.id)
     loginListeners.forEach((fn) => fn())
@@ -110,10 +129,12 @@ export const auth = {
    * 刷新令牌每次使用后轮换，保存响应中的新令牌；返回的用户与本地记录不一致时视为失败。
    */
   async refresh(): Promise<void> {
+    const gen = generation
     const rt = state.refreshToken
     if (!rt) throw new Error('没有刷新令牌')
     const expected = state.me?.id ?? state.userId
     const r = await api.auth.refresh({ refreshToken: rt, expectedUserId: expected }, CLIENT_HEADERS)
+    if (gen !== generation) throw new SessionChangedError()
     if (expected !== null && r.userId !== undefined && r.userId !== null && r.userId !== expected) {
       throw new Error('刷新令牌与当前用户不一致')
     }
@@ -126,23 +147,29 @@ export const auth = {
     if (!state.accessToken) return Promise.resolve(null)
     if (state.me) return Promise.resolve(state.me)
     if (!meLoading) {
-      meLoading = api.me
+      const gen = generation
+      const loading = api.me
         .get()
         .then((me) => {
+          if (gen !== generation) return null
           state.me = me
           setUserId(me.id)
           return me
         })
         .catch(() => null)
         .finally(() => {
-          meLoading = null
+          if (meLoading === loading) meLoading = null
         })
+      meLoading = loading
     }
     return meLoading
   },
 
   async reloadMe(): Promise<void> {
-    state.me = await api.me.get()
+    const gen = generation
+    const me = await api.me.get()
+    if (gen !== generation) throw new SessionChangedError()
+    state.me = me
   },
 
   setMe(me: Me): void {
@@ -152,8 +179,10 @@ export const auth = {
   /** /auth/logout 以请求体中的刷新令牌认证，访问令牌过期也能调用；无论结果如何都清空本地状态 */
   async logout(): Promise<void> {
     const rt = state.refreshToken
-    if (rt) await api.auth.logout(rt).catch(() => {})
     clearLocal()
+    const gen = generation
+    if (rt) await api.auth.logout(rt).catch(() => {})
+    if (gen !== generation) return
     uni.reLaunch({ url: LOGIN_PAGE })
   },
 
@@ -173,6 +202,7 @@ export const auth = {
 
 setAuthHooks({
   getAccessToken: () => state.accessToken,
+  sessionGeneration,
   refresh: () => auth.refresh(),
   onAuthFailure: () => auth.clearAndRedirect(),
 })
