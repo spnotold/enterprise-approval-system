@@ -20,14 +20,15 @@ import java.util.Map;
 
 /**
  * 邮件投递：每 10 秒取一批待发记录（FOR UPDATE SKIP LOCKED，每批 50 条）发送；
- * 失败按 1、2、4、8、16 分钟退避重试，5 次后标记失败，站内通知不受影响。
+ * 失败按 1、2、4、8、16 分钟退避重试，5 次重试仍失败后标记失败，站内通知不受影响。
  * 邮件只包含标题、申请编号、类型、状态、操作人、时间和“在系统中查看”链接，不包含金额明细和票据。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class MailDispatcher {
-    static final int MAX_ATTEMPTS = 5;
+    /** 含首次发送：首发失败后按 1、2、4、8、16 分钟各重试一次，共 5 次重试，第 6 次仍失败才标记 FAILED */
+    static final int MAX_ATTEMPTS = 6;
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final Map<String, String> STATUS_NAMES = Map.of("DRAFT", "草稿", "IN_APPROVAL", "审批中",
             "APPROVED", "已通过", "REJECTED", "已驳回", "WITHDRAWN", "已撤回");
