@@ -1,11 +1,12 @@
 <script setup lang="ts">
-// 表单画布：字段列表（静态预览），选中、上移 / 下移、删除
+// 表单画布：字段列表（静态预览），选中、上移 / 下移、拖拽重排、删除
+import { ref } from 'vue'
 import { ArrowDown, ArrowUp, Calendar, Delete, Upload, WarningFilled } from '@element-plus/icons-vue'
-import type { FormField } from '@/lib/types'
+import type { FieldType, FormField } from '@/lib/types'
 import { FIELD_TYPE_LABEL } from '@/lib/labels'
 import { uidOf } from './utils'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     fields: FormField[]
     selected: number | null
@@ -23,11 +24,82 @@ const emit = defineEmits<{
   select: [index: number]
   move: [index: number, delta: -1 | 1]
   remove: [index: number]
+  reorder: [from: number, to: number]
+  dropType: [type: FieldType, targetIndex?: number]
 }>()
+
+const dropTargetIndex = ref<number | null>(null)
+const isCanvasOver = ref(false)
+
+function onCardDragStart(e: DragEvent, index: number) {
+  if (props.readonly || !e.dataTransfer) return
+  e.dataTransfer.setData('application/x-eas-field-index', String(index))
+  e.dataTransfer.setData('text/plain', String(index))
+  e.dataTransfer.effectAllowed = 'move'
+}
+
+function onCardDragOver(e: DragEvent, index: number) {
+  if (props.readonly) return
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = e.dataTransfer.types.includes('application/x-eas-field-type') ? 'copy' : 'move'
+  }
+  dropTargetIndex.value = index
+}
+
+function onCardDragLeave(_e: DragEvent, index: number) {
+  if (dropTargetIndex.value === index) {
+    dropTargetIndex.value = null
+  }
+}
+
+function onCardDrop(e: DragEvent, index: number) {
+  if (props.readonly) return
+  e.preventDefault()
+  dropTargetIndex.value = null
+  isCanvasOver.value = false
+  const fieldType = e.dataTransfer?.getData('application/x-eas-field-type') as FieldType | undefined
+  const fieldIndex = e.dataTransfer?.getData('application/x-eas-field-index')
+  if (fieldType) {
+    emit('dropType', fieldType, index)
+  } else if (fieldIndex !== undefined && fieldIndex !== '') {
+    const from = Number(fieldIndex)
+    if (!Number.isNaN(from) && from !== index) {
+      emit('reorder', from, index)
+    }
+  }
+}
+
+function onCanvasDragOver(e: DragEvent) {
+  if (props.readonly) return
+  e.preventDefault()
+  isCanvasOver.value = true
+}
+
+function onCanvasDragLeave(_e: DragEvent) {
+  isCanvasOver.value = false
+}
+
+function onCanvasDrop(e: DragEvent) {
+  if (props.readonly) return
+  e.preventDefault()
+  isCanvasOver.value = false
+  dropTargetIndex.value = null
+  const fieldType = e.dataTransfer?.getData('application/x-eas-field-type') as FieldType | undefined
+  if (fieldType) {
+    emit('dropType', fieldType)
+  }
+}
 </script>
 
 <template>
-  <div class="form-canvas">
+  <div
+    class="form-canvas"
+    :class="{ 'is-drop-active': isCanvasOver && fields.length === 0 }"
+    @dragover="onCanvasDragOver"
+    @dragleave="onCanvasDragLeave"
+    @drop="onCanvasDrop"
+  >
     <div class="panel-title">
       表单画布
       <span class="muted small">共 {{ fields.length }} 个字段</span>
@@ -37,19 +109,29 @@ const emit = defineEmits<{
       v-for="(f, i) in fields"
       :key="uidOf(f)"
       class="field-card"
-      :class="{ 'is-selected': selected === i, 'has-issue': (issueCounts[i] ?? 0) > 0 }"
+      :class="{
+        'is-selected': selected === i,
+        'has-issue': (issueCounts[i] ?? 0) > 0,
+        'is-drop-target': dropTargetIndex === i,
+      }"
       :data-path="`fields[${i}]`"
+      :draggable="!readonly"
       role="button"
       tabindex="0"
       @click="emit('select', i)"
       @keydown.enter.self="emit('select', i)"
+      @keydown.space.self.prevent="emit('select', i)"
+      @dragstart="onCardDragStart($event, i)"
+      @dragover.stop="onCardDragOver($event, i)"
+      @dragleave.stop="onCardDragLeave($event, i)"
+      @drop.stop="onCardDrop($event, i)"
     >
       <div class="card-head">
         <el-tag size="small" effect="plain">{{ FIELD_TYPE_LABEL[f.type] ?? f.type }}</el-tag>
         <span class="label">
           <span v-if="f.required" class="req">*</span>{{ f.label || '（未命名）' }}
         </span>
-        <span class="mono muted small key">{{ f.key || '—' }}</span>
+        <span class="muted small key">{{ f.key || '—' }}</span>
         <el-tag v-if="f.type === 'AMOUNT' && f.statAmount" size="small" type="success">统计金额</el-tag>
         <el-badge v-if="(issueCounts[i] ?? 0) > 0" :value="issueCounts[i]" type="danger" class="issue-badge" />
         <el-tooltip v-else-if="(warnCounts[i] ?? 0) > 0" :content="`有 ${warnCounts[i]} 处待完善`" placement="top">
@@ -117,6 +199,14 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  transition:
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease);
+}
+.form-canvas.is-drop-active {
+  border: 2px dashed var(--eas-primary);
+  background: var(--eas-primary-tint);
+  border-radius: var(--eas-radius-panel);
 }
 .panel-title {
   font-weight: 600;
@@ -127,20 +217,26 @@ const emit = defineEmits<{
 }
 .field-card {
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--eas-radius-panel);
   padding: 10px 12px;
   background: var(--el-bg-color);
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease);
   outline: none;
 }
 .field-card:hover {
-  border-color: var(--el-color-primary-light-5);
+  border-color: var(--eas-primary);
+  background: var(--eas-primary-tint);
+}
+.field-card.is-drop-target {
+  border: 2px dashed var(--eas-primary) !important;
+  background: var(--eas-primary-tint) !important;
 }
 .field-card:focus-visible {
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .field-card.is-selected {
   border-color: var(--el-color-primary);

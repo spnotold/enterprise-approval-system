@@ -2,7 +2,7 @@
 // 申请列表：我的申请（mine）/ 本部门申请（dept）/ 授权范围申请（granted）
 // 筛选：类型、状态、提交日期、关键词；筛选与分页同步到 URL
 import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, type RouteLocationRaw } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
@@ -11,16 +11,20 @@ import { APP_STATUS_LABEL, APP_TYPE_LABEL, toOptions } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { dateRangeModel, useListQuery } from '@/composables/useListQuery'
 import { useAction } from '@/composables/useAction'
+import { useBreakpoint } from '@/composables/useBreakpoint'
+import { useRowNavigation } from '@/composables/useRowNavigation'
 import { useAuthStore } from '@/stores/auth'
 import { useDictStore } from '@/stores/dict'
 import StatusTag from '@/components/StatusTag.vue'
 import MoneyText from '@/components/MoneyText.vue'
 import ListEmpty from '@/components/ListEmpty.vue'
+import '@/styles/listRows.css'
 
 const props = defineProps<{ scope: ListScope }>()
 const router = useRouter()
 const auth = useAuthStore()
 const dict = useDictStore()
+const { isMobile } = useBreakpoint()
 
 const TITLES: Record<ListScope, { title: string; sub: string }> = {
   mine: { title: '我的申请', sub: '包含草稿；草稿可编辑、删除，审批中可撤回，已驳回 / 已撤回可复制修改后重新提交。' },
@@ -99,13 +103,20 @@ async function copy(row: ApplicationSummary) {
   }
 }
 
-function open(row: ApplicationSummary) {
-  void router.push(row.status === 'DRAFT' && props.scope === 'mine' ? `/applications/${row.id}/edit` : `/applications/${row.id}`)
+function target(row: ApplicationSummary): RouteLocationRaw {
+  return row.status === 'DRAFT' && props.scope === 'mine' ? `/applications/${row.id}/edit` : `/applications/${row.id}`
+}
+const { wrap: navWrap, onRowClick } = useRowNavigation<ApplicationSummary>({ target, rows: q.records, enabled: () => !q.loading.value })
+
+const EMPTY_TEXT: Record<ListScope, string> = {
+  mine: '暂无申请。点击右上角「发起申请」开始填写。',
+  dept: '本部门暂无已提交的申请。新申请提交后会出现在这里。',
+  granted: '授权范围内暂无已提交的申请。新申请提交后会出现在这里。',
 }
 </script>
 
 <template>
-  <div class="page">
+  <div ref="navWrap" class="page">
     <div class="page-header">
       <div>
         <h2 class="page-title">{{ TITLES[scope].title }}</h2>
@@ -115,25 +126,27 @@ function open(row: ApplicationSummary) {
     </div>
 
     <el-card shadow="never">
-      <div class="toolbar">
+      <div class="toolbar list-filters">
         <el-input
           v-model="q.filters.keyword"
           placeholder="编号或标题"
+          aria-label="编号或标题"
           clearable
           :prefix-icon="Search"
           @keyup.enter="q.search()"
           @clear="q.search()"
         />
-        <el-select v-model="q.filters.type" placeholder="类型" clearable @change="q.search()">
+        <el-select v-model="q.filters.type" placeholder="类型" aria-label="申请类型" clearable @change="q.search()">
           <el-option v-for="o in typeOptions" :key="o.value" :value="o.value" :label="o.label" />
         </el-select>
-        <el-select v-model="q.filters.status" placeholder="状态" clearable @change="q.search()">
+        <el-select v-model="q.filters.status" placeholder="状态" aria-label="申请状态" clearable @change="q.search()">
           <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
         </el-select>
         <el-select
           v-if="scope === 'dept' && headDepts.length > 1"
           v-model="q.filters.deptId"
           placeholder="全部负责部门"
+          aria-label="负责部门"
           clearable
           @change="q.search()"
         >
@@ -149,13 +162,19 @@ function open(row: ApplicationSummary) {
           @change="q.search()"
         />
         <el-button type="primary" @click="q.search()">查询</el-button>
-        <el-button v-if="q.hasFilters.value" @click="q.reset()">清空筛选</el-button>
+        <el-button v-if="q.hasFilters.value" link type="primary" @click="q.reset()">重置</el-button>
       </div>
 
-      <el-table v-loading="q.loading.value" :data="q.records.value" style="margin-top: 12px" @row-dblclick="open">
-        <el-table-column label="编号" width="190" fixed="left">
+      <el-table
+        v-loading="q.loading.value"
+        :data="q.records.value"
+        row-key="id"
+        class="app-table eas-row-table eas-row-clickable"
+        @row-click="onRowClick"
+      >
+        <el-table-column label="编号" width="190" :fixed="isMobile ? false : 'left'">
           <template #default="{ row }">
-            <el-link type="primary" @click="open(row as ApplicationSummary)">{{ row.appNo }}</el-link>
+            <router-link :to="target(row as ApplicationSummary)" class="app-link eas-tnum">{{ row.appNo }}</router-link>
           </template>
         </el-table-column>
         <el-table-column label="标题" min-width="180" show-overflow-tooltip>
@@ -180,44 +199,52 @@ function open(row: ApplicationSummary) {
         <el-table-column v-if="scope === 'mine'" label="更新时间" width="150">
           <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" :width="scope === 'mine' ? 190 : 80" fixed="right">
+        <el-table-column label="操作" :width="scope === 'mine' ? 190 : 80" :fixed="isMobile ? false : 'right'">
           <template #default="{ row }">
-            <el-button link type="primary" @click="router.push(`/applications/${row.id}`)">查看</el-button>
-            <template v-if="scope === 'mine'">
-              <template v-if="row.status === 'DRAFT'">
-                <el-button link type="primary" @click="router.push(`/applications/${row.id}/edit`)">编辑</el-button>
-                <el-button link type="danger" :disabled="act.loading.value" @click="remove(row as ApplicationSummary)">删除</el-button>
+            <div class="row-actions">
+              <el-button link type="primary" @click.stop="router.push(`/applications/${row.id}`)">查看</el-button>
+              <template v-if="scope === 'mine'">
+                <template v-if="row.status === 'DRAFT'">
+                  <el-button link type="primary" @click.stop="router.push(`/applications/${row.id}/edit`)">编辑</el-button>
+                  <el-button link type="danger" :disabled="act.loading.value" @click.stop="remove(row as ApplicationSummary)">删除</el-button>
+                </template>
+                <el-button
+                  v-else-if="row.status === 'IN_APPROVAL'"
+                  link
+                  type="warning"
+                  :disabled="act.loading.value"
+                  @click.stop="withdraw(row as ApplicationSummary)"
+                >
+                  撤回
+                </el-button>
+                <el-button
+                  v-else-if="row.status === 'REJECTED' || row.status === 'WITHDRAWN'"
+                  link
+                  type="primary"
+                  :disabled="act.loading.value"
+                  @click.stop="copy(row as ApplicationSummary)"
+                >
+                  复制并修改
+                </el-button>
               </template>
-              <el-button
-                v-else-if="row.status === 'IN_APPROVAL'"
-                link
-                type="warning"
-                :disabled="act.loading.value"
-                @click="withdraw(row as ApplicationSummary)"
-              >
-                撤回
-              </el-button>
-              <el-button
-                v-else-if="row.status === 'REJECTED' || row.status === 'WITHDRAWN'"
-                link
-                type="primary"
-                :disabled="act.loading.value"
-                @click="copy(row as ApplicationSummary)"
-              >
-                复制并修改
-              </el-button>
-            </template>
+            </div>
           </template>
         </el-table-column>
         <template #empty>
-          <ListEmpty v-if="q.loaded.value" :filtered="q.hasFilters.value" @reset="q.reset()" />
+          <ListEmpty
+            v-if="q.loaded.value"
+            :filtered="q.hasFilters.value"
+            :description="q.hasFilters.value ? undefined : EMPTY_TEXT[scope]"
+            @reset="q.reset()"
+          />
           <span v-else />
         </template>
       </el-table>
       <el-pagination
         class="pager"
         background
-        layout="total, sizes, prev, pager, next"
+        :layout="isMobile ? 'prev, pager, next' : 'total, sizes, prev, pager, next'"
+        :pager-count="isMobile ? 5 : 7"
         :total="q.total.value"
         :current-page="q.page.value"
         :page-size="q.size.value"
@@ -228,3 +255,13 @@ function open(row: ApplicationSummary) {
     </el-card>
   </div>
 </template>
+
+<style scoped>
+.app-table {
+  margin-top: 12px;
+}
+.app-link {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+</style>

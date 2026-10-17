@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 系统配置：键值列表，修改需填写原因（写入审计日志，可在审计日志中对比前后值）
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -99,7 +100,7 @@ function openAudit(c: SysConfigItem) {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">系统配置</h2>
@@ -112,7 +113,7 @@ function openAudit(c: SysConfigItem) {
     </div>
 
     <el-card shadow="never">
-      <el-table v-loading="loading" :data="filtered" row-key="key" style="width: 100%">
+      <el-table v-loading="loading" :data="filtered" row-key="key" class="eas-row-table" style="width: 100%">
         <el-table-column label="键" min-width="200">
           <template #default="{ row }"><span class="mono">{{ row.key }}</span></template>
         </el-table-column>

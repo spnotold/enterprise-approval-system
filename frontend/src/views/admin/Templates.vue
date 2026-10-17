@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/components/admin/admin.css'
 // 流程模板管理：列表、新建自定义模板、编辑基本信息、启用 / 停用、进入设计
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -217,7 +218,7 @@ function deptText(row: TemplateAdminItem) {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page admin-page">
     <div class="page-header">
       <h2 class="page-title">流程模板</h2>
       <div class="toolbar">
@@ -238,7 +239,7 @@ function deptText(row: TemplateAdminItem) {
     </div>
 
     <el-skeleton v-if="loading && !loaded" :rows="6" animated />
-    <el-table v-else v-loading="loading" :data="filtered" row-key="id" border>
+    <el-table v-else v-loading="loading" :data="filtered" row-key="id" class="eas-row-table">
       <el-table-column label="模板名称" min-width="200">
         <template #default="{ row }">
           <router-link :to="designPath(row.id)" class="name-link">{{ row.name }}</router-link>
@@ -246,7 +247,7 @@ function deptText(row: TemplateAdminItem) {
         </template>
       </el-table-column>
       <el-table-column label="编码" min-width="150">
-        <template #default="{ row }"><span class="mono small">{{ row.code }}</span></template>
+        <template #default="{ row }"><span class="small">{{ row.code }}</span></template>
       </el-table-column>
       <el-table-column label="类别" width="80" align="center">
         <template #default="{ row }">
@@ -280,7 +281,7 @@ function deptText(row: TemplateAdminItem) {
         </template>
       </el-table-column>
       <el-table-column label="使用次数" width="90" align="right">
-        <template #default="{ row }">{{ row.usageCount }}</template>
+        <template #default="{ row }"><span class="eas-tnum">{{ row.usageCount }}</span></template>
       </el-table-column>
       <el-table-column label="更新时间" width="150">
         <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>

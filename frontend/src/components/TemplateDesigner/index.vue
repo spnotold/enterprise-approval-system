@@ -105,12 +105,15 @@ function ensureFields(): FormField[] {
   return formSchema.value.fields
 }
 
-async function addField(type: FieldType) {
+async function addField(type: FieldType, targetIndex?: number) {
   if (formLocked.value) return
   const list = ensureFields()
-  list.push(newField(type, list))
-  selectedField.value = list.length - 1
-  await scrollToPath(`fields[${list.length - 1}]`)
+  const field = newField(type, list)
+  const insertAt =
+    typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex <= list.length ? targetIndex : list.length
+  list.splice(insertAt, 0, field)
+  selectedField.value = insertAt
+  await scrollToPath(`fields[${insertAt}]`)
 }
 
 function moveItem<T>(list: T[], i: number, delta: -1 | 1, sel: { value: number | null }) {
@@ -122,12 +125,31 @@ function moveItem<T>(list: T[], i: number, delta: -1 | 1, sel: { value: number |
   else if (sel.value === j) sel.value = i
 }
 
+function reorderItem<T>(list: T[], from: number, to: number, sel: { value: number | null }) {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return
+  const [it] = list.splice(from, 1)
+  list.splice(to, 0, it)
+  if (sel.value === from) sel.value = to
+  else if (sel.value != null) {
+    if (from < sel.value && to >= sel.value) sel.value--
+    else if (from > sel.value && to <= sel.value) sel.value++
+  }
+}
+
 function moveField(i: number, delta: -1 | 1) {
   moveItem(ensureFields(), i, delta, selectedField)
 }
 
+function reorderField(from: number, to: number) {
+  reorderItem(ensureFields(), from, to, selectedField)
+}
+
 function moveNode(i: number, delta: -1 | 1) {
   moveItem(ensureNodes(), i, delta, selectedNode)
+}
+
+function reorderNode(from: number, to: number) {
+  reorderItem(ensureNodes(), from, to, selectedNode)
 }
 
 function afterRemove(i: number, sel: { value: number | null }, len: number) {
@@ -201,10 +223,7 @@ function ensureNodes(): NodeDef[] {
 async function addNode() {
   if (props.readonly) return
   const list = ensureNodes()
-  if (list.length >= MAX_NODES) {
-    ElMessage.warning(`最多 ${MAX_NODES} 个节点`)
-    return
-  }
+  if (list.length >= MAX_NODES) return
   list.push(newNode(list))
   selectedNode.value = list.length - 1
   await scrollToPath(`nodes[${list.length - 1}]`)
@@ -229,74 +248,37 @@ function setNode(n: NodeDef) {
   if (selectedNode.value != null) ensureNodes()[selectedNode.value] = n
 }
 
-// ---------- 定位 ----------
+// ---------- 校验问题滚动定位 ----------
 
-/** fields[2].rules.min -> [fields[2].rules.min, fields[2].rules, fields[2]] */
-function pathPrefixes(p: string): string[] {
-  const out = [p]
-  let cur = p
-  for (;;) {
-    const next = cur.replace(/(\.[^.[\]]+|\[\d+\])$/, '')
-    if (next === cur || !next) break
-    out.push(next)
-    cur = next
-  }
-  return out
-}
-
-function findEl(p: string): HTMLElement | null {
-  const el = root.value?.querySelector(`[data-path="${CSS.escape(p)}"]`)
-  return el instanceof HTMLElement ? el : null
-}
-
-function flash(el: HTMLElement) {
-  el.classList.remove('tpl-locate-flash')
-  void el.offsetWidth // 重新触发动画
-  el.classList.add('tpl-locate-flash')
-  window.setTimeout(() => el.classList.remove('tpl-locate-flash'), 1600)
-}
-
-async function scrollToPath(path: string, highlight = false) {
+async function scrollToPath(path: string, flash = false) {
   await nextTick()
-  await nextTick()
-  const prefixes = pathPrefixes(path)
-  const card = findEl(prefixes[prefixes.length - 1])
-  const target = prefixes.slice(0, -1).map(findEl).find((el): el is HTMLElement => !!el) ?? null
-  if (card) {
-    card.scrollIntoView({ behavior: target ? 'auto' : 'smooth', block: 'nearest' })
-    if (highlight) flash(card)
-  }
-  if (target) {
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    if (highlight) flash(target)
-    const input = target.querySelector('input, textarea')
-    if (input instanceof HTMLElement && !input.hasAttribute('disabled')) input.focus({ preventScroll: true })
+  if (!root.value) return
+  // 转义属性选择器中的方括号与特殊符号
+  const selector = `[data-path="${path.replace(/["\\]/g, '\\$&')}"]`
+  const el = root.value.querySelector<HTMLElement>(selector)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  if (flash) {
+    el.classList.remove('tpl-locate-flash')
+    // 强制触发重排后重新挂载动画类
+    void el.offsetWidth
+    el.classList.add('tpl-locate-flash')
   }
 }
 
-/**
- * 按校验路径定位：fields[i]… 选中字段并打开属性面板；nodes[i]… 选中节点。
- * 返回 false 表示路径不对应设计器中的元素（如模板基本信息、整体问题）。
- */
+/** 外部调用：根据校验问题的 path 定位到对应字段 / 节点并滚动进可视区 */
 async function locate(path: string | null | undefined): Promise<boolean> {
-  const t = parseTarget(path)
-  const norm = normalizeIssuePath(path) ?? ''
+  const norm = normalizeIssuePath(path)
+  if (!norm) return false
+  const t = parseTarget(norm)
   switch (t.kind) {
     case 'field':
       tab.value = 'form'
-      if (t.index >= fields.value.length) {
-        ElMessage.warning('该字段已不存在，请重新校验')
-        return true
-      }
       selectedField.value = t.index
       await scrollToPath(norm, true)
       return true
     case 'node':
       tab.value = 'flow'
-      if (t.index >= nodes.value.length) {
-        ElMessage.warning('该节点已不存在，请重新校验')
-        return true
-      }
       selectedNode.value = t.index
       await scrollToPath(norm, true)
       return true
@@ -342,7 +324,7 @@ defineExpose({ locate })
           :closable="false"
           class="mb"
           :title="it.message"
-          :description="it.path ? `${it.code} · ${it.path}` : it.code"
+          :description="it.path ? `${it.code}（${it.path}）` : it.code"
         />
 
         <div class="cols" :class="{ 'no-lib': formLocked }">
@@ -361,6 +343,8 @@ defineExpose({ locate })
               "
               @select="(i) => (selectedField = i)"
               @move="moveField"
+              @reorder="reorderField"
+              @drop-type="addField"
               @remove="removeField"
             />
           </section>
@@ -398,7 +382,7 @@ defineExpose({ locate })
           :closable="false"
           class="mb"
           :title="it.message"
-          :description="it.path ? `${it.code} · ${it.path}` : it.code"
+          :description="it.path ? `${it.code}（${it.path}）` : it.code"
         />
 
         <div class="cols flow">
@@ -412,6 +396,7 @@ defineExpose({ locate })
               :warn-counts="nodeWarnCounts"
               @select="(i) => (selectedNode = i)"
               @move="moveNode"
+              @reorder="reorderNode"
               @remove="removeNode"
               @add="addNode"
             />
@@ -437,7 +422,16 @@ defineExpose({ locate })
 
 <style scoped>
 .tpl-designer {
+  font-variant-numeric: tabular-nums;
   min-width: 0;
+}
+.tpl-designer :deep(.mono) {
+  font-family: var(--eas-font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.tpl-designer :deep(.el-button.is-link) {
+  min-width: 32px;
+  min-height: 32px;
 }
 .tab-label {
   display: inline-flex;
@@ -467,7 +461,7 @@ defineExpose({ locate })
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--eas-radius-panel);
   background: var(--el-bg-color);
 }
 .col-main {
@@ -505,7 +499,7 @@ defineExpose({ locate })
   }
 }
 .tpl-locate-flash {
-  border-radius: 6px;
-  animation: tpl-locate-flash 1.6s ease-out;
+  border-radius: var(--eas-radius-panel);
+  animation: tpl-locate-flash 1.6s var(--eas-ease);
 }
 </style>
