@@ -83,12 +83,12 @@ const timeout = computed<number | undefined>({
       <div class="fallback">
         <el-switch :model-value="!!node.fallbackRule" active-text="设置替代规则" @update:model-value="toggleFallback" />
         <div class="muted small hint">
-          解析结果是申请人本人时使用替代规则；未设置时由企业负责人审批，仍是本人则使用系统兜底审批人。
+          解析结果是申请人本人时使用替代规则（只取一人）；未设置时由企业负责人审批，仍是本人则使用系统兜底审批人。
         </div>
         <ApproverRuleEditor
           v-if="node.fallbackRule"
           v-model:rule="node.fallbackRule"
-          :mode="mode"
+          mode="SINGLE"
           :readonly="readonly"
         />
       </div>
