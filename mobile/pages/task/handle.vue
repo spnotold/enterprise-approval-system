@@ -20,6 +20,9 @@ const done = ref(false)
 const sheet = ref<{ visible: boolean; mode: 'approve' | 'reject' }>({ visible: false, mode: 'approve' })
 /** 本次同意 / 驳回的节点：刷新后该签批格落章（只播一次） */
 const stampSeq = ref<number | null>(null)
+let navigationTimer: ReturnType<typeof setTimeout> | undefined
+let unloaded = false
+let page: ReturnType<typeof getCurrentPages>[number] | undefined
 
 /** 当前用户在本单上仍有待处理的待办 */
 const myTask = computed(() => {
@@ -50,6 +53,7 @@ function open(mode: 'approve' | 'reject'): void {
 }
 
 function onDone(r: ActionResult, mode: 'approve' | 'reject'): void {
+  if (unloaded) return
   sheet.value.visible = false
   done.value = true
   stampSeq.value = detail.value?.currentNodeSeq ?? null
@@ -57,7 +61,15 @@ function onDone(r: ActionResult, mode: 'approve' | 'reject'): void {
   const next = r.currentNode?.assigneeName ? `，已流转至${r.currentNode.name}（${r.currentNode.assigneeName}）` : ''
   toast(mode === 'approve' ? `已同意${r.status === 'APPROVED' ? '，审批完成' : next}` : '已驳回', 'none')
   void load(true)
-  setTimeout(() => uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/task/list' }) }), 1500)
+  const pages = getCurrentPages()
+  if (!page || pages[pages.length - 1] !== page) return
+  clearTimeout(navigationTimer)
+  navigationTimer = setTimeout(() => {
+    const current = getCurrentPages()
+    if (current[current.length - 1] === page) {
+      uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/task/list' }) })
+    }
+  }, 1500)
 }
 
 const onNotice = (items: IncomingNotice[]) => {
@@ -65,6 +77,8 @@ const onNotice = (items: IncomingNotice[]) => {
 }
 
 onLoad(async (q) => {
+  const pages = getCurrentPages()
+  page = pages[pages.length - 1]
   appId.value = Number(q?.id)
   taskId.value = q?.taskId ? Number(q.taskId) : null
   if (!(await requireLogin())) return
@@ -76,7 +90,12 @@ onLoad(async (q) => {
   await load()
 })
 
-onUnload(() => uni.$off(NOTICE_EVENT, onNotice))
+onUnload(() => {
+  // 手动离开后不再执行审批成功的延时返回
+  unloaded = true
+  clearTimeout(navigationTimer)
+  uni.$off(NOTICE_EVENT, onNotice)
+})
 onPullDownRefresh(() => void load(true))
 </script>
 

@@ -36,8 +36,10 @@ const STATUS_OPTIONS: { value: AppStatus | null; label: string }[] = [
   { value: null, label: '全部状态' },
   ...APP_STATUS_ORDER.map((s) => ({ value: s, label: APP_STATUS_LABEL[s] })),
 ]
+// 草稿只属于本人，部门 / 授权范围只列已提交的申请
+const statusOptions = computed(() => STATUS_OPTIONS.filter((o) => scope.value === 'mine' || o.value !== 'DRAFT'))
 const typeIndex = computed(() => Math.max(0, TYPE_OPTIONS.findIndex((o) => o.value === type.value)))
-const statusIndex = computed(() => Math.max(0, STATUS_OPTIONS.findIndex((o) => o.value === status.value)))
+const statusIndex = computed(() => Math.max(0, statusOptions.value.findIndex((o) => o.value === status.value)))
 
 const scopes = computed(() => {
   const r: { value: ListScope; label: string }[] = [{ value: 'mine', label: '我的' }]
@@ -56,7 +58,7 @@ const list = usePagedList<ApplicationSummary>(async (page, size) => {
   const currentScope = scope.value
   const r = await api.applications.list({
     scope: currentScope, page, size, type: type.value,
-    status: currentScope === 'mine' ? status.value : status.value === 'DRAFT' ? null : status.value,
+    status: status.value,
     keyword: keyword.value.trim() || null,
   })
   // 过期响应不动缓存；第一页（刷新 / 切换筛选）到达时作废已缓存的操作权限
@@ -119,11 +121,11 @@ async function runAction(a: ApplicationSummary, key: string): Promise<void> {
 }
 
 function selectStatus(i: number): void {
-  if (status.value === STATUS_OPTIONS[i].value) return
-  status.value = STATUS_OPTIONS[i].value
+  if (status.value === statusOptions.value[i].value) return
+  status.value = statusOptions.value[i].value
   reload()
 }
-const swipe = useSwipeTabs(statusIndex, () => STATUS_OPTIONS.length, selectStatus)
+const swipe = useSwipeTabs(statusIndex, () => statusOptions.value.length, selectStatus)
 onPageScroll(closeSwipeCells)
 onHide(closeSwipeCells)
 
@@ -136,6 +138,7 @@ function reload(): void {
 function setScope(s: ListScope): void {
   if (scope.value === s) return
   scope.value = s
+  if (s !== 'mine' && status.value === 'DRAFT') status.value = null
   uni.setNavigationBarTitle({ title: s === 'mine' ? '我的申请' : s === 'dept' ? '本部门申请' : '授权范围申请' })
   reload()
 }
@@ -225,8 +228,8 @@ onReachBottom(() => void list.loadMore())
     </view>
 
     <view class="seg status-tabs">
-      <view class="seg-indicator" :style="{ width: `calc((100% - 12rpx) / ${STATUS_OPTIONS.length})`, transform: `translateX(${statusIndex * 100}%)` }" />
-      <view v-for="(s, i) in STATUS_OPTIONS" :key="s.value ?? 'all'" class="seg-item" :class="{ active: statusIndex === i }" hover-class="is-pressed" hover-stay-time="60" @tap="selectStatus(i)">{{ s.value ? s.label : '全部' }}</view>
+      <view class="seg-indicator" :style="{ width: `calc((100% - 12rpx) / ${statusOptions.length})`, transform: `translateX(${statusIndex * 100}%)` }" />
+      <view v-for="(s, i) in statusOptions" :key="s.value ?? 'all'" class="seg-item" :class="{ active: statusIndex === i }" hover-class="is-pressed" hover-stay-time="60" @tap="selectStatus(i)">{{ s.value ? s.label : '全部' }}</view>
     </view>
 
     <view v-if="updates > 0" class="update-tip" hover-class="is-pressed" hover-stay-time="60" @tap="reload">有 {{ updates }} 条更新，点击刷新</view>

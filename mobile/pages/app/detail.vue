@@ -25,6 +25,9 @@ const notFound = ref(false)
 const sheet = ref<{ visible: boolean; mode: 'approve' | 'reject' }>({ visible: false, mode: 'approve' })
 /** 本次同意 / 驳回的节点：刷新后该签批格落章（只播一次） */
 const stampSeq = ref<number | null>(null)
+let navigationTimer: ReturnType<typeof setTimeout> | undefined
+let unloaded = false
+let loadRequest = 0
 
 /** 操作在底部栏中的顺序：次要在左，主要在右 */
 const ORDER: AppAction[] = ['DELETE', 'EDIT', 'COPY', 'URGE', 'WITHDRAW', 'SUBMIT', 'REJECT', 'APPROVE']
@@ -43,11 +46,16 @@ const visibleActions = computed(() => (actions.value.length > 3 ? actions.value.
 const moreActions = computed(() => (actions.value.length > 3 ? actions.value.slice(0, -2) : []))
 
 async function load(silent = false): Promise<void> {
+  const request = ++loadRequest
   if (!silent) loading()
   try {
-    detail.value = await api.applications.detail(id.value)
+    const d = await api.applications.detail(id.value)
+    // 保存、提交可能连续触发刷新，只接收最新请求的结果
+    if (request !== loadRequest || unloaded) return
+    detail.value = d
     notFound.value = false
   } catch (err) {
+    if (request !== loadRequest || unloaded) return
     const e = toApiError(err)
     if (e.code === 40401 || e.httpStatus === 404) notFound.value = true
     else showError(e)
@@ -121,6 +129,8 @@ async function doUrge(d: ApplicationDetail): Promise<void> {
 }
 
 async function doDelete(d: ApplicationDetail): Promise<void> {
+  const pages = getCurrentPages()
+  const page = pages[pages.length - 1]
   const ok = await confirm({ title: '删除草稿', content: '删除后不可恢复，确定删除？', confirmText: '删除', danger: true })
   if (!ok) return
   loading('删除中')
@@ -129,7 +139,14 @@ async function doDelete(d: ApplicationDetail): Promise<void> {
     hideLoading()
     toast('已删除', 'success')
     changed()
-    setTimeout(() => uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/index' }) }), 800)
+    if (unloaded) return
+    clearTimeout(navigationTimer)
+    navigationTimer = setTimeout(() => {
+      const current = getCurrentPages()
+      if (current[current.length - 1] === page) {
+        uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/index' }) })
+      }
+    }, 800)
   } catch (e) {
     hideLoading()
     handleError(e)
@@ -227,6 +244,9 @@ function onChanged(changedId: number): void {
 }
 
 onUnload(() => {
+  // 取消删除成功后的延时返回
+  unloaded = true
+  clearTimeout(navigationTimer)
   uni.$off(NOTICE_EVENT, onNotice)
   uni.$off('eas:app-changed', onChanged)
 })
