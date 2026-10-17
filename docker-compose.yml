@@ -87,6 +87,7 @@ services:
       SMTP_SSL: ${SMTP_SSL:-false}                       # SMTP_SSL=true 时启用隐式 SSL（465）
       COOKIE_SECURE: ${COOKIE_SECURE:-true}     # 通过 http 访问时设为 false，否则浏览器不保存刷新令牌 Cookie
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      EAS_CORS_ALLOWED_ORIGINS: ${EAS_CORS_ALLOWED_ORIGINS:-}  # 同源部署留空，仅跨域访问时填写
       EAS_ADMIN_PASSWORD: ${EAS_ADMIN_PASSWORD:-}  # 非 demo 部署：首次启动创建 admin 账号
       TZ: Asia/Shanghai
     healthcheck:
