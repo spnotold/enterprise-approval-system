@@ -242,12 +242,15 @@ onBeforeUnmount(() => {
 }
 
 /* 左栏变窄时竖排：容器是 AuthShell 里的 .auth-aside（跨组件匹配祖先容器） */
-/* 360–599：单列、最大宽度 320px；「已通过」章仍在最后一格下方右侧，
-   给说明文字让出空间，避免压住它 */
+/* 360–599：单列、最大宽度 320px；舞台也收在 320px 内，让「已通过」章正好落在最后一格下方右侧；
+   并给说明文字让出空间，避免压住它 */
 @container auth-aside (360px <= inline-size < 600px) {
+  .slip,
+  .slip-stage {
+    max-width: 320px;
+  }
   .slip {
     grid-template-columns: minmax(0, 1fr);
-    max-width: 320px;
   }
   .slip-note {
     margin-top: 48px;
@@ -257,6 +260,9 @@ onBeforeUnmount(() => {
 @container auth-aside (inline-size < 360px) {
   .slip {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .slip,
+  .slip-stage {
     max-width: 320px;
   }
   .cell {
