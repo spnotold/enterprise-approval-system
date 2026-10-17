@@ -3,7 +3,8 @@
 import { computed, ref } from 'vue'
 import { onLoad, onPageScroll, onHide, onPullDownRefresh, onReachBottom, onShow, onUnload } from '@dcloudio/uni-app'
 import { api } from '@/lib/api'
-import type { AppAction, AppStatus, AppType, ApplicationDetail, ApplicationSummary, ListScope } from '@/lib/types'
+import type { AppAction, AppStatus, AppType, ApplicationSummary, ListScope } from '@/lib/types'
+import { useActionPermissions } from '@/composables/useActionPermissions'
 import SwipeCell, { type SwipeAction } from '@/components/SwipeCell.vue'
 import { closeSwipeCells, useSwipeTabs } from '@/composables/useSwipeTabs'
 import { newIdemKey } from '@/lib/idem'
@@ -46,8 +47,9 @@ const scopes = computed(() => {
 })
 const hasFilter = computed(() => !!type.value || !!status.value || !!keyword.value.trim())
 
-const actionDetails = ref<Record<number, ApplicationDetail>>({})
 const busy = ref(false)
+// 左滑操作权限（详情的 allowedActions）不随列表加载，用户开始左滑某条时才按需请求
+const permissions = useActionPermissions((id) => api.applications.detail(id))
 let listRequest = 0
 const list = usePagedList<ApplicationSummary>(async (page, size) => {
   const request = ++listRequest
@@ -57,32 +59,35 @@ const list = usePagedList<ApplicationSummary>(async (page, size) => {
     status: currentScope === 'mine' ? status.value : status.value === 'DRAFT' ? null : status.value,
     keyword: keyword.value.trim() || null,
   })
-  if (request === listRequest && currentScope === 'mine') {
-    for (const a of r.records) delete actionDetails.value[a.id]
-    const details = await Promise.all(r.records.filter((a) => a.status === 'DRAFT' || a.status === 'IN_APPROVAL').map(async (a) => {
-      try { return await api.applications.detail(a.id) } catch { return null }
-    }))
-    if (request === listRequest) {
-      for (const d of details) if (d) actionDetails.value[d.id] = d
-    }
-  }
+  // 过期响应不动缓存；第一页（刷新 / 切换筛选）到达时作废已缓存的操作权限
+  if (request === listRequest && page === 1) permissions.reset()
   return r
 })
 
+const LOADING_ACTION: SwipeAction = { key: 'LOADING', text: '加载中', type: 'muted', disabled: true }
+const RETRY_ACTION: SwipeAction = { key: 'RETRY', text: '重试', type: 'muted', keepOpen: true }
+
 function actionsFor(a: ApplicationSummary): SwipeAction[] {
   if (scope.value !== 'mine' || busy.value) return []
-  const d = actionDetails.value[a.id]
-  if (!d || d.version !== a.version || d.status !== a.status) return []
+  if (a.status !== 'DRAFT' && a.status !== 'IN_APPROVAL') return []
+  const p = permissions.get(a)
+  if (!p || p.state === 'loading') return [LOADING_ACTION]
+  if (p.state === 'error') return [RETRY_ACTION]
   const actions: SwipeAction[] = []
   if (a.status === 'IN_APPROVAL') {
-    if (d.allowedActions.includes('URGE')) actions.push({ key: 'URGE', text: '催办', type: 'primary' })
-    if (d.allowedActions.includes('WITHDRAW')) actions.push({ key: 'WITHDRAW', text: '撤回', type: 'danger' })
+    if (p.actions.includes('URGE')) actions.push({ key: 'URGE', text: '催办', type: 'primary' })
+    if (p.actions.includes('WITHDRAW')) actions.push({ key: 'WITHDRAW', text: '撤回', type: 'danger' })
   }
-  if (a.status === 'DRAFT' && d.allowedActions.includes('DELETE')) actions.push({ key: 'DELETE', text: '删除', type: 'danger' })
+  if (a.status === 'DRAFT' && p.actions.includes('DELETE')) actions.push({ key: 'DELETE', text: '删除', type: 'danger' })
   return actions
 }
 
+function loadActions(a: ApplicationSummary): void {
+  if (scope.value === 'mine' && (a.status === 'DRAFT' || a.status === 'IN_APPROVAL')) void permissions.load(a)
+}
+
 async function runAction(a: ApplicationSummary, key: string): Promise<void> {
+  if (key === 'RETRY') { loadActions(a); return }
   if (busy.value || !actionsFor(a).some((x) => x.key === key)) return
   busy.value = true
   try {
@@ -227,7 +232,7 @@ onReachBottom(() => void list.loadMore())
     <view v-if="updates > 0" class="update-tip" hover-class="is-pressed" hover-stay-time="60" @tap="reload">有 {{ updates }} 条更新，点击刷新</view>
 
     <view class="list-area" @touchstart="swipe.onTouchStart" @touchmove="swipe.onTouchMove" @touchend="swipe.onTouchEnd" @touchcancel="swipe.onTouchCancel">
-      <SwipeCell v-for="a in list.items.value" :key="a.id" :cell-id="`app-${a.id}`" :actions="actionsFor(a)" @content-tap="!swipe.suppressTap.value && goDetail(a.id)" @action="runAction(a, $event)">
+      <SwipeCell v-for="a in list.items.value" :key="a.id" :cell-id="`app-${a.id}`" :actions="actionsFor(a)" @will-open="loadActions(a)" @content-tap="!swipe.suppressTap.value && goDetail(a.id)" @action="runAction(a, $event)">
         <AppCard :app="a" :show-applicant="scope !== 'mine'" flush />
       </SwipeCell>
 
