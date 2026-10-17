@@ -19,6 +19,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: number | null] }>()
 
 const text = ref(props.modelValue === null ? '' : centsToYuan(props.modelValue))
 const invalid = ref(false)
+const focused = ref(false)
 
 /** 输入中的 “12.” 按 12 元处理 */
 function parse(v: string): number | null {
@@ -57,7 +58,12 @@ function onInput(e: Event | UniInputEvent): void {
   emit('update:modelValue', cents)
 }
 
+function onFocus(): void {
+  focused.value = true
+}
+
 function onBlur(): void {
+  focused.value = false
   if (text.value.endsWith('.')) text.value = text.value.slice(0, -1)
   if (props.modelValue !== null) text.value = centsToYuan(props.modelValue)
 }
@@ -65,22 +71,23 @@ function onBlur(): void {
 
 <template>
   <view>
-  <view class="money" :class="{ 'is-error': error || invalid }">
-    <text class="money-unit">¥</text>
-    <input
-      class="money-input"
-      type="digit"
-      :value="text"
-      :placeholder="placeholder"
-      placeholder-class="placeholder"
-      :disabled="disabled"
-      maxlength="13"
-      @input="onInput"
-      @blur="onBlur"
-    />
-    <text class="money-suffix">元</text>
-  </view>
-  <view v-if="invalid" class="field-err">金额格式不正确，最多两位小数</view>
+    <view class="money" :class="{ 'is-error': error || invalid, 'is-focus': focused }">
+      <text class="money-unit">¥</text>
+      <input
+        class="money-input"
+        type="digit"
+        :value="text"
+        :placeholder="placeholder"
+        placeholder-class="placeholder"
+        :disabled="disabled"
+        maxlength="13"
+        @input="onInput"
+        @focus="onFocus"
+        @blur="onBlur"
+      />
+      <text class="money-suffix">元</text>
+    </view>
+    <view v-if="invalid" class="field-err">金额格式不正确，最多两位小数</view>
   </view>
 </template>
 
@@ -90,20 +97,33 @@ function onBlur(): void {
   align-items: center;
   height: 88rpx;
   padding: 0 20rpx;
-  background: #f7f8fa;
-  border-radius: 10rpx;
+  background: var(--eas-paper);
+  border: 2rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+}
+
+.money.is-error {
+  background: var(--eas-danger-tint) !important;
+  border-color: var(--eas-danger);
+}
+
+.money.is-focus {
+  border-color: var(--eas-primary);
 }
 
 .money-unit,
 .money-suffix {
-  color: #646a73;
-  font-size: 28rpx;
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-sm);
 }
 
 .money-input {
   flex: 1;
-  height: 88rpx;
+  height: 84rpx;
   padding: 0 12rpx;
-  font-size: 32rpx;
+  font-size: var(--eas-fs-md);
+  color: var(--eas-ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 </style>

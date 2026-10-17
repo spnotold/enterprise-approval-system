@@ -18,11 +18,12 @@ const builtin = computed(() => templates.value.filter((t) => t.category === 'BUI
 const custom = computed(() => templates.value.filter((t) => t.category === 'CUSTOM'))
 const adminOnly = computed(() => auth.isAdminOnly)
 
-const ICONS: Record<string, { icon: string; color: string; bg: string }> = {
-  PURCHASE: { icon: 'cart', color: '#2a78d6', bg: '#e8f1fc' },
-  TRAVEL: { icon: 'paperplane', color: '#1baf7a', bg: '#e6f7f0' },
-  EXPENSE: { icon: 'wallet', color: '#eb6834', bg: '#fdeee7' },
-  CUSTOM: { icon: 'compose', color: '#6250d6', bg: '#efedfb' },
+// 入口图标统一用黛蓝线性图标，不按类型换色
+const ICONS: Record<string, string> = {
+  PURCHASE: 'cart',
+  TRAVEL: 'paperplane',
+  EXPENSE: 'wallet',
+  CUSTOM: 'compose',
 }
 
 async function load(): Promise<void> {
@@ -54,36 +55,56 @@ function start(t: TemplateOption): void {
   <view class="page">
     <AdminNotice v-if="adminOnly" />
     <template v-else>
-      <view class="card row between" @tap="goAppList({ status: 'DRAFT' })">
-        <view class="row">
-          <uni-icons type="folder-add" size="22" color="#2f6bff" />
-          <text class="draft-text">我的草稿</text>
+      <view class="panel">
+        <view class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="goAppList({ status: 'DRAFT' })">
+          <view class="tpl-icon">
+            <uni-icons type="folder-add" size="22" color="var(--eas-primary)" />
+          </view>
+          <view class="flex1">
+            <view class="bold">我的草稿</view>
+            <view class="tpl-desc ellipsis">继续填写尚未提交的申请</view>
+          </view>
         </view>
-        <uni-icons type="right" size="16" color="#c0c4cc" />
       </view>
 
       <view v-if="builtin.length" class="section-title">常用申请</view>
-      <view v-for="t in builtin" :key="t.id" class="card tpl" @tap="start(t)">
-        <view class="tpl-icon" :style="{ background: ICONS[t.bizType].bg }">
-          <uni-icons :type="ICONS[t.bizType].icon" size="26" :color="ICONS[t.bizType].color" />
+      <view v-if="builtin.length" class="panel">
+        <view
+          v-for="t in builtin"
+          :key="t.id"
+          class="row-item"
+          hover-class="is-pressed"
+          :hover-stay-time="60"
+          @tap="start(t)"
+        >
+          <view class="tpl-icon">
+            <uni-icons :type="ICONS[t.bizType]" size="26" color="var(--eas-primary)" />
+          </view>
+          <view class="flex1">
+            <view class="bold">{{ t.name }}</view>
+            <view class="tpl-desc ellipsis">{{ t.description || '' }}</view>
+          </view>
         </view>
-        <view class="flex1">
-          <view class="bold">{{ t.name }}</view>
-          <view class="muted ellipsis">{{ t.description || '' }}</view>
-        </view>
-        <uni-icons type="right" size="16" color="#c0c4cc" />
       </view>
 
       <view v-if="custom.length" class="section-title">其他申请</view>
-      <view v-for="t in custom" :key="t.id" class="card tpl" @tap="start(t)">
-        <view class="tpl-icon" :style="{ background: ICONS.CUSTOM.bg }">
-          <uni-icons :type="ICONS.CUSTOM.icon" size="26" :color="ICONS.CUSTOM.color" />
+      <view v-if="custom.length" class="panel">
+        <view
+          v-for="t in custom"
+          :key="t.id"
+          class="row-item"
+          hover-class="is-pressed"
+          :hover-stay-time="60"
+          @tap="start(t)"
+        >
+          <view class="tpl-icon">
+            <uni-icons :type="ICONS.CUSTOM" size="26" color="var(--eas-primary)" />
+          </view>
+          <view class="flex1">
+            <view class="bold">{{ t.name }}</view>
+            <view class="tpl-desc ellipsis">{{ t.description || '' }}</view>
+          </view>
         </view>
-        <view class="flex1">
-          <view class="bold">{{ t.name }}</view>
-          <view class="muted ellipsis">{{ t.description || '' }}</view>
-        </view>
-        <uni-icons type="right" size="16" color="#c0c4cc" />
       </view>
 
       <EmptyState v-if="loaded && !templates.length" text="暂无可发起的申请类型" />
@@ -92,24 +113,49 @@ function start(t: TemplateOption): void {
 </template>
 
 <style scoped>
-.draft-text {
-  margin-left: 12rpx;
+.panel {
+  background: var(--eas-surface);
+  border-radius: var(--eas-radius-panel);
+  margin-bottom: 16rpx;
+  overflow: hidden;
 }
 
-.tpl {
+.section-title {
+  margin: 24rpx 8rpx 16rpx;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  color: var(--eas-ink-2);
+}
+
+.row-item {
   display: flex;
   align-items: center;
-  min-height: 88rpx;
+  min-height: 128rpx;
+  padding: 20rpx 28rpx;
+  border-bottom: 1rpx solid var(--eas-rule);
+  font-size: var(--eas-fs-md);
+  color: var(--eas-ink);
+}
+
+.row-item:last-child {
+  border-bottom: none;
 }
 
 .tpl-icon {
   width: 88rpx;
   height: 88rpx;
-  border-radius: 20rpx;
+  border-radius: var(--eas-radius-control);
+  background: var(--eas-primary-tint);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 20rpx;
+  margin-right: 24rpx;
   flex-shrink: 0;
+}
+
+.tpl-desc {
+  margin-top: 4rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
 }
 </style>

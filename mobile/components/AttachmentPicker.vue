@@ -58,6 +58,8 @@ interface Pending {
 const list = ref<AttachmentMeta[]>([...props.modelValue])
 const nos = ref<string[]>([...props.invoiceNos])
 const pending = reactive<Pending[]>([])
+// 票据号输入框聚焦的行（-1 为无）；小程序没有 :focus，用事件切换样式类
+const focusedNo = ref(-1)
 let seq = 0
 
 watch(
@@ -164,7 +166,12 @@ function dropPending(p: Pending): void {
 }
 
 async function remove(index: number): Promise<void> {
-  const ok = await confirm({ content: `删除附件“${list.value[index].originalName}”？`, danger: true, confirmText: '删除' })
+  const ok = await confirm({
+    title: '删除附件',
+    content: `删除附件“${list.value[index].originalName}”？`,
+    danger: true,
+    confirmText: '删除',
+  })
   if (!ok) return
   list.value.splice(index, 1)
   nos.value.splice(index, 1)
@@ -175,6 +182,12 @@ function onInvoiceNo(index: number, e: Event | UniInputEvent): void {
   while (nos.value.length < list.value.length) nos.value.push('')
   nos.value[index] = inputValue(e)
   emit('update:invoiceNos', [...nos.value])
+}
+
+/** 长按已上传的附件：与“删除”按钮走同一个入口（先确认再删除）；只读时不响应 */
+function onLongPress(index: number): void {
+  if (props.readonly) return
+  void remove(index)
 }
 
 function preview(meta: AttachmentMeta): void {
@@ -192,25 +205,38 @@ onUnmounted(() => {
 
     <view v-for="(m, i) in list" :key="m.id" class="att-item">
       <view class="att-row">
-        <view class="att-main" @tap="preview(m)">
+        <view
+          class="att-main"
+          hover-class="is-pressed"
+          :hover-stay-time="60"
+          @tap="preview(m)"
+          @longpress="onLongPress(i)"
+        >
           <view class="att-icon" :class="isPdf(m.contentType) ? 'pdf' : 'img'">
             {{ isPdf(m.contentType) ? 'PDF' : '图' }}
           </view>
           <view class="flex1">
             <view class="att-name ellipsis">{{ m.originalName }}</view>
-            <view class="muted">{{ formatSize(m.sizeBytes) }} · 点击预览</view>
+            <view class="att-meta">
+              <text>{{ formatSize(m.sizeBytes) }}</text>
+              <text class="att-hint">点击预览</text>
+              <text v-if="!readonly" class="att-hint">长按删除</text>
+            </view>
           </view>
         </view>
-        <view v-if="!readonly" class="link-btn danger" @tap="remove(i)">删除</view>
+        <view v-if="!readonly" class="link-btn danger" hover-class="is-pressed" :hover-stay-time="60" @tap="remove(i)">删除</view>
       </view>
       <input
         v-if="withInvoiceNo && !readonly"
         class="input att-no"
+        :class="{ 'is-focus': focusedNo === i }"
         :value="nos[i] ?? ''"
         placeholder="票据号（选填，用于查重）"
         placeholder-class="placeholder"
         maxlength="64"
         @input="onInvoiceNo(i, $event)"
+        @focus="focusedNo = i"
+        @blur="focusedNo = -1"
       />
       <view v-else-if="withInvoiceNo && nos[i]" class="muted">票据号：{{ nos[i] }}</view>
       <view v-if="warnings[m.id]" class="att-warn">{{ warnings[m.id] }}</view>
@@ -230,22 +256,24 @@ onUnmounted(() => {
             <view v-else class="field-err">{{ p.message || '上传失败' }}</view>
           </view>
         </view>
-        <view v-if="p.status === 'failed'" class="link-btn" @tap="retry(p)">重试</view>
-        <view class="link-btn danger" @tap="dropPending(p)">{{ p.status === 'uploading' ? '取消' : '移除' }}</view>
+        <view v-if="p.status === 'failed'" class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="retry(p)">重试</view>
+        <view class="link-btn danger" hover-class="is-pressed" :hover-stay-time="60" @tap="dropPending(p)">{{
+          p.status === 'uploading' ? '取消' : '移除'
+        }}</view>
       </view>
     </view>
 
     <view v-if="!readonly && remaining > 0" class="att-actions">
-      <view v-if="allowImage" class="att-btn" @tap="pickImage('camera')">
-        <uni-icons type="camera" size="20" color="#2f6bff" />
+      <view v-if="allowImage" class="att-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="pickImage('camera')">
+        <uni-icons type="camera" size="20" color="var(--eas-primary)" />
         <text>拍照</text>
       </view>
-      <view v-if="allowImage" class="att-btn" @tap="pickImage('album')">
-        <uni-icons type="image" size="20" color="#2f6bff" />
+      <view v-if="allowImage" class="att-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="pickImage('album')">
+        <uni-icons type="image" size="20" color="var(--eas-primary)" />
         <text>相册</text>
       </view>
-      <view v-if="allowPdf" class="att-btn" @tap="pickDocument">
-        <uni-icons type="paperclip" size="20" color="#2f6bff" />
+      <view v-if="allowPdf" class="att-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="pickDocument">
+        <uni-icons type="paperclip" size="20" color="var(--eas-primary)" />
         <text>{{ docLabel }}</text>
       </view>
     </view>
@@ -257,7 +285,7 @@ onUnmounted(() => {
 <style scoped>
 .att-item {
   padding: 8rpx 0;
-  border-bottom: 1rpx solid #f0f1f2;
+  border-bottom: 1rpx solid var(--eas-rule);
 }
 
 .att-row {
@@ -271,62 +299,81 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   min-height: 88rpx;
+  border-radius: var(--eas-radius-control);
 }
 
 .att-icon {
-  width: 64rpx;
+  width: 72rpx;
   height: 64rpx;
-  border-radius: 10rpx;
+  border-radius: var(--eas-radius-control);
   margin-right: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20rpx;
+  font-size: var(--eas-fs-xs);
   font-weight: 600;
   flex-shrink: 0;
 }
 
 .att-icon.pdf {
-  background: #fdecec;
-  color: #e5484d;
+  background: var(--eas-danger-tint);
+  color: var(--eas-danger);
 }
 
 .att-icon.img {
-  background: #e8efff;
-  color: #2f6bff;
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
 }
 
 .att-name {
-  font-size: 28rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink);
+}
+
+.att-meta {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.att-hint {
+  margin-left: 20rpx;
 }
 
 .att-no {
   margin: 8rpx 0;
-  height: 72rpx;
-  font-size: 26rpx;
+  height: 88rpx;
+  font-size: var(--eas-fs-sm);
+  background: var(--eas-paper);
+  border: 2rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+}
+
+.att-no.is-focus {
+  border-color: var(--eas-primary);
 }
 
 .att-warn {
-  font-size: 24rpx;
-  color: #ad6800;
-  background: #fff7e6;
-  border-radius: 8rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-warning-text);
+  background: var(--eas-warning-tint);
+  border-radius: var(--eas-radius-control);
   padding: 8rpx 12rpx;
   margin: 4rpx 0 8rpx;
 }
 
 .att-progress {
   height: 8rpx;
-  background: #eef0f3;
-  border-radius: 4rpx;
+  background: var(--eas-paper-deep);
+  border-radius: var(--eas-radius-tag);
   margin-top: 12rpx;
   overflow: hidden;
 }
 
 .att-progress-bar {
   height: 100%;
-  background: #2f6bff;
-  transition: width 0.2s;
+  background: var(--eas-primary);
+  transition: width var(--eas-dur) var(--eas-ease);
 }
 
 .att-actions {
@@ -341,10 +388,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx dashed #b6c7f5;
-  border-radius: 12rpx;
-  color: #2f6bff;
-  font-size: 26rpx;
+  border: 2rpx dashed var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+  color: var(--eas-primary);
+  font-size: var(--eas-fs-sm);
 }
 
 .att-btn:last-child {
