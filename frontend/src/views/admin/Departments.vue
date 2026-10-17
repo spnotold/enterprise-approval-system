@@ -215,7 +215,7 @@ async function submitHead() {
         <el-table-column label="用户数" width="90" align="right">
           <template #default="{ row }"><span class="eas-tnum">{{ row.userCount }}</span></template>
         </el-table-column>
-        <el-table-column prop="sortOrder" label="排序" width="80" align="right" />
+        <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
         <el-table-column label="创建时间" width="160">
           <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
         </el-table-column>
