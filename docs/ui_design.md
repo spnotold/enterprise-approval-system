@@ -153,6 +153,15 @@
 - **键盘**：手柄可 Tab 聚焦（排在表单之后；`role="separator"`、`aria-orientation="vertical"`、`aria-valuenow/min/max` 为表单栏宽度），左右方向键每次 16px，Home / End 到最小 / 最大，聚焦时显示和悬停相同的样式。
 - **窄屏**：视口 880px 以下只显示表单栏，不出现手柄。
 
+### Web：登录页演示账号
+
+仅后端以 demo 模式运行时显示（现有 `demoMode` 判断不变）：
+
+- **直接平铺，不折叠**：表单下方一条 1px `rule` 分隔线，下面一行小标题「演示账号」（600）+「密码 Demo@2026」（`ink-2`，12px），再下面是**两列**账号按钮网格（gap 8px），10 个账号 5 行放完，不设内部滚动。
+- **账号按钮**：白底、1px `rule` 边框、`--eas-radius-control` 圆角、内边距 8px 10px；第一行姓名（14px，600）+ 用户名（12px，`ink-3`，tabular-nums），第二行短身份（12px，`ink-2`），完整说明放在 `title` 里。悬停边框变 `primary`、底色 `paper`；按下下沉 1px；`:focus-visible` 2px `primary` 外框。点击填入用户名和密码并把焦点移到「登录」按钮。
+- **短身份**：admin「系统管理员」、ceo_zhao「企业负责人」、rd_head_li「研发部负责人」、rd_emp_wang「研发部员工」、rd_emp_chen「研发部员工」、mkt_head_sun「市场部负责人」、mkt_emp_zhou「市场部员工」、fin_head_qian「财务部负责人」、fin_auditor_wu「财务审批主办」、pending_he「待审核账号」。
+- **窗口矮时**：右侧表单栏内容超出视口时整页可以上下滚动（表单栏垂直居中改为「放得下才居中」，放不下从顶部开始），不能截掉内容。表单栏窄于 400px 时账号网格改为单列。
+
 ### 移动端：手指
 
 1. **按压反馈**：所有可点的卡片、列表行、宫格用 `hover-class`（底色变 `paper-deep`、缩放 0.985，`hover-stay-time` 60ms）。
