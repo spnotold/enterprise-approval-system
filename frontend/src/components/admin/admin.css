@@ -28,8 +28,30 @@
 }
 .admin-page .el-button.is-link,
 .admin-page .el-link {
+  min-width: 32px;
   min-height: 32px;
 }
+.admin-page .admin-status.el-tag {
+  gap: 6px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--eas-ink);
+  line-height: 1.4;
+}
+.admin-page .admin-status.el-tag::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--eas-muted);
+}
+.admin-page .admin-status.el-tag--primary::before { background: var(--eas-primary); }
+.admin-page .admin-status.el-tag--success::before { background: var(--eas-success); }
+.admin-page .admin-status.el-tag--warning::before { background: var(--eas-warning); }
+.admin-page .admin-status.el-tag--danger::before { background: var(--eas-danger); }
 .admin-page .mono {
   font-family: var(--eas-font-sans);
   font-variant-numeric: tabular-nums;

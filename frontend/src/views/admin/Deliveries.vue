@@ -57,7 +57,7 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
         <el-table-column label="状态" width="130">
           <template #default="{ row }">
-            <el-tag :type="STATUS_TAG[row.status as DeliveryStatus] ?? 'info'" disable-transitions>
+            <el-tag class="admin-status" :type="STATUS_TAG[row.status as DeliveryStatus] ?? 'info'" disable-transitions>
               {{ DELIVERY_STATUS_LABEL[row.status as DeliveryStatus] ?? row.status }}
             </el-tag>
           </template>

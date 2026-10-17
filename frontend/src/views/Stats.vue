@@ -269,7 +269,7 @@ const LEGEND: LegendComponentOption = {
   itemWidth: 12,
   itemHeight: 8,
   textStyle: { color: AXIS_TEXT },
-  inactiveColor: AXIS_TEXT,
+  inactiveColor: cssVar('--eas-ink-3'),
   inactiveBorderColor: GRID_LINE,
 }
 

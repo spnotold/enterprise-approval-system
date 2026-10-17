@@ -444,6 +444,10 @@ defineExpose({ locate })
   font-family: var(--eas-font-sans);
   font-variant-numeric: tabular-nums;
 }
+.tpl-designer :deep(.el-button.is-link) {
+  min-width: 32px;
+  min-height: 32px;
+}
 .tab-label {
   display: inline-flex;
   align-items: center;
@@ -511,6 +515,6 @@ defineExpose({ locate })
 }
 .tpl-locate-flash {
   border-radius: var(--eas-radius-panel);
-  animation: tpl-locate-flash var(--eas-dur) var(--eas-ease);
+  animation: tpl-locate-flash 1.6s var(--eas-ease);
 }
 </style>

@@ -181,7 +181,7 @@ async function remove(t: ExpenseTypeAdmin) {
         <el-table-column prop="name" label="名称" min-width="120" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.enabled ? 'success' : 'info'" disable-transitions>
+            <el-tag class="admin-status" :type="row.enabled ? 'success' : 'info'" disable-transitions>
               {{ row.enabled ? '启用' : '已停用' }}
             </el-tag>
           </template>

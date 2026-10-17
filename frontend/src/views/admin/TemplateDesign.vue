@@ -450,6 +450,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
               tabindex="0"
               @click="locateIssue(it)"
               @keydown.enter="locateIssue(it)"
+              @keydown.space.prevent="locateIssue(it)"
             >
               <el-tooltip :content="TPL_CODE_LABEL[it.code] ?? it.code" placement="top">
                 <el-tag type="danger" size="small" effect="plain" class="code-tag">{{ it.code }}</el-tag>
@@ -498,7 +499,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
           </el-table-column>
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
-              <el-tag size="small" :type="VERSION_STATUS[row.status as TemplateVersionBrief['status']]?.type ?? 'info'">
+              <el-tag class="admin-status" size="small" :type="VERSION_STATUS[row.status as TemplateVersionBrief['status']]?.type ?? 'info'">
                 {{ VERSION_STATUS[row.status as TemplateVersionBrief['status']]?.label ?? row.status }}
               </el-tag>
             </template>
@@ -598,6 +599,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 .issue-item:hover,
 .issue-item:focus-visible {
   background: var(--el-color-danger-light-9);
+}
+.issue-item:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .code-tag {
   flex: none;

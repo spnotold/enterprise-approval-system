@@ -386,7 +386,7 @@ async function submitGrant() {
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
         <el-table-column label="状态" width="130">
           <template #default="{ row }">
-            <el-tag :type="USER_STATUS_TAG[row.status as UserStatus]" disable-transitions>
+            <el-tag class="admin-status" :type="USER_STATUS_TAG[row.status as UserStatus]" disable-transitions>
               {{ USER_STATUS_LABEL[row.status as UserStatus] ?? row.status }}
             </el-tag>
             <el-tag v-if="isLocked(row as AdminUser)" type="danger" effect="plain" class="ml4" disable-transitions>已锁定</el-tag>

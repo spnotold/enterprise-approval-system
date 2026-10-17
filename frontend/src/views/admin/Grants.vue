@@ -307,7 +307,7 @@ async function submit() {
         </el-table-column>
         <el-table-column label="状态" min-width="150">
           <template #default="{ row }">
-            <el-tag :type="GRANT_STATE[grantState(row as GrantView)].type" disable-transitions>
+            <el-tag class="admin-status" :type="GRANT_STATE[grantState(row as GrantView)].type" disable-transitions>
               {{ GRANT_STATE[grantState(row as GrantView)].label }}
             </el-tag>
             <div v-if="row.revokedAt" class="muted small">

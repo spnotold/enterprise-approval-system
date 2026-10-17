@@ -70,9 +70,10 @@ function focusPieLegend(name: string | null) {
 }
 
 function onHighlight(event: unknown) {
-  // 图例的扇区 highlight 带 name；柱线图例则带 seriesName。
-  if (event && typeof event === 'object' && 'name' in event && typeof event.name === 'string'
-    && (!('seriesName' in event) || event.seriesName == null)) focusPieLegend(event.name)
+  // 饼图 seriesName 可能是空字符串；focusPieLegend 内部会按扇区名精确守卫。
+  if (event && typeof event === 'object' && 'name' in event && typeof event.name === 'string') {
+    focusPieLegend(event.name)
+  }
 }
 
 function onDownplay() {

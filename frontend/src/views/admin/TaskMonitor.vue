@@ -154,7 +154,7 @@ async function submit() {
             <el-tag
               :type="USER_STATUS_TAG[row.assignee.status as UserStatus]"
               size="small"
-              class="ml6"
+              class="admin-status ml6"
               disable-transitions
             >
               {{ USER_STATUS_LABEL[row.assignee.status as UserStatus] ?? row.assignee.status }}
