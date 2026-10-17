@@ -216,6 +216,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
 <template>
   <FormShell
     title="差旅申请"
+    description="行程、起止时间、预算与同行人员"
     :app-no="draft.appNo.value"
     :loading="draft.loading.value"
     :load-error="draft.loadError.value"
@@ -348,7 +349,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
 .travel-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
 }
 .duration {
   display: flex;

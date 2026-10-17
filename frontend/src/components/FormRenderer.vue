@@ -191,7 +191,7 @@ function maxLength(f: FormField): number {
             :max-size-mb="Math.min(f.rules?.maxSizeMb ?? 10, 10)"
             @update:model-value="onAttachments(f.key, $event)"
           />
-          <div v-if="f.help" class="muted small help">{{ f.help }}</div>
+          <div v-if="f.help" class="help">{{ f.help }}</div>
         </div>
       </template>
     </el-form-item>
@@ -203,8 +203,10 @@ function maxLength(f: FormField): number {
   width: 100%;
 }
 .help {
-  line-height: 1.5;
   margin-top: 2px;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.5;
+  color: var(--eas-ink-3);
 }
 @media (max-width: 768px) {
   .form-renderer :deep(.el-form-item) {

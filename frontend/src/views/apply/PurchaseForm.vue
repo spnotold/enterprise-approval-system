@@ -267,6 +267,7 @@ function beforeToday(d: Date) {
 <template>
   <FormShell
     title="采购申请"
+    description="采购明细、多家报价比较、拟选供应商"
     :app-no="draft.appNo.value"
     :loading="draft.loading.value"
     :load-error="draft.loadError.value"
@@ -384,7 +385,7 @@ function beforeToday(d: Date) {
 .purchase-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
 }
 .card-head {
   display: flex;

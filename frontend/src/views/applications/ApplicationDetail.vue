@@ -4,26 +4,29 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
-import type { AppAction, ApplicationDetail, FlowView } from '@/lib/types'
-import { APP_STATUS_LABEL, APP_TYPE_LABEL, LOG_ACTION_LABEL } from '@/lib/labels'
+import type { ActionResult, AppAction, ApplicationDetail, FlowView } from '@/lib/types'
+import { APP_STATUS_LABEL, LOG_ACTION_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { ApiError, errorText, isServerError, showError, toApiError } from '@/lib/errors'
 import { useAction } from '@/composables/useAction'
-import { useBreakpoint } from '@/composables/useBreakpoint'
 import { sessionGeneration, useAuthStore } from '@/stores/auth'
 import { useNoticeStore } from '@/stores/notice'
 import ApprovePanel from '@/components/ApprovePanel.vue'
 import FlowTimeline from '@/components/FlowTimeline.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import MoneyText from '@/components/MoneyText.vue'
 import ApplicationBusiness from '@/components/applications/ApplicationBusiness.vue'
 import LinkedApplicationCard from '@/components/applications/LinkedApplicationCard.vue'
+import SlipHeader from '@/components/slip/SlipHeader.vue'
+import SignatureBar from '@/components/slip/SignatureBar.vue'
+import SlipSection from '@/components/slip/SlipSection.vue'
+import SlipFields from '@/components/slip/SlipFields.vue'
+import SlipField from '@/components/slip/SlipField.vue'
+import { provideSlipHover } from '@/components/slip/hover'
 
 const props = defineProps<{ id: number }>()
 const router = useRouter()
 const auth = useAuthStore()
 const notice = useNoticeStore()
-const { isMobile } = useBreakpoint()
 const detail = ref<ApplicationDetail | null>(null)
 const loading = ref(false)
 const loadError = ref<ApiError | null>(null)
@@ -33,8 +36,6 @@ const urgeLimit = ref<{ id: number; seq: number | null; nextAt: string } | null>
 const act = useAction()
 const busy = computed(() => loading.value || loadError.value !== null || acting.value !== null)
 const full = computed(() => detail.value?.viewMode === 'FULL')
-const columns = computed(() => isMobile.value ? 1 : 2)
-const activeNodes = computed(() => detail.value?.flow?.nodes.filter((node) => node.status === 'ACTIVE') ?? [])
 const logs = computed(() => [...(detail.value?.logs ?? [])].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id - b.id))
 // 关联查看只呈现流程结果，即使意外收到正文意见也不显示。
 const visibleFlow = computed<FlowView | null>(() => {
@@ -63,6 +64,62 @@ const canHandle = computed(() => !!(
 ))
 const hasActions = computed(() => canHandle.value || (['EDIT', 'DELETE', 'COPY', 'WITHDRAW', 'URGE', 'SUBMIT'] as AppAction[]).some(ownerAction))
 
+// 签批栏与流转记录（及审批日志）的悬停联动
+const hover = provideSlipHover()
+const hoveredNodeName = computed(() => detail.value?.flow?.nodes.find((node) => String(node.seq) === hover.key.value)?.name ?? null)
+function logRowClass({ row }: { row: { nodeName: string | null } }): string {
+  return hoveredNodeName.value && row.nodeName === hoveredNodeName.value ? 'row-linked' : ''
+}
+function locateNode(key: string) {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  document.getElementById(`flow-node-${key}`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
+}
+
+// 本人刚同意 / 驳回的待办：刷新后它在签批栏里落章，动画只播这一次。
+// 落章标记按（申请 id、待办 id）快照登记：请求发出时为 submitting，成功后转为 ready（等待展示），
+// 章播完、动画被取消、章卸载或刷新后找不到这枚章时消费掉，不依赖审批面板是否还在。
+interface StampMark { appId: number; taskId: number; phase: 'submitting' | 'ready' }
+const stampMark = ref<StampMark | null>(null)
+const freshTaskId = computed(() => {
+  const mark = stampMark.value
+  return mark?.phase === 'ready' && mark.appId === detail.value?.id ? mark.taskId : null
+})
+function onStamped(taskId: number) {
+  if (stampMark.value?.taskId === taskId) stampMark.value = null
+}
+function hasStamp(result: ApplicationDetail, taskId: number): boolean {
+  return !!result.flow?.nodes.some((node) => node.tasks.some((task) => task.id === taskId && (task.status === 'APPROVED' || task.status === 'REJECTED')))
+}
+
+// 审批提交进行中：推送触发的自动刷新先记下，结束后再刷，避免提前换掉审批面板、丢掉提交结果
+const submitting = ref(false)
+let refreshQueued = false
+let submitSeq = 0
+async function onSubmit({ taskId, result }: { taskId: number; result: Promise<ActionResult | undefined> }) {
+  const seq = ++submitSeq
+  const appId = props.id
+  stampMark.value = { appId, taskId, phase: 'submitting' }
+  submitting.value = true
+  let ok = false
+  try {
+    ok = !!(await result)
+  } catch {
+    ok = false
+  }
+  if (seq !== submitSeq) return
+  submitting.value = false
+  const mark = stampMark.value
+  if (mark?.appId === appId && mark.taskId === taskId) stampMark.value = ok ? { ...mark, phase: 'ready' } : null
+  if (ok || refreshQueued) {
+    refreshQueued = false
+    void load()
+  }
+}
+function autoRefresh() {
+  if (submitting.value) refreshQueued = true
+  else void load()
+}
+
 let requestSeq = 0
 async function load() {
   const seq = ++requestSeq
@@ -74,6 +131,8 @@ async function load() {
     const result = await api.applications.detail(id)
     if (seq !== requestSeq || id !== props.id || generation !== sessionGeneration()) return
     detail.value = result
+    const mark = stampMark.value
+    if (mark?.phase === 'ready' && (mark.appId !== result.id || !hasStamp(result, mark.taskId))) stampMark.value = null
     now.value = Date.now()
     const limit = urgeLimit.value
     if (result.status !== 'IN_APPROVAL' || result.applicant.id !== auth.me?.id ||
@@ -87,7 +146,10 @@ async function load() {
     if (seq !== requestSeq || id !== props.id || generation !== sessionGeneration()) return
     loadError.value = toApiError(e)
     // 临时刷新失败保留输入；权限失效时立即移除旧内容。
-    if ([40101, 40102, 40301, 40401].includes(loadError.value.code)) detail.value = null
+    if ([40101, 40102, 40301, 40401].includes(loadError.value.code)) {
+      detail.value = null
+      stampMark.value = null
+    }
     if (isServerError(loadError.value)) showError(loadError.value)
   } finally {
     if (seq === requestSeq) loading.value = false
@@ -96,13 +158,17 @@ async function load() {
 watch([() => props.id, () => auth.me?.id], () => {
   detail.value = null
   urgeLimit.value = null
+  stampMark.value = null
+  submitting.value = false
+  refreshQueued = false
+  submitSeq += 1
   if (auth.me) void load()
   else { requestSeq += 1; loading.value = false; loadError.value = null }
 }, { immediate: true, flush: 'sync' })
 watch(() => notice.lastAppEvent, (event) => {
-  if (event?.applicationId === props.id) void load()
+  if (event?.applicationId === props.id) autoRefresh()
 })
-onBeforeUnmount(() => { requestSeq += 1 })
+onBeforeUnmount(() => { requestSeq += 1; submitSeq += 1 })
 
 function back() {
   if (window.history.state?.back) router.back()
@@ -197,61 +263,61 @@ async function urge() {
 
 <template>
   <div class="page application-detail">
-    <div class="page-header">
-      <div><h2 class="page-title">申请详情</h2><div v-if="detail" class="page-subtitle mono">{{ detail.appNo }}</div></div>
-      <div class="toolbar">
-        <el-button :disabled="acting !== null" @click="back">返回</el-button>
-        <el-button :icon="Refresh" :loading="loading" :disabled="loading || acting !== null" @click="load">刷新</el-button>
-      </div>
+    <div class="detail-toolbar">
+      <el-button :disabled="acting !== null" @click="back">返回</el-button>
+      <span class="flex-1" />
+      <el-button :icon="Refresh" :loading="loading" :disabled="loading || acting !== null || submitting" @click="load">刷新</el-button>
     </div>
     <el-skeleton v-if="loading && !detail" :rows="12" animated />
     <el-result v-else-if="loadError && !detail" icon="warning" :title="loadError.code === 40401 || loadError.httpStatus === 404 ? '无权查看或已不存在' : errorText(loadError)">
       <template #extra><el-button @click="back">返回</el-button><el-button type="primary" @click="load">重新加载</el-button></template>
     </el-result>
     <template v-else-if="detail">
-      <el-alert v-if="loadError" :title="errorText(loadError, '刷新失败，请重试后再操作')" type="warning" :closable="false" show-icon />
-      <el-alert v-if="!full" title="关联申请只读摘要" description="此查看方式仅展示关联摘要及流程结果，附件和审批意见不可见。" type="info" :closable="false" show-icon />
-      <el-alert v-else-if="!detail.canReadAttachments" title="可查看业务内容；当前无权预览或下载附件。" type="info" :closable="false" show-icon />
-      <el-card shadow="never">
-        <template #header><div class="detail-heading"><h3 class="section-title pre-wrap">{{ detail.title || detail.templateName }}</h3><StatusTag :status="detail.status" :show-node="false" /></div></template>
-        <el-descriptions :column="columns" border>
-          <el-descriptions-item label="申请编号"><span class="mono">{{ detail.appNo }}</span></el-descriptions-item>
-          <el-descriptions-item label="申请类型">{{ APP_TYPE_LABEL[detail.type] }}</el-descriptions-item>
-          <el-descriptions-item label="申请人">{{ detail.applicant.realName }}</el-descriptions-item>
-          <el-descriptions-item label="所属部门">{{ detail.deptName ?? '—' }}</el-descriptions-item>
-          <el-descriptions-item label="申请金额"><MoneyText :cents="detail.amountCents" strong /></el-descriptions-item>
-          <el-descriptions-item label="模板">{{ detail.templateName }}<template v-if="detail.templateVersionNo != null"> · v{{ detail.templateVersionNo }}</template></el-descriptions-item>
-          <el-descriptions-item label="提交时间">{{ fmtDateTime(detail.submittedAt) }}</el-descriptions-item>
-          <el-descriptions-item label="结束时间">{{ fmtDateTime(detail.finishedAt) }}</el-descriptions-item>
-          <template v-if="full">
-            <el-descriptions-item label="创建时间">{{ fmtDateTime(detail.createdAt) }}</el-descriptions-item>
-            <el-descriptions-item label="更新时间">{{ fmtDateTime(detail.updatedAt) }}</el-descriptions-item>
-          </template>
-          <el-descriptions-item v-if="activeNodes.length" label="当前审批" :span="columns">
-            <div v-for="node in activeNodes" :key="node.seq">{{ node.name }} · {{ (node.candidates.length ? node.candidates : node.assignee ? [node.assignee] : []).map(person => person.realName).join('、') || '—' }}</div>
-          </el-descriptions-item>
-        </el-descriptions>
-      </el-card>
-      <el-card v-if="!full" shadow="never">
-        <template #header><h3 class="section-title">关联摘要</h3></template>
-        <LinkedApplicationCard v-if="detail.linked" :application="detail.linked" :navigable="false" />
-        <el-empty v-else description="未返回关联摘要" :image-size="60" />
-      </el-card>
-      <ApplicationBusiness v-else :key="`${detail.id}-${detail.version}-${detail.canReadAttachments}`" :detail="detail" />
-      <el-card v-if="full && (detail.source || detail.followUps.length)" shadow="never">
-        <template #header><h3 class="section-title">来源与后续申请</h3></template>
-        <div v-if="detail.source" class="application-link">来源单：<router-link :to="`/applications/${detail.source.id}`">{{ detail.source.appNo }}</router-link><StatusTag :status="detail.source.status" size="small" /></div>
-        <div v-for="followUp in detail.followUps" :key="followUp.id" class="application-link">后续单：<router-link :to="`/applications/${followUp.id}`">{{ followUp.appNo }}</router-link><StatusTag :status="followUp.status" size="small" /></div>
-      </el-card>
-      <el-card shadow="never">
-        <template #header><h3 class="section-title">{{ full ? '审批流程与意见' : '审批流程结果' }}</h3></template>
+      <!-- surface：背景格纸据此把提示条、操作栏识别为内容，点击其中空白不荡开背景环 -->
+      <el-alert v-if="loadError" class="surface" :title="errorText(loadError, '刷新失败，请重试后再操作')" type="warning" :closable="false" show-icon />
+      <el-alert v-if="!full" class="surface" title="关联申请只读摘要" description="此查看方式仅展示关联摘要及流程结果，附件和审批意见不可见。" type="info" :closable="false" show-icon />
+      <el-alert v-else-if="!detail.canReadAttachments" class="surface" title="可查看业务内容；当前无权预览或下载附件。" type="info" :closable="false" show-icon />
+
+      <article class="slip" :aria-label="`${detail.appNo} 申请单`">
+        <SlipHeader :detail="detail" />
+        <SignatureBar
+          v-if="visibleFlow && visibleFlow.nodes.length"
+          :flow="visibleFlow"
+          :show-comments="full"
+          :fresh-task-id="freshTaskId"
+          @stamped="onStamped"
+          @locate="locateNode"
+        />
+        <SlipSection v-if="!full" title="关联摘要">
+          <LinkedApplicationCard v-if="detail.linked" :application="detail.linked" :navigable="false" />
+          <el-empty v-else description="未返回关联摘要" :image-size="60" />
+        </SlipSection>
+        <ApplicationBusiness v-else :key="`${detail.id}-${detail.version}-${detail.canReadAttachments}`" :detail="detail" />
+        <SlipSection v-if="full && (detail.source || detail.followUps.length)" title="来源与后续申请">
+          <div v-if="detail.source" class="application-link"><span class="muted">来源单</span><router-link :to="`/applications/${detail.source.id}`">{{ detail.source.appNo }}</router-link><StatusTag :status="detail.source.status" size="small" /></div>
+          <div v-for="followUp in detail.followUps" :key="followUp.id" class="application-link"><span class="muted">后续单</span><router-link :to="`/applications/${followUp.id}`">{{ followUp.appNo }}</router-link><StatusTag :status="followUp.status" size="small" /></div>
+        </SlipSection>
+        <SlipSection title="单据信息">
+          <SlipFields>
+            <SlipField label="模板">{{ detail.templateName }}<span v-if="detail.templateVersionNo != null" class="muted version">v{{ detail.templateVersionNo }}</span></SlipField>
+            <SlipField label="结束时间"><span class="num">{{ fmtDateTime(detail.finishedAt) }}</span></SlipField>
+            <template v-if="full">
+              <SlipField label="创建时间"><span class="num">{{ fmtDateTime(detail.createdAt) }}</span></SlipField>
+              <SlipField label="更新时间"><span class="num">{{ fmtDateTime(detail.updatedAt) }}</span></SlipField>
+            </template>
+          </SlipFields>
+        </SlipSection>
+      </article>
+
+      <section class="panel">
+        <h3 class="panel-title">{{ full ? '流转记录' : '审批流程结果' }}</h3>
         <FlowTimeline :flow="visibleFlow" />
-      </el-card>
-      <el-card v-if="full" shadow="never">
-        <template #header><h3 class="section-title">审批日志</h3></template>
-        <el-table :data="logs" row-key="id" size="small" border>
-          <el-table-column label="时间" width="175"><template #default="{ row }">{{ fmtDateTime(row.createdAt, true) }}</template></el-table-column>
-          <el-table-column label="操作" width="80"><template #default="{ row }"><span :class="{ 'text-danger': row.action === 'REJECT' }">{{ LOG_ACTION_LABEL[row.action as keyof typeof LOG_ACTION_LABEL] }}</span></template></el-table-column>
+      </section>
+      <section v-if="full" class="panel">
+        <h3 class="panel-title">审批日志</h3>
+        <el-table class="log-table" :data="logs" row-key="id" size="small" :row-class-name="logRowClass">
+          <el-table-column label="时间" width="175"><template #default="{ row }"><span class="num">{{ fmtDateTime(row.createdAt, true) }}</span></template></el-table-column>
+          <el-table-column label="操作" width="80"><template #default="{ row }"><span :class="{ 'text-danger': row.action === 'REJECT' }">{{ row.action === 'APPROVE' ? '同意' : LOG_ACTION_LABEL[row.action as keyof typeof LOG_ACTION_LABEL] }}</span></template></el-table-column>
           <el-table-column prop="operatorName" label="操作人" min-width="100" />
           <el-table-column prop="nodeName" label="节点" min-width="120"><template #default="{ row }">{{ row.nodeName ?? '—' }}</template></el-table-column>
           <el-table-column label="意见 / 原因" min-width="220"><template #default="{ row }"><span class="pre-wrap" :class="{ 'text-danger': row.action === 'REJECT' }">{{ row.comment || '—' }}</span></template></el-table-column>
@@ -259,8 +325,8 @@ async function urge() {
           <el-table-column label="申请 / 模板版本" width="140"><template #default="{ row }">v{{ row.appVersion }} / {{ row.templateVersionNo == null ? '—' : `v${row.templateVersionNo}` }}</template></el-table-column>
           <template #empty><el-empty description="暂无审批日志" :image-size="60" /></template>
         </el-table>
-      </el-card>
-      <div v-if="full && hasActions" class="form-actions detail-actions">
+      </section>
+      <div v-if="full && hasActions" class="form-actions detail-actions surface">
         <span v-if="nextUrgeAt && ownerAction('URGE')" class="muted small">下次可催办：{{ fmtDateTime(nextUrgeAt) }}</span><span class="flex-1" />
         <el-button v-if="ownerAction('EDIT')" :disabled="busy" @click="router.push(`/applications/${detail.id}/edit`)">编辑草稿</el-button>
         <el-button v-if="ownerAction('DELETE')" type="danger" plain :loading="acting === 'DELETE'" :disabled="busy" @click="ownerOperation('DELETE')">删除草稿</el-button>
@@ -268,17 +334,54 @@ async function urge() {
         <el-button v-if="ownerAction('WITHDRAW')" type="danger" plain :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
         <el-button v-if="ownerAction('URGE')" :loading="acting === 'URGE'" :disabled="busy || !!nextUrgeAt" @click="urge">催办</el-button>
         <el-button v-if="ownerAction('SUBMIT')" type="primary" :loading="acting === 'SUBMIT'" :disabled="busy" @click="ownerOperation('SUBMIT')">提交申请</el-button>
-        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @done="load" @refresh="load" />
+        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @submit="onSubmit" @refresh="load" />
       </div>
     </template>
   </div>
 </template>
 
 <style scoped>
-.detail-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
-.detail-heading h3 { flex: 1; min-width: 0; }
-.application-link { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
-.application-link a { color: var(--el-color-primary); text-decoration: none; }
-.detail-actions { flex-wrap: wrap; align-items: center; }
+.application-detail { max-width: 1200px; }
+.detail-toolbar { display: flex; align-items: center; gap: 8px; }
+.slip, .panel {
+  font-size: var(--eas-fs-sm);
+  line-height: 1.6;
+  padding: 24px 28px;
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  background: var(--eas-surface);
+}
+.slip { display: flex; flex-direction: column; gap: 20px; }
+.panel-title { margin: 0 0 12px; color: var(--eas-ink); font-size: var(--eas-fs-md); font-weight: 600; }
+.application-link { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 0; }
+.application-link a { color: var(--eas-primary); text-decoration: none; font-variant-numeric: tabular-nums; }
+.application-link a:hover { text-decoration: underline; }
+.version { margin-left: 8px; }
+.num { font-variant-numeric: tabular-nums; }
+.log-table :deep(.row-linked > td.el-table__cell) { background: var(--eas-paper); }
+.log-table :deep(.row-linked > td.el-table__cell:first-child) { box-shadow: inset 3px 0 0 var(--eas-primary); }
+.detail-actions {
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 28px;
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  box-shadow: none;
+}
+/* 吸底时 el-main 的下内边距会露出滚过的内容，用页面底色盖住 */
+.detail-actions::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: -1px;
+  right: -1px;
+  height: 20px;
+  background: var(--eas-paper);
+  pointer-events: none;
+}
 .detail-actions .el-button { margin-left: 0; }
+@media (max-width: 768px) {
+  .slip, .panel { padding: 16px; }
+  .detail-actions { padding: 12px 16px; }
+}
 </style>

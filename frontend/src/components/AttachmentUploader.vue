@@ -72,8 +72,10 @@ const accept = computed(() => {
 const remaining = computed(() => props.maxCount - model.value.length - pending.value.length)
 const canUpload = computed(() => !props.readonly && !props.disabled && remaining.value > 0)
 const hint = computed(
-  () => props.tip ?? `支持 ${allowedText.value}，单个不超过 ${props.maxSizeMb} MB，最多 ${props.maxCount} 个`,
+  () => props.tip ?? `可将文件拖到此处。支持 ${allowedText.value}，单个不超过 ${props.maxSizeMb} MB，最多 ${props.maxCount} 个`,
 )
+const dragging = ref(false)
+let dragDepth = 0
 
 function setActive(delta: number) {
   activeCount += delta
@@ -102,6 +104,11 @@ function onSelect(e: Event) {
   const el = e.target as HTMLInputElement
   const files = Array.from(el.files ?? [])
   el.value = '' // 允许再次选择同一文件
+  addFiles(files)
+}
+
+// 选择文件与拖入文件共用：预检类型 / 大小 / 数量后加入上传队列
+function addFiles(files: File[]) {
   let slots = remaining.value
   for (const f of files) {
     const err = precheck(f)
@@ -118,6 +125,41 @@ function onSelect(e: Event) {
     setActive(1)
   }
   void drain()
+}
+
+// 拖放：用计数器抵消子元素的 dragenter / dragleave 抖动；只响应带文件的拖动。
+// 带文件的拖放一律先 preventDefault（只读、禁用、已满时也是），否则浏览器会直接打开文件、离开当前页面；
+// 能否接收再按 readonly / disabled / 剩余数量决定。
+function hasFiles(e: DragEvent): boolean {
+  return Array.from(e.dataTransfer?.types ?? []).includes('Files')
+}
+
+function onDragEnter(e: DragEvent) {
+  if (!hasFiles(e)) return
+  e.preventDefault()
+  dragDepth += 1
+  if (canUpload.value) dragging.value = true
+}
+
+function onDragOver(e: DragEvent) {
+  if (!hasFiles(e)) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = canUpload.value ? 'copy' : 'none'
+}
+
+function onDragLeave(e: DragEvent) {
+  if (!hasFiles(e)) return
+  dragDepth = Math.max(0, dragDepth - 1)
+  if (dragDepth === 0) dragging.value = false
+}
+
+function onDrop(e: DragEvent) {
+  if (!hasFiles(e)) return
+  e.preventDefault()
+  dragDepth = 0
+  dragging.value = false
+  if (!canUpload.value) return
+  addFiles(Array.from(e.dataTransfer?.files ?? []))
 }
 
 // 逐个上传：单次请求只带一个文件
@@ -187,10 +229,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="uploader">
-    <div v-if="!readonly" class="uploader-bar">
+  <div
+    class="uploader"
+    @dragenter="onDragEnter"
+    @dragover="onDragOver"
+    @dragleave="onDragLeave"
+    @drop="onDrop"
+  >
+    <div v-if="!readonly" class="uploader-bar" :class="{ 'is-dragging': dragging, 'is-disabled': !canUpload }">
       <el-button size="small" :icon="Upload" :disabled="!canUpload" @click="pick">{{ buttonText }}</el-button>
-      <span class="muted small">{{ hint }}</span>
+      <span class="uploader-hint">{{ hint }}</span>
       <input ref="input" type="file" :accept="accept" :multiple="maxCount > 1" hidden @change="onSelect" />
     </div>
 
@@ -202,7 +250,7 @@ onBeforeUnmount(() => {
             <el-button link type="primary" class="file-name" :title="f.originalName" @click="preview(f)">
               {{ f.originalName }}
             </el-button>
-            <span class="muted small nowrap">{{ fmtSize(f.sizeBytes) }}</span>
+            <span class="file-size">{{ fmtSize(f.sizeBytes) }}</span>
             <span class="file-actions">
               <el-button link size="small" @click="preview(f)">预览</el-button>
               <el-button link size="small" :loading="downloadingId === f.id" @click="download(f)">下载</el-button>
@@ -217,7 +265,7 @@ onBeforeUnmount(() => {
         <div class="file-main">
           <div class="file-row">
             <span class="file-name-text" :title="p.file.name">{{ p.file.name }}</span>
-            <span class="muted small nowrap">{{ fmtSize(p.file.size) }}</span>
+            <span class="file-size">{{ fmtSize(p.file.size) }}</span>
             <span v-if="p.status === 'error'" class="file-actions">
               <el-button link size="small" type="primary" @click="retry(p)">重试</el-button>
               <el-button link size="small" type="danger" @click="dropPending(p)">移除</el-button>
@@ -234,38 +282,59 @@ onBeforeUnmount(() => {
         </div>
       </li>
     </ul>
-    <div v-else-if="readonly" class="muted small">无附件</div>
+    <div v-else-if="readonly" class="file-empty">无附件</div>
 
     <FilePreviewDialog v-model="previewVisible" :file="previewFile" />
   </div>
 </template>
 
 <style scoped>
+.uploader {
+  width: 100%;
+}
+/* 上传栏即拖放区：虚线框，拖入文件时变主色 */
 .uploader-bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px 8px;
+  padding: 6px 8px;
+  border: 1px dashed var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+  transition:
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease);
+}
+.uploader-bar.is-dragging {
+  border-color: var(--eas-primary);
+  background: var(--eas-primary-tint);
+}
+.uploader-hint {
+  font-size: var(--eas-fs-xs);
+  line-height: 1.5;
+  color: var(--eas-ink-3);
+}
+/* 拖入时底色是 primary-tint，ink-3 不到 4.5:1 */
+.uploader-bar.is-dragging .uploader-hint {
+  color: var(--eas-ink-2);
 }
 .file-list {
   list-style: none;
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 .file-item {
   display: flex;
   gap: 6px;
   align-items: flex-start;
-  padding: 4px 6px;
-  border-radius: 4px;
-  background: var(--el-fill-color-lighter);
+  padding: 4px 2px;
+}
+.file-item + .file-item {
+  border-top: 1px solid var(--eas-rule);
 }
 .file-icon {
   margin-top: 4px;
-  color: var(--el-text-color-secondary);
+  color: var(--eas-ink-2);
 }
 .file-main {
   flex: 1;
@@ -288,6 +357,16 @@ onBeforeUnmount(() => {
 .file-name :deep(span) {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.file-size {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.file-empty {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
 }
 .file-actions {
   margin-left: auto;

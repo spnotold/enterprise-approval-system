@@ -190,7 +190,7 @@ function typeName(r: object): string {
           <!-- 只读 -->
           <template v-if="readonly">
             <div v-if="row.noInvoice" class="no-invoice">
-              <el-tag type="warning" effect="dark" size="small" disable-transitions>无票</el-tag>
+              <el-tag type="warning" effect="plain" size="small" disable-transitions>无票</el-tag>
               <span class="pre-wrap small">原因：{{ row.noInvoiceReason ?? '—' }}</span>
             </div>
             <template v-else-if="showAttachments">
@@ -198,7 +198,7 @@ function typeName(r: object): string {
                 <template #extra="{ file }">
                   <div class="invoice-extra">
                     <span v-if="invoiceOf(row, file.id)?.invoiceNo" class="small">
-                      票据号：<span class="mono">{{ invoiceOf(row, file.id)?.invoiceNo }}</span>
+                      票据号：<span class="num">{{ invoiceOf(row, file.id)?.invoiceNo }}</span>
                     </span>
                     <template v-if="namedDups(invoiceOf(row, file.id)).length">
                       <el-tag
@@ -304,6 +304,9 @@ function typeName(r: object): string {
   gap: 6px;
   align-items: flex-start;
 }
+.num {
+  font-variant-numeric: tabular-nums;
+}
 .invoice-extra {
   display: flex;
   flex-direction: column;
@@ -323,7 +326,7 @@ function typeName(r: object): string {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
-  color: var(--el-color-warning-dark-2);
-  background: var(--el-color-warning-light-9);
+  color: var(--eas-warning-text);
+  background: var(--eas-warning-tint);
 }
 </style>

@@ -26,6 +26,7 @@ interface CustomModel {
 
 const schema = shallowRef<FormSchema | null>(null)
 const templateName = ref('自定义申请')
+const templateDescription = ref<string | null>(null)
 const templateId = ref<number | null>(props.templateId ?? null)
 const versionNo = ref<number | null>(null)
 const outdated = ref(false)
@@ -106,6 +107,7 @@ async function loadTemplateForNew() {
     const t = await api.templates.current(templateId.value)
     schema.value = t.formSchema
     templateName.value = t.name
+    templateDescription.value = t.description
     versionNo.value = t.versionNo
     const values: Record<string, unknown> = {}
     for (const f of t.formSchema.fields) values[f.key] = defaultValue(f)
@@ -138,6 +140,7 @@ async function rerenderWithLatest(fromSubmit: boolean) {
     schema.value = t.formSchema
     versionNo.value = t.versionNo
     templateName.value = t.name
+    templateDescription.value = t.description
     outdated.value = false
     model.value = { ...model.value, formValues: carried.values, attachments: keptAttachments, templateVersionId: t.versionId }
     newVersionNo = t.versionNo
@@ -186,6 +189,7 @@ const loadError = computed(() => draft.loadError.value ?? templateError.value)
 <template>
   <FormShell
     :title="templateName"
+    :description="templateDescription"
     :app-no="draft.appNo.value"
     :loading="draft.loading.value || (!schema && !loadError)"
     :load-error="loadError"
@@ -202,7 +206,7 @@ const loadError = computed(() => draft.loadError.value ?? templateError.value)
     @delete="draft.removeDraft"
   >
     <template #header-extra>
-      <el-tag v-if="versionNo" type="info" effect="plain" disable-transitions>模板版本 v{{ versionNo }}</el-tag>
+      <span v-if="versionNo" class="version">模板版本 v{{ versionNo }}</span>
     </template>
     <el-alert v-if="outdated" type="warning" :closable="false" show-icon title="该草稿按旧版本模板填写，模板已更新">
       <div class="outdated">
@@ -227,6 +231,11 @@ const loadError = computed(() => draft.loadError.value ?? templateError.value)
 </template>
 
 <style scoped>
+.version {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+  font-variant-numeric: tabular-nums;
+}
 .outdated {
   display: flex;
   align-items: center;

@@ -68,6 +68,7 @@ watch(cents, (c) => {
 
 <style scoped>
 .amount-input :deep(input) {
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 </style>

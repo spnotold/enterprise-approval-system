@@ -81,11 +81,12 @@ function remove(i: number) {
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="数量" width="110">
+      <el-table-column label="数量" width="110" align="right">
         <template #default="{ row, $index }">
-          <span v-if="readonly">{{ row.quantity ?? '—' }}</span>
+          <span v-if="readonly" class="num">{{ row.quantity ?? '—' }}</span>
           <div v-else :class="{ 'cell-error': err($index, 'quantity') }">
             <el-input
+              class="num-input"
               :model-value="row.quantity ?? ''"
               inputmode="decimal"
               placeholder="0"
@@ -95,7 +96,7 @@ function remove(i: number) {
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="单价（元）" width="140">
+      <el-table-column label="单价（元）" width="140" align="right">
         <template #default="{ row, $index }">
           <MoneyText v-if="readonly" :cents="row.unitPriceCents" />
           <div v-else :class="{ 'cell-error': err($index, 'unitPriceCents') }">
@@ -134,6 +135,13 @@ function remove(i: number) {
 </template>
 
 <style scoped>
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.num-input :deep(input) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .table-foot {
   display: flex;
   align-items: center;
