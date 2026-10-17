@@ -38,6 +38,7 @@ enterprise-approval-system
     ├── design_document.md  # 设计文档
     ├── design_document.docx # 设计文档 Word 版
     ├── user_guide.md       # 使用手册
+    ├── ui_design.md        # 界面设计规范（Web 与移动端）
     ├── test_report.md      # 测试报告
     ├── summary.md          # 总结
     ├── git_log.txt         # git log 导出

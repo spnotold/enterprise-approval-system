@@ -52,10 +52,10 @@ cd backend && mvn test
 | 后端 `ReviewRound2Test` | 5 | 5 | 0 |
 | 后端 `AdminBootstrapTest` | 2 | 2 | 0 |
 | 后端合计 | **84** | **84** | **0** |
-| Web `npm run test` | 92 | 92 | 0 |
-| 移动端 `npm run test` | 20 | 20 | 0 |
+| Web `npm run test` | 190 | 190 | 0 |
+| 移动端 `npm run test` | 42 | 42 | 0 |
 
-以上结果为 2026-10-16 的完整重跑。后端依据 18 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 84 项，全部通过，失败 0、错误 0、跳过 0。Web 的 `npm run lint`、`npm run build` 通过，92 项测试通过；移动端 `npm run typecheck` 通过，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
+后端结果为 2026-10-16 的完整重跑（此后后端代码未改动），依据 18 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 84 项，全部通过，失败 0、错误 0、跳过 0。Web 与移动端为 2026-10-17 界面重设计（见 `docs/ui_design.md`）合入后的结果：Web 的 `npm run lint`、`npm run build` 通过，190 项测试通过；移动端 `npm run typecheck` 通过，42 项测试通过，`npm run build:h5` 与 `npm run build:mp-weixin` 均通过。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 
