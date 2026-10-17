@@ -13,6 +13,7 @@ import edu.zju.eas.response.ErrorCode;
 import edu.zju.eas.response.FieldErrors;
 import edu.zju.eas.security.AuthInfoService;
 import edu.zju.eas.security.TokenService;
+import edu.zju.eas.service.notify.SseHub;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class AuthService {
     private final TokenService tokenService;
     private final AuthInfoService authInfoService;
     private final AuditService auditService;
+    private final SseHub sseHub;
     private final Clock clock;
 
     /** 访问令牌 + 刷新令牌原文；refreshToken 为 null 表示沿用客户端现有的刷新令牌 */
@@ -200,12 +202,13 @@ public class AuthService {
         invalidateSessions(userId);
     }
 
-    /** 令牌版本 + 1、撤销刷新令牌、清权限缓存 */
+    /** 令牌版本 + 1、撤销刷新令牌、清权限缓存，并关闭该用户已打开的 SSE 连接 */
     @Transactional
     public void invalidateSessions(Long userId) {
         userMapper.bumpTokenVersion(userId);
         refreshTokenMapper.revokeAllOfUser(userId);
         authInfoService.evict(userId);
+        sseHub.closeAfterCommit(userId);
     }
 
     private TokenPair issuePair(SysUser u, String client, UUID familyId) {
