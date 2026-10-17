@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // 登录 / 注册共用外壳：左侧是安静的说明区（用一排签批格示意流转，窄屏隐藏），右侧是白底表单
 // 两栏之间的分界线可拖动，也可聚焦后用键盘调整；宽度记忆在 localStorage（数值规则见 authSplit.ts）
+// 左栏与表单栏都是 CSS 容器（auth-aside / auth-main），SlipDemo 等子组件按容器宽度自行换排版：
+// 注意容器查询不能样式化容器自身，所以内边距放在 .aside-inner / .auth-box 上，由各自的 @container 改写
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import PaperField from '@/components/PaperField.vue'
 import SlipDemo from '@/components/SlipDemo.vue'
@@ -138,8 +140,10 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px;
   background: var(--eas-paper-deep);
+  /* 左栏自身是容器：SlipDemo / 标题 / 内边距 都按它的宽度换排版 */
+  container-type: inline-size;
+  container-name: auth-aside;
 }
 .auth-paper {
   position: absolute;
@@ -149,11 +153,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   pointer-events: none;
   z-index: 0;
 }
+/* 容器查询不能改 .auth-aside 自身的内边距，所以放到这个后代上；
+   max-width 440px 的内容区 + 左右各 48px 内边距，与旧的「aside 内边距 48 + 内容 440」完全等价 */
 .aside-inner {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 440px;
+  max-width: 536px;
+  box-sizing: border-box;
+  padding: 48px;
 }
 .logo {
   display: inline-flex;
@@ -178,13 +186,34 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   line-height: 1.3;
 }
 
+/* 左栏自适应：容器为自身宽度，不看视口 */
+/* 360–599：三格竖排的样式在 SlipDemo 里；这里收内边距、标题字号 */
+@container auth-aside (360px <= inline-size < 600px) {
+  .aside-inner {
+    padding: 32px;
+  }
+  .aside-title {
+    font-size: var(--eas-fs-lg);
+  }
+}
+/* < 360：再收紧一档 */
+@container auth-aside (inline-size < 360px) {
+  .aside-inner {
+    padding: 20px;
+  }
+  .aside-title {
+    font-size: var(--eas-fs-md);
+  }
+}
+
 .auth-main {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 40px;
-  box-sizing: border-box;
+  /* 表单栏自身是容器：窄于 440px 时 .auth-box 收紧内边距并占满 */
+  container-type: inline-size;
+  container-name: auth-main;
 }
 /* 分界线手柄：骑在两栏交界处，平时只是一条 1px rule 线，悬停 / 拖动 / 聚焦时加粗并露出握把 */
 .auth-split {
@@ -239,9 +268,20 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   opacity: 1;
 }
 
+/* 同上：容器查询不能改 .auth-main 的内边距，放到 .auth-box 上；
+   max-width 400px 的表单盒子 + 左右各 40px，与旧的「main 内边距 40 + 内容 400」等价 */
 .auth-box {
   width: 100%;
-  max-width: 400px;
+  max-width: 480px;
+  box-sizing: border-box;
+  padding: 48px 40px;
+}
+/* 表单栏 < 440px：内边距收紧为 32 24，表单盒子占满可用宽度 */
+@container auth-main (inline-size < 440px) {
+  .auth-box {
+    max-width: none;
+    padding: 32px 24px;
+  }
 }
 .brand-compact {
   display: none;
@@ -268,6 +308,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   }
   .auth-main {
     align-items: flex-start;
+  }
+  /* 内边距跟 .auth-box 一起收紧；放在容器查询之后，移动端保持 32px 20px 的旧值 */
+  .auth-box {
     padding: 32px 20px;
   }
   .brand-compact {
