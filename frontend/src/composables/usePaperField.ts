@@ -33,6 +33,64 @@ export interface RippleItem {
   startTime: number
 }
 
+export interface PaperClickAncestor {
+  tagName: string
+  role: string | null
+  backgroundColor: string
+  contentEditable?: boolean
+}
+
+const INTERACTIVE_TAGS = new Set(['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT'])
+const INTERACTIVE_ROLES = new Set([
+  'button',
+  'link',
+  'checkbox',
+  'radio',
+  'tab',
+  'switch',
+  'slider',
+  'combobox',
+  'option',
+  'menuitem',
+])
+
+function alphaFromCssColor(color: string): number {
+  const normalized = color.trim().toLowerCase()
+  if (!normalized || normalized === 'transparent') return 0
+
+  const functionMatch = normalized.match(/^[a-z][\w-]*\((.*)\)$/)
+  if (!functionMatch) return 1
+
+  const body = functionMatch[1]
+  const slashAlpha = body.match(/\/\s*([+-]?(?:\d*\.)?\d+)%?\s*$/)
+  if (slashAlpha) {
+    const value = Number(slashAlpha[1])
+    return slashAlpha[0].includes('%') ? value / 100 : value
+  }
+
+  if (normalized.startsWith('rgba(') || normalized.startsWith('hsla(')) {
+    const parts = body.split(',')
+    const rawAlpha = parts.at(-1)?.trim() ?? '1'
+    const value = Number.parseFloat(rawAlpha)
+    return rawAlpha.endsWith('%') ? value / 100 : value
+  }
+
+  return 1
+}
+
+/**
+ * 纯函数：祖先链不包含交互元素或实色背景时，才视为格纸背景空白。
+ * 调用方应从点击目标开始收集，并在背景容器本身之前停止。
+ */
+export function isPaperBackgroundChain(ancestors: PaperClickAncestor[]): boolean {
+  return ancestors.every(({ tagName, role, backgroundColor, contentEditable }) => {
+    if (INTERACTIVE_TAGS.has(tagName.toUpperCase())) return false
+    if (role && INTERACTIVE_ROLES.has(role.toLowerCase())) return false
+    if (contentEditable) return false
+    return alphaFromCssColor(backgroundColor) <= 0
+  })
+}
+
 /**
  * 判断 pointerdown 是否发生在背景空白处
  * 1. 排除按钮、链接、输入框、下拉框、单选/复选、标签页等可交互控件。
@@ -40,11 +98,27 @@ export interface RippleItem {
  * 3. 排除 Aside 内部的主体说明内容（.aside-inner）。
  * 4. 结合 document.elementsFromPoint 进行底层堆叠检测，确保点击区域下无内容承载元素。
  */
-export function isBackgroundClick(e: PointerEvent): boolean {
-  const target = e.target as HTMLElement | null
+export function isBackgroundClick(e: PointerEvent, backgroundContainer?: HTMLElement | null): boolean {
+  const target =
+    typeof Element === 'undefined' || e.target instanceof Element ? (e.target as Element | null) : null
   if (!target) return false
 
-  // 1. 排除表单与交互控件
+  const ancestors: PaperClickAncestor[] = []
+  let current: Element | null = target
+  while (current && current !== backgroundContainer) {
+    ancestors.push({
+      tagName: current.tagName,
+      role: current.getAttribute('role'),
+      backgroundColor:
+        typeof getComputedStyle === 'function' ? getComputedStyle(current).backgroundColor : '',
+      contentEditable: current.hasAttribute('contenteditable'),
+    })
+    current = current.parentElement
+  }
+
+  if (!isPaperBackgroundChain(ancestors)) return false
+
+  // 补充排除：保留历史选择器，覆盖 tabindex 等没有明确语义的控件。
   if (
     target.closest(
       'button, a, input, textarea, select, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="tab"], [tabindex]:not([tabindex="-1"])',
@@ -53,7 +127,7 @@ export function isBackgroundClick(e: PointerEvent): boolean {
     return false
   }
 
-  // 2. 排除内容承载容器
+  // 补充排除：保留历史内容容器白名单，兼容背景由伪元素绘制等情况。
   if (
     target.closest(
       '.el-card, .sheet, .part, .panel, .surface, .kpi, .el-table, .el-dialog, .el-drawer, .el-popover, .el-dropdown, .el-dropdown-menu, .el-menu, .header, .aside, .nav-drawer, .slip, .cell, .auth-box, .auth-main',
@@ -62,12 +136,12 @@ export function isBackgroundClick(e: PointerEvent): boolean {
     return false
   }
 
-  // 3. 在 AuthShell 中，aside-inner 内包含说明文字、标题与签批示意
+  // 在 AuthShell 中，aside-inner 内包含说明文字、标题与签批示意。
   if (target.closest('.aside-inner')) {
     return false
   }
 
-  // 4. 深度检测：elementsFromPoint
+  // 补充进行底层堆叠检测。
   if (typeof document !== 'undefined' && typeof document.elementsFromPoint === 'function') {
     const stack = document.elementsFromPoint(e.clientX, e.clientY)
     for (const el of stack) {
@@ -141,9 +215,11 @@ export function usePaperField(
   let resizeObserver: ResizeObserver | null = null
   let coarseQuery: MediaQueryList | null = null
   let motionQuery: MediaQueryList | null = null
+  let dprQuery: MediaQueryList | null = null
 
   let rafId: number | null = null
   let containerEl: HTMLElement | null = null
+  let disposed = false
 
   // 指针状态
   let targetX = 0
@@ -429,7 +505,7 @@ export function usePaperField(
     targetX = e.clientX - rect.left
     targetY = e.clientY - rect.top
 
-    if (isBackgroundClick(e)) {
+    if (isBackgroundClick(e, containerEl)) {
       activeRipples.push({
         x: targetX,
         y: targetY,
@@ -464,6 +540,12 @@ export function usePaperField(
         attachPointerListeners()
       }
     }
+  }
+
+  function onDprChange() {
+    if (disposed) return
+    updateSize()
+    registerDprListener()
   }
 
   function resolveContainer(): HTMLElement | null {
@@ -515,18 +597,27 @@ export function usePaperField(
     }
   }
 
+  function registerDprListener() {
+    removeMediaListener(dprQuery, onDprChange)
+    dprQuery = null
+
+    if (disposed || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const currentDpr = window.devicePixelRatio || 1
+    dprQuery = window.matchMedia(`(resolution: ${currentDpr}dppx)`)
+    addMediaListener(dprQuery, onDprChange)
+  }
+
   function updateSize() {
     const canvas = canvasRef.value
     if (!canvas) return
-    const parent = canvas.parentElement
-    if (!parent) return
 
     const rect = canvas.getBoundingClientRect()
-    const newWidth = Math.round(rect.width || parent.clientWidth)
-    const newHeight = Math.round(rect.height || parent.clientHeight)
+    const newWidth = rect.width
+    const newHeight = rect.height
     const newDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
 
     if (newWidth <= 0 || newHeight <= 0) return
+    if (newWidth === width && newHeight === height && newDpr === dpr) return
 
     width = newWidth
     height = newHeight
@@ -534,14 +625,13 @@ export function usePaperField(
 
     canvas.width = Math.round(width * dpr)
     canvas.height = Math.round(height * dpr)
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
 
     rebuildOffscreen()
     renderFrame(performance.now())
   }
 
   function init() {
+    disposed = false
     isDegraded.value = checkDegraded()
 
     addMediaListener(coarseQuery, onMediaChange)
@@ -553,12 +643,14 @@ export function usePaperField(
     const canvas = canvasRef.value
     if (canvas) {
       updateSize()
-      const targetObserved = canvas.parentElement || canvas
+      registerDprListener()
+      const targetObserved = resolveContainer() || canvas.parentElement
       if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => {
+          if (disposed) return
           updateSize()
         })
-        resizeObserver.observe(targetObserved)
+        if (targetObserved) resizeObserver.observe(targetObserved)
       }
 
       if (!isDegraded.value) {
@@ -568,6 +660,7 @@ export function usePaperField(
   }
 
   function cleanup() {
+    disposed = true
     stopLoop()
     detachPointerListeners()
     if (resizeObserver) {
@@ -576,6 +669,8 @@ export function usePaperField(
     }
     removeMediaListener(coarseQuery, onMediaChange)
     removeMediaListener(motionQuery, onMediaChange)
+    removeMediaListener(dprQuery, onDprChange)
+    dprQuery = null
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }

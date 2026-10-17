@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { isBackgroundClick, resolvePaperColors } from './usePaperField'
+import { isBackgroundClick, isPaperBackgroundChain, resolvePaperColors } from './usePaperField'
 
 interface MockTarget {
   tagName: string
   className: string
   parent?: MockTarget | null
+  parentElement?: MockTarget | null
+  getAttribute: (name: string) => string | null
+  hasAttribute: (name: string) => boolean
   closest: (selector: string) => MockTarget | null
 }
 
@@ -13,6 +16,9 @@ function createMockElement(tag: string, className = '', parent: MockTarget | nul
     tagName: tag.toUpperCase(),
     className,
     parent,
+    parentElement: parent,
+    getAttribute: () => null,
+    hasAttribute: () => false,
     closest(selector: string): MockTarget | null {
       const selectors = selector.split(',').map((s) => s.trim())
       for (const s of selectors) {
@@ -42,6 +48,69 @@ describe('usePaperField helpers', () => {
     it('resolves deep paper base color', () => {
       const colors = resolvePaperColors('deep')
       expect(colors.baseColor).toBeDefined()
+    })
+  })
+
+  describe('isPaperBackgroundChain', () => {
+    it('accepts a chain whose backgrounds are all transparent', () => {
+      expect(
+        isPaperBackgroundChain([
+          { tagName: 'SPAN', role: null, backgroundColor: 'rgba(0, 0, 0, 0)' },
+          { tagName: 'DIV', role: null, backgroundColor: 'transparent' },
+          { tagName: 'MAIN', role: null, backgroundColor: 'rgb(0 0 0 / 0%)' },
+        ]),
+      ).toBe(true)
+    })
+
+    it.each([
+      'rgb(255, 255, 255)',
+      'rgba(255, 255, 255, 0.01)',
+      'rgb(255 255 255 / 20%)',
+      'color(srgb 1 1 1 / 0.4)',
+    ])('rejects a non-transparent background: %s', (backgroundColor) => {
+      expect(isPaperBackgroundChain([{ tagName: 'DIV', role: null, backgroundColor }])).toBe(
+        false,
+      )
+    })
+
+    it.each(['button', 'a', 'input', 'textarea', 'select'])(
+      'rejects interactive <%s> elements',
+      (tagName) => {
+        expect(
+          isPaperBackgroundChain([{ tagName, role: null, backgroundColor: 'transparent' }]),
+        ).toBe(false)
+      },
+    )
+
+    it.each(['button', 'switch', 'slider', 'combobox', 'option', 'menuitem'])(
+      'rejects role=%s elements',
+      (role) => {
+        expect(
+          isPaperBackgroundChain([{ tagName: 'DIV', role, backgroundColor: 'transparent' }]),
+        ).toBe(false)
+      },
+    )
+
+    it('rejects elements with a contenteditable attribute', () => {
+      expect(
+        isPaperBackgroundChain([
+          {
+            tagName: 'DIV',
+            role: null,
+            backgroundColor: 'transparent',
+            contentEditable: true,
+          },
+        ]),
+      ).toBe(false)
+    })
+
+    it('checks every ancestor in the chain', () => {
+      expect(
+        isPaperBackgroundChain([
+          { tagName: 'SPAN', role: null, backgroundColor: 'transparent' },
+          { tagName: 'SECTION', role: null, backgroundColor: 'rgba(242, 243, 240, 1)' },
+        ]),
+      ).toBe(false)
     })
   })
 
