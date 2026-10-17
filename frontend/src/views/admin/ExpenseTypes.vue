@@ -167,7 +167,7 @@ async function remove(t: ExpenseTypeAdmin) {
     <div class="page-header">
       <div>
         <h2 class="page-title">费用类型</h2>
-        <div class="page-subtitle">报销明细可选的费用类型。已被报销明细引用的类型不能删除，只能停用。</div>
+        <div class="page-subtitle">报销明细里可选的费用类型。已有报销单使用的类型不能删除，只能停用。</div>
       </div>
       <div class="toolbar">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
@@ -186,11 +186,11 @@ async function remove(t: ExpenseTypeAdmin) {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="sortOrder" label="排序" width="80" align="right" />
-        <el-table-column label="引用" min-width="150">
+        <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
+        <el-table-column label="使用情况" min-width="150">
           <template #default="{ row }">
-            <span v-if="row.referenced" class="text-warning small">已被引用，只能停用</span>
-            <span v-else class="muted small">未被引用</span>
+            <span v-if="row.referenced" class="small">已有报销单使用</span>
+            <span v-else class="muted small">未使用</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="170">
@@ -204,7 +204,7 @@ async function remove(t: ExpenseTypeAdmin) {
             >
               {{ row.enabled ? '停用' : '启用' }}
             </el-button>
-            <el-tooltip :disabled="!row.referenced" content="已被引用，只能停用" placement="top">
+            <el-tooltip :disabled="!row.referenced" content="已有报销单使用，只能停用" placement="top">
               <span class="btn-wrap">
                 <el-button
                   link
