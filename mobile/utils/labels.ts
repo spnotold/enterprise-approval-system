@@ -85,7 +85,7 @@ export const ACTION_LABEL: Record<AppAction, string> = {
   SUBMIT: '提交',
   WITHDRAW: '撤回',
   COPY: '复制并修改',
-  APPROVE: '批准',
+  APPROVE: '同意',
   REJECT: '驳回',
   URGE: '催办',
 }

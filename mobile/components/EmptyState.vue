@@ -9,9 +9,9 @@ const emit = defineEmits<{ action: [] }>()
 
 <template>
   <view class="empty">
-    <uni-icons type="info" size="36" color="#c0c4cc" />
+    <uni-icons type="info" size="36" color="var(--eas-rule-strong)" />
     <view class="empty-text">{{ text || '暂无数据' }}</view>
-    <view v-if="actionText" class="link-btn" @tap="emit('action')">{{ actionText }}</view>
+    <view v-if="actionText" class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="emit('action')">{{ actionText }}</view>
   </view>
 </template>
 
@@ -25,7 +25,7 @@ const emit = defineEmits<{ action: [] }>()
 
 .empty-text {
   margin-top: 12rpx;
-  color: #8f959e;
+  color: var(--eas-ink-3);
   font-size: 26rpx;
 }
 </style>

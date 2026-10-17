@@ -9,7 +9,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import UChart from '@/components/UChart.vue'
 import { auth, requireLogin } from '@/stores/auth'
 import { centsForChart, type ChartData } from '@/utils/chart'
-import { APP_STATUS_COLOR, APP_STATUS_LABEL, APP_STATUS_ORDER, APP_TYPE_LABEL } from '@/utils/labels'
+import { APP_STATUS_LABEL, APP_STATUS_ORDER, APP_TYPE_LABEL } from '@/utils/labels'
 import { todayCN } from '@/utils/time'
 
 type TabName = 'personal' | 'dept' | 'finance' | 'enterprise'
@@ -22,6 +22,23 @@ const TAB_DEFS: { name: TabName; label: string; permission?: string }[] = [
   { name: 'enterprise', label: '企业', permission: 'ENTERPRISE_STATS' },
 ]
 const TYPE_ORDER: AppType[] = ['PURCHASE', 'TRAVEL', 'EXPENSE', 'CUSTOM']
+// 列表里的状态圆点：草稿、已撤回都是灰（docs/ui_design.md 第 2 节）
+const STATUS_TONE: Record<AppStatus, 'muted' | 'primary' | 'success' | 'danger'> = {
+  DRAFT: 'muted',
+  IN_APPROVAL: 'primary',
+  APPROVED: 'success',
+  REJECTED: 'danger',
+  WITHDRAWN: 'muted',
+}
+// 图表 canvas 读不到 CSS 变量，色值镜像 tokens.css；草稿与已撤回在同一图里要能分辨，已撤回改用浅黛
+const STATUS_CHART_COLOR: Record<AppStatus, string> = {
+  DRAFT: '#7a858c',
+  IN_APPROVAL: '#3e5c76',
+  APPROVED: '#4f7a5c',
+  REJECTED: '#9c4a3e',
+  WITHDRAWN: '#8a9fb3',
+}
+const TOTAL_CHART_COLOR = '#7a858c'
 const SUBMITTED_STATUSES = APP_STATUS_ORDER.filter((s) => s !== 'DRAFT')
 const today = ref(todayCN())
 const pad = (value: number): string => String(value).padStart(2, '0')
@@ -243,7 +260,7 @@ const departmentMetrics = computed(() => department.value ? totalMetrics(departm
 
 function statusChart(counts: Partial<Record<AppStatus, number>>, statuses: AppStatus[]): ChartData | null {
   const series = statuses.filter((status) => (counts[status] ?? 0) > 0).map((status) => ({
-    name: APP_STATUS_LABEL[status], data: counts[status] ?? 0, color: APP_STATUS_COLOR[status],
+    name: APP_STATUS_LABEL[status], data: counts[status] ?? 0, color: STATUS_CHART_COLOR[status],
   }))
   return series.length ? { series } : null
 }
@@ -261,7 +278,7 @@ const deptTypeChart = computed<ChartData | null>(() => {
   return {
     categories: TYPE_ORDER.map((type) => APP_TYPE_LABEL[type]),
     series: SUBMITTED_STATUSES.map((status) => ({
-      name: APP_STATUS_LABEL[status], color: APP_STATUS_COLOR[status],
+      name: APP_STATUS_LABEL[status], color: STATUS_CHART_COLOR[status],
       data: TYPE_ORDER.map((type) => rows.filter((row) => row.type === type && row.status === status).reduce((sum, row) => sum + row.count, 0)),
     })),
   }
@@ -311,10 +328,10 @@ const enterpriseChart = computed<ChartData | null>(() => {
   return {
     categories: rows.map((row) => row.deptName),
     series: [
-      { name: '申请数', data: rows.map((row) => row.count) },
-      { name: '已通过', color: APP_STATUS_COLOR.APPROVED, data: rows.map((row) => row.approvedCount) },
-      { name: '已驳回', color: APP_STATUS_COLOR.REJECTED, data: rows.map((row) => row.rejectedCount) },
-      { name: '审批中', color: APP_STATUS_COLOR.IN_APPROVAL, data: rows.map((row) => row.inApprovalCount) },
+      { name: '申请数', color: TOTAL_CHART_COLOR, data: rows.map((row) => row.count) },
+      { name: '已通过', color: STATUS_CHART_COLOR.APPROVED, data: rows.map((row) => row.approvedCount) },
+      { name: '已驳回', color: STATUS_CHART_COLOR.REJECTED, data: rows.map((row) => row.rejectedCount) },
+      { name: '审批中', color: STATUS_CHART_COLOR.IN_APPROVAL, data: rows.map((row) => row.inApprovalCount) },
     ],
   }
 })
@@ -324,176 +341,473 @@ const enterpriseMetrics = computed<Metric[]>(() => enterprise.value ? [
   { label: '已通过金额合计', value: money(sumCents(enterprise.value.byDept.map((row) => row.approvedAmountCents))) },
   { label: '在途金额合计', value: money(sumCents(enterprise.value.byDept.map((row) => row.inProgressAmountCents))) },
 ] : [])
-const countChartOptions: Record<string, unknown> = { yAxis: { data: [{ min: 0, tofix: 0 }] }, xAxis: { rotateLabel: true, fontSize: 10, disableGrid: true } }
+const countChartOptions: Record<string, unknown> = { yAxis: { data: [{ min: 0, tofix: 0 }] }, xAxis: { rotateLabel: true, fontSize: 12, disableGrid: true } }
 const stackedOptions: Record<string, unknown> = { ...countChartOptions, extra: { column: { type: 'stack' } } }
-const moneyChartOptions: Record<string, unknown> = { xAxis: { rotateLabel: true, fontSize: 10, disableGrid: true } }
+const moneyChartOptions: Record<string, unknown> = { xAxis: { rotateLabel: true, fontSize: 12, disableGrid: true } }
 </script>
 
 <template>
-  <view class="page">
-    <view class="banner banner-info stats-definition">按提交时间统计；已通过金额仅含已通过申请；部门以提交时所属部门为准</view>
-    <view class="seg">
-      <view v-for="tab in tabs" :key="tab.name" class="seg-item" :class="{ active: active === tab.name }" @tap="active = tab.name">{{ tab.label }}</view>
+  <view class="stats">
+    <view class="definition">按提交时间统计；已通过金额仅含已通过申请；部门以提交时所属部门为准</view>
+    <view class="tabs">
+      <view
+        v-for="tab in tabs"
+        :key="tab.name"
+        class="tab"
+        :class="{ 'tab--active': active === tab.name }"
+        hover-class="is-pressed"
+        :hover-stay-time="60"
+        @tap="active = tab.name"
+      >
+        {{ tab.label }}
+      </view>
     </view>
 
-    <view v-if="active === 'personal'" class="banner banner-warning">个人统计为全量数据，不按日期筛选；状态分布包含草稿。部门和企业统计不包含草稿。</view>
-    <view v-else class="card">
-      <view class="card-title">提交日期（上海时区）</view>
+    <view v-if="active === 'personal'" class="notice notice--warning">个人统计为全量数据，不按日期筛选；状态分布包含草稿。部门和企业统计不包含草稿。</view>
+    <view v-else class="panel">
+      <view class="panel-title">提交日期（上海时区）</view>
       <view class="date-range">
         <picker class="date-picker" mode="date" :value="from" :end="to < today ? to : today" @change="changeDate('from', $event)">
-          <view class="picker-value">{{ from }}<uni-icons type="bottom" size="14" color="#8f959e" /></view>
+          <view class="pick" hover-class="is-pressed" :hover-stay-time="60">{{ from }}</view>
         </picker>
         <text class="date-separator">至</text>
         <picker class="date-picker" mode="date" :value="to" :start="from" :end="today" @change="changeDate('to', $event)">
-          <view class="picker-value">{{ to }}<uni-icons type="bottom" size="14" color="#8f959e" /></view>
+          <view class="pick" hover-class="is-pressed" :hover-stay-time="60">{{ to }}</view>
         </picker>
       </view>
       <view class="shortcuts">
-        <view class="link-btn" @tap="quickRange(1)">本月</view>
-        <view class="link-btn" @tap="quickRange(3)">近 3 个月</view>
-        <view class="link-btn" @tap="quickRange(6)">近 6 个月</view>
+        <view class="chip" hover-class="is-pressed" :hover-stay-time="60" @tap="quickRange(1)">本月</view>
+        <view class="chip" hover-class="is-pressed" :hover-stay-time="60" @tap="quickRange(3)">近 3 个月</view>
+        <view class="chip" hover-class="is-pressed" :hover-stay-time="60" @tap="quickRange(6)">近 6 个月</view>
       </view>
-      <view v-if="rangeError" class="field-err">{{ rangeError }}</view>
-      <view v-if="active === 'dept'" class="field">
-        <view class="field-label">负责部门</view>
+      <view v-if="rangeError" class="err">{{ rangeError }}</view>
+      <view v-if="active === 'dept'" class="dept-field">
+        <view class="label">负责部门</view>
         <picker v-if="deptOptions.length > 1" :range="deptOptions" range-key="name" :value="deptIndex" @change="changeDepartment">
-          <view class="picker-value"><text class="ellipsis">{{ selectedDeptName }}</text><uni-icons type="bottom" size="14" color="#8f959e" /></view>
+          <view class="pick pick--between" hover-class="is-pressed" :hover-stay-time="60">
+            <text class="ellipsis">{{ selectedDeptName }}</text>
+            <text class="pick-action">切换</text>
+          </view>
         </picker>
         <view v-else class="bold">{{ selectedDeptName }}</view>
       </view>
     </view>
 
-    <view class="row between refresh-row">
-      <text class="muted">{{ active === 'personal' ? '全量数据' : displayedRange }}</text>
-      <button class="refresh-button" :disabled="loading || !ready" :loading="loading" @tap="refresh">刷新</button>
+    <view class="refresh-row">
+      <text class="note flex1">{{ active === 'personal' ? '全量数据' : displayedRange }}</text>
+      <button
+        class="refresh-button"
+        hover-class="is-pressed"
+        :hover-stay-time="60"
+        :disabled="loading || !ready"
+        :loading="loading"
+        @tap="refresh"
+      >
+        刷新
+      </button>
     </view>
-    <view v-if="loading" class="card"><EmptyState text="正在加载统计数据…" /></view>
-    <view v-else-if="error" class="card">
+    <view v-if="loading" class="panel"><EmptyState text="正在加载统计数据…" /></view>
+    <view v-else-if="error" class="panel">
       <EmptyState :text="error" action-text="重试" @action="refresh" />
-      <view v-if="traceId" class="muted break">追踪号：{{ traceId }}</view>
+      <view v-if="traceId" class="note break">追踪号：{{ traceId }}</view>
     </view>
 
     <template v-else-if="active === 'personal' && personal">
       <view class="metric-grid">
-        <view v-for="metric in personalMetrics" :key="metric.label" class="metric"><view class="muted">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view></view>
+        <view v-for="metric in personalMetrics" :key="metric.label" class="metric"><view class="note">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view></view>
       </view>
-      <view class="card">
-        <view class="card-title">我的申请状态</view>
+      <view class="panel">
+        <view class="panel-title">我的申请状态</view>
         <UChart v-if="personalChart" type="ring" :data="personalChart" />
         <EmptyState v-else text="尚无申请，可从“发起”创建申请" />
         <view v-for="status in APP_STATUS_ORDER" :key="status" class="data-row">
-          <text :style="{ color: APP_STATUS_COLOR[status] }">{{ APP_STATUS_LABEL[status] }}</text>
+          <view class="status"><text class="dot" :class="`dot--${STATUS_TONE[status]}`" /><text>{{ APP_STATUS_LABEL[status] }}</text></view>
           <text class="amount">{{ personal.statusCounts[status] ?? 0 }} 单</text>
         </view>
       </view>
     </template>
 
     <template v-else-if="active === 'dept' && department">
-      <view class="section-title">{{ department.deptName }}</view>
+      <view class="section">{{ department.deptName }}</view>
       <view class="metric-grid">
-        <view v-for="metric in departmentMetrics" :key="metric.label" class="metric"><view class="muted">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view><view v-if="metric.hint" class="metric-hint">{{ metric.hint }}</view></view>
+        <view v-for="metric in departmentMetrics" :key="metric.label" class="metric"><view class="note">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view><view v-if="metric.hint" class="metric-hint">{{ metric.hint }}</view></view>
       </view>
-      <view v-if="department.totals.count === 0" class="card"><EmptyState text="所选区间内暂无已提交申请" /></view>
-      <view class="card">
-        <view class="card-title">各类申请数量与状态</view>
+      <view v-if="department.totals.count === 0" class="panel"><EmptyState text="所选区间内暂无已提交申请" /></view>
+      <view class="panel">
+        <view class="panel-title">各类申请数量与状态</view>
         <UChart v-if="deptTypeChart" type="column" :data="deptTypeChart" :opts="stackedOptions" />
         <view v-for="item in deptTypeCards" :key="item.type" class="detail-item">
           <view class="bold">{{ APP_TYPE_LABEL[item.type] }}</view>
           <view class="status-numbers"><text v-for="row in item.rows" :key="row.status">{{ APP_STATUS_LABEL[row.status] }} {{ row.count }} 单</text></view>
         </view>
       </view>
-      <view class="card">
-        <view class="card-title">状态分布</view>
+      <view class="panel">
+        <view class="panel-title">状态分布</view>
         <UChart v-if="deptStatusChart" type="pie" :data="deptStatusChart" />
-        <view v-for="status in SUBMITTED_STATUSES" :key="status" class="data-row"><text>{{ APP_STATUS_LABEL[status] }}</text><text class="amount">{{ deptStatusCounts[status] ?? 0 }} 单</text></view>
+        <view v-for="status in SUBMITTED_STATUSES" :key="status" class="data-row">
+          <view class="status"><text class="dot" :class="`dot--${STATUS_TONE[status]}`" /><text>{{ APP_STATUS_LABEL[status] }}</text></view>
+          <text class="amount">{{ deptStatusCounts[status] ?? 0 }} 单</text>
+        </view>
       </view>
-      <view class="card">
-        <view class="card-title">月度趋势（按提交月份）</view>
-        <view class="muted">图表展示区间内最近 12 个月，缺少数据的月份按 0 显示。金额单位：元。</view>
+      <view class="panel">
+        <view class="panel-title">月度趋势（按提交月份）</view>
+        <view class="note">图表展示区间内最近 12 个月，缺少数据的月份按 0 显示。金额单位：元。</view>
         <template v-if="department.totals.count > 0">
           <UChart type="line" :data="monthlyCountChart" :opts="countChartOptions" :height="420" />
           <UChart type="line" :data="monthlyAmountChart" :opts="moneyChartOptions" :height="420" />
         </template>
         <EmptyState v-else text="暂无月度趋势" />
-        <view v-if="monthlyRows.length" class="muted mt">完整区间月度明细（未列出的月份均为 0）</view>
+        <view v-if="monthlyRows.length" class="note mt">完整区间月度明细（未列出的月份均为 0）</view>
         <view v-for="row in monthlyRows" :key="row.month" class="detail-item">
-          <view class="data-row"><text class="bold">{{ row.month }}</text><text>{{ row.count }} 单</text></view>
-          <view class="data-row"><text class="muted">已通过金额</text><text class="amount">{{ money(row.approvedAmountCents) }}</text></view>
+          <view class="data-row"><text class="bold">{{ row.month }}</text><text class="amount">{{ row.count }} 单</text></view>
+          <view class="data-row"><text class="note">已通过金额</text><text class="amount">{{ money(row.approvedAmountCents) }}</text></view>
         </view>
       </view>
     </template>
 
     <template v-else-if="active === 'finance' && finance">
-      <view class="banner banner-info">财务金额仅含已通过申请；无票占比按已通过报销明细金额计算。</view>
+      <view class="notice">财务金额仅含已通过申请；无票占比按已通过报销明细金额计算。</view>
       <view class="metric-grid">
-        <view v-for="metric in financeMetrics" :key="metric.label" class="metric"><view class="muted">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view><view v-if="metric.hint" class="metric-hint">{{ metric.hint }}</view></view>
+        <view v-for="metric in financeMetrics" :key="metric.label" class="metric"><view class="note">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view><view v-if="metric.hint" class="metric-hint">{{ metric.hint }}</view></view>
       </view>
-      <view class="card">
-        <view class="card-title">报销已通过金额 · 费用类型</view>
-        <view v-if="finance.byExpenseType.length > 8" class="muted">图表展示前 8 个费用类型，完整数据见下方。</view>
+      <view class="panel">
+        <view class="panel-title">各费用类型的报销已通过金额</view>
+        <view v-if="finance.byExpenseType.length > 8" class="note">图表展示前 8 个费用类型，完整数据见下方。</view>
         <UChart v-if="expenseTypeChart" type="column" :data="expenseTypeChart" :opts="moneyChartOptions" />
         <EmptyState v-if="!finance.byExpenseType.length" text="所选区间内暂无已通过的报销" />
         <view v-for="row in finance.byExpenseType" :key="row.code" class="detail-item">
           <view class="data-row"><text class="bold wrap-name">{{ row.name }}</text><text class="amount">{{ money(row.approvedAmountCents) }}</text></view>
-          <view class="muted">{{ row.itemCount }} 条明细</view>
+          <view class="note">{{ row.itemCount }} 条明细</view>
         </view>
       </view>
-      <view class="card">
-        <view class="card-title">各部门报销与采购已通过金额</view>
+      <view class="panel">
+        <view class="panel-title">各部门报销与采购已通过金额</view>
         <EmptyState v-if="!finance.byDept.length" text="所选区间内暂无部门财务数据" />
         <view v-for="row in finance.byDept" :key="row.deptId" class="detail-item">
           <view class="bold break">{{ row.deptName }}</view>
-          <view class="data-row"><text class="muted">报销已通过金额</text><text class="amount">{{ money(row.expenseAmountCents) }}</text></view>
-          <view class="data-row"><text class="muted">采购已通过金额</text><text class="amount">{{ money(row.purchaseAmountCents) }}</text></view>
+          <view class="data-row"><text class="note">报销已通过金额</text><text class="amount">{{ money(row.expenseAmountCents) }}</text></view>
+          <view class="data-row"><text class="note">采购已通过金额</text><text class="amount">{{ money(row.purchaseAmountCents) }}</text></view>
         </view>
       </view>
     </template>
 
     <template v-else-if="active === 'enterprise' && enterprise">
       <view class="metric-grid">
-        <view v-for="metric in enterpriseMetrics" :key="metric.label" class="metric"><view class="muted">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view></view>
+        <view v-for="metric in enterpriseMetrics" :key="metric.label" class="metric"><view class="note">{{ metric.label }}</view><view class="metric-value">{{ metric.value }}</view></view>
       </view>
-      <view class="card">
-        <view class="card-title">各部门申请数量对比</view>
-        <view v-if="enterprise.byDept.length > 8" class="muted">图表展示前 8 个部门，完整数据见下方。</view>
+      <view class="panel">
+        <view class="panel-title">各部门申请数量对比</view>
+        <view v-if="enterprise.byDept.length > 8" class="note">图表展示前 8 个部门，完整数据见下方。</view>
         <UChart v-if="enterpriseChart" type="column" :data="enterpriseChart" :opts="countChartOptions" :height="540" />
         <EmptyState v-else text="所选区间内暂无已提交申请" />
       </view>
-      <view v-for="row in enterprise.byDept" :key="row.deptId" class="card">
-        <view class="card-title break">{{ row.deptName }}</view>
+      <view v-for="row in enterprise.byDept" :key="row.deptId" class="panel">
+        <view class="panel-title break">{{ row.deptName }}</view>
         <view class="dept-metrics">
-          <view v-for="metric in totalMetrics(row)" :key="metric.label" class="dept-metric"><view class="muted">{{ metric.label }}</view><view class="amount break">{{ metric.value }}</view></view>
+          <view v-for="metric in totalMetrics(row)" :key="metric.label" class="dept-metric"><view class="note">{{ metric.label }}</view><view class="amount break">{{ metric.value }}</view></view>
         </view>
       </view>
-      <view class="muted">通过率 = 已通过 /（已通过 + 已驳回）；平均审批时长仅含已通过、已驳回申请；“—”表示没有可计算的数据。</view>
+      <view class="note">通过率 = 已通过 /（已通过 + 已驳回）；平均审批时长仅含已通过、已驳回申请；“—”表示没有可计算的数据。</view>
     </template>
   </view>
 </template>
 
 <style scoped>
-.stats-definition { position: sticky; top: 0; z-index: 2; }
-.date-range { display: flex; align-items: center; }
-.date-picker { flex: 1; min-width: 0; }
-.date-range .picker-value { font-size: 25rpx; padding: 0 12rpx; }
-.date-separator { margin: 0 12rpx; color: #8f959e; }
-.shortcuts { display: flex; flex-wrap: wrap; }
-.shortcuts .link-btn { flex: 1; font-size: 26rpx; padding: 0 8rpx; }
-.refresh-row { margin: -8rpx 0 16rpx; gap: 16rpx; }
-.refresh-row > text { flex: 1; min-width: 0; }
-.refresh-button { margin: 0; min-width: 120rpx; min-height: 88rpx; display: flex; align-items: center; justify-content: center; padding: 0 16rpx; background: transparent; color: #2f6bff; font-size: 26rpx; flex-shrink: 0; }
-.refresh-button::after { border: 0; }
-.metric-grid { display: flex; flex-wrap: wrap; margin: 0 -8rpx 8rpx; }
-.metric { width: calc(50% - 16rpx); margin: 0 8rpx 16rpx; padding: 24rpx 20rpx; border-radius: 16rpx; background: #fff; }
-.metric-value { margin-top: 8rpx; font-size: 32rpx; line-height: 1.4; font-weight: 700; font-variant-numeric: tabular-nums; word-break: break-all; }
-.metric-hint { margin-top: 6rpx; color: #8f959e; font-size: 22rpx; }
-.data-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16rpx; padding: 12rpx 0; }
-.data-row > text:last-child { text-align: right; word-break: break-all; }
-.data-row > text:first-child { min-width: 0; }
-.wrap-name { flex: 1; word-break: break-all; }
-.detail-item { padding: 20rpx 0; border-top: 1rpx solid #f0f1f2; }
-.detail-item:first-child { border-top: 0; }
-.status-numbers { display: flex; flex-wrap: wrap; margin-top: 8rpx; color: #646a73; font-size: 24rpx; }
-.status-numbers text { width: 50%; padding: 6rpx 0; }
-.dept-metrics { display: flex; flex-wrap: wrap; }
-.dept-metric { width: 50%; padding: 12rpx 16rpx 12rpx 0; }
+.stats {
+  min-height: 100vh;
+  padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+  background: var(--eas-paper);
+  color: var(--eas-ink);
+  font-family: var(--eas-font-sans);
+}
+
+.definition {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 16rpx 24rpx;
+  margin-bottom: 24rpx;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.6;
+  color: var(--eas-ink-2);
+  background: var(--eas-paper-deep);
+  border-radius: var(--eas-radius-control);
+}
+
+.tabs {
+  display: flex;
+  padding: 6rpx;
+  margin-bottom: 24rpx;
+  background: var(--eas-paper-deep);
+  border-radius: var(--eas-radius-control);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 88rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink-2);
+  border-radius: var(--eas-radius-control);
+  transition: background-color var(--eas-dur) var(--eas-ease);
+}
+
+.tab--active {
+  background: var(--eas-surface);
+  color: var(--eas-ink);
+  font-weight: 600;
+}
+
+.notice {
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.6;
+  color: var(--eas-ink-2);
+  background: var(--eas-primary-tint);
+  border-radius: var(--eas-radius-control);
+}
+
+.notice--warning {
+  color: var(--eas-warning-text);
+  background: var(--eas-warning-tint);
+}
+
+.panel {
+  padding: 24rpx 28rpx;
+  margin-bottom: 24rpx;
+  background: var(--eas-surface);
+  border: 1rpx solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+}
+
+.panel-title {
+  margin-bottom: 12rpx;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+}
+
+.section {
+  margin: 8rpx 4rpx 16rpx;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  color: var(--eas-ink-2);
+}
+
+.note {
+  font-size: var(--eas-fs-xs);
+  line-height: 1.6;
+  color: var(--eas-ink-3);
+}
+
+.err {
+  margin-top: 8rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-danger);
+}
+
+.label {
+  margin-bottom: 12rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink-2);
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+}
+
+.date-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.date-separator {
+  margin: 0 16rpx;
+  color: var(--eas-ink-2);
+}
+
+.pick {
+  display: flex;
+  align-items: center;
+  height: 88rpx;
+  padding: 0 20rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink);
+  background: var(--eas-paper);
+  border: 2rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+}
+
+.pick--between {
+  justify-content: space-between;
+}
+
+.pick-action {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  color: var(--eas-primary);
+}
+
+.shortcuts {
+  display: flex;
+  margin: 16rpx -8rpx 0;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 88rpx;
+  margin: 0 8rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-primary);
+  border: 2rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+}
+
+.dept-field {
+  margin-top: 24rpx;
+}
+
+.refresh-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin: -8rpx 0 16rpx;
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 120rpx;
+  min-height: 88rpx;
+  margin: 0;
+  padding: 0 16rpx;
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-primary);
+  background: transparent;
+  border-radius: var(--eas-radius-control);
+}
+
+.refresh-button::after {
+  border: 0;
+}
+
+.metric-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -8rpx 8rpx;
+}
+
+.metric {
+  width: calc(50% - 16rpx);
+  margin: 0 8rpx 16rpx;
+  padding: 24rpx 20rpx;
+  background: var(--eas-surface);
+  border: 1rpx solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+}
+
+.metric-value {
+  margin-top: 8rpx;
+  font-size: var(--eas-fs-md);
+  line-height: 1.4;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+
+.metric-hint {
+  margin-top: 6rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+
+.data-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 12rpx 0;
+}
+
+.data-row > text:last-child {
+  text-align: right;
+  word-break: break-all;
+}
+
+.data-row > text:first-child {
+  min-width: 0;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+}
+
+.dot {
+  width: 12rpx;
+  height: 12rpx;
+  margin-right: 12rpx;
+  border-radius: 50%;
+}
+
+.dot--muted {
+  background: var(--eas-muted);
+}
+
+.dot--primary {
+  background: var(--eas-primary);
+}
+
+.dot--success {
+  background: var(--eas-success);
+}
+
+.dot--danger {
+  background: var(--eas-danger);
+}
+
+.wrap-name {
+  flex: 1;
+  word-break: break-all;
+}
+
+.detail-item {
+  padding: 20rpx 0;
+  border-top: 1rpx solid var(--eas-rule);
+}
+
+.detail-item:first-child {
+  border-top: 0;
+}
+
+.status-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
+}
+
+.status-numbers text {
+  width: 50%;
+  padding: 6rpx 0;
+}
+
+.dept-metrics {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.dept-metric {
+  width: 50%;
+  padding: 12rpx 16rpx 12rpx 0;
+}
 </style>

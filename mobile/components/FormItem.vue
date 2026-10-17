@@ -19,3 +19,24 @@ defineProps<{
     <view v-if="error" class="field-err">{{ error }}</view>
   </view>
 </template>
+
+<style scoped>
+.field-label {
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-sm);
+}
+
+.req {
+  color: var(--eas-danger);
+}
+
+.field-help {
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-xs);
+}
+
+.field-err {
+  color: var(--eas-danger);
+  font-size: var(--eas-fs-xs);
+}
+</style>

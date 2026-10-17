@@ -16,6 +16,8 @@ const emit = defineEmits<{ change: [index: number] }>()
         :key="s"
         class="step"
         :class="{ active: i === current, done: i < current }"
+        hover-class="is-pressed"
+        :hover-stay-time="60"
         @tap="emit('change', i)"
       >
         <view class="step-no">{{ i + 1 }}</view>
@@ -30,9 +32,9 @@ const emit = defineEmits<{ change: [index: number] }>()
 .steps {
   width: 100%;
   white-space: nowrap;
-  background: #fff;
-  border-radius: 16rpx;
-  margin-bottom: 24rpx;
+  background: var(--eas-surface);
+  border-radius: var(--eas-radius-panel);
+  margin-bottom: 16rpx;
 }
 
 .steps-inner {
@@ -43,14 +45,15 @@ const emit = defineEmits<{ change: [index: number] }>()
 .step {
   position: relative;
   flex: 1;
-  min-width: 110rpx;
+  min-width: 136rpx;
   height: 112rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #8f959e;
-  font-size: 22rpx;
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-xs);
+  border-bottom: 4rpx solid transparent;
 }
 
 .step-no {
@@ -59,33 +62,35 @@ const emit = defineEmits<{ change: [index: number] }>()
   line-height: 40rpx;
   border-radius: 50%;
   text-align: center;
-  background: #eef0f3;
-  font-size: 22rpx;
+  background: var(--eas-paper);
+  font-size: var(--eas-fs-xs);
+  font-variant-numeric: tabular-nums;
   margin-bottom: 6rpx;
 }
 
 .step.done .step-no {
-  background: #e8efff;
-  color: #2f6bff;
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
 }
 
 .step.active {
-  color: #2f6bff;
+  color: var(--eas-primary);
   font-weight: 600;
+  border-bottom-color: var(--eas-primary);
 }
 
 .step.active .step-no {
-  background: #2f6bff;
-  color: #fff;
+  background: var(--eas-primary);
+  color: var(--eas-surface);
 }
 
 .step-err {
   position: absolute;
   top: 16rpx;
-  right: 22rpx;
+  right: 28rpx;
   width: 14rpx;
   height: 14rpx;
   border-radius: 50%;
-  background: #e5484d;
+  background: var(--eas-danger);
 }
 </style>
