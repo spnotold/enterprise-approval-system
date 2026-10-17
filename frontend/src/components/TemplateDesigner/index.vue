@@ -267,8 +267,9 @@ async function scrollToPath(path: string, flash = false) {
 }
 
 /** 外部调用：根据校验问题的 path 定位到对应字段 / 节点并滚动进可视区 */
-async function locate(path: string): Promise<boolean> {
+async function locate(path: string | null | undefined): Promise<boolean> {
   const norm = normalizeIssuePath(path)
+  if (!norm) return false
   const t = parseTarget(norm)
   switch (t.kind) {
     case 'field':
