@@ -84,6 +84,27 @@ class RefreshRotationTest extends IntegrationTestBase {
         assertThat(refresh(raw, uid("rd_emp_wang")).getResponse().getStatus()).isEqualTo(200);
     }
 
+    @Test
+    void expiredRotatedTokenWithinGraceIsRejected() throws Exception {
+        String raw = login("rd_emp_wang");
+        MvcResult first = refresh(raw, null);
+        assertThat(first.getResponse().getStatus()).isEqualTo(200);
+        String rotated = first.getResponse().getCookie(COOKIE).getValue();
+        // 已轮换且在 10 秒宽限期内，但令牌本身已过期：不再补发访问令牌
+        jdbc.update("UPDATE refresh_token SET expires_at = now() - interval '1 second' WHERE token_hash = ?",
+                Hashes.sha256Hex(raw));
+
+        MvcResult reused = refresh(raw, null);
+        assertThat(reused.getResponse().getStatus()).isEqualTo(401);
+        // 宽限期内不按泄露处理：不撤销整族、不写审计，已轮换出的新令牌仍然有效
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM refresh_token WHERE family_id = "
+                        + "(SELECT family_id FROM refresh_token WHERE token_hash = ?) AND revoked_at IS NOT NULL",
+                Long.class, Hashes.sha256Hex(raw))).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE action = 'REFRESH_TOKEN_REUSE'", Long.class))
+                .isZero();
+        assertThat(refresh(rotated, null).getResponse().getStatus()).isEqualTo(200);
+    }
+
     private String login(String username) throws Exception {
         MvcResult r = call(post("/auth/login"), null, map("account", username, "password", PASSWORD));
         assertThat(r.getResponse().getStatus()).isEqualTo(200);
