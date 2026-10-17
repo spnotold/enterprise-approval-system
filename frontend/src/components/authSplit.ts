@@ -4,9 +4,9 @@
 /** 表单栏默认宽度（px），双击分界线复位到这个值 */
 export const AUTH_FORM_WIDTH_DEFAULT = 540
 /** 表单栏最小宽度（px） */
-export const AUTH_FORM_WIDTH_MIN = 380
+export const AUTH_FORM_WIDTH_MIN = 360
 /** 左侧说明栏最小宽度（px） */
-export const AUTH_ASIDE_WIDTH_MIN = 360
+export const AUTH_ASIDE_WIDTH_MIN = 200
 /** 表单栏宽度的 localStorage 键 */
 export const AUTH_SPLIT_STORAGE_KEY = 'eas.auth.formWidth'
 /** 方向键每步（px） */
@@ -34,15 +34,15 @@ function resolveStorage(storage?: SplitStorage | null): SplitStorage | null {
 }
 
 /**
- * 表单栏允许的最大宽度：视口宽度的 60%，且左栏不小于 AUTH_ASIDE_WIDTH_MIN。
+ * 表单栏允许的最大宽度：视口宽度减去左栏最小宽度，没有其他上限。
  * 视口过窄时结果会小于最小宽度，由 clampFormWidth 兜底成 AUTH_FORM_WIDTH_MIN。
  */
 export function maxFormWidth(viewportWidth: number): number {
   const viewport = Number.isFinite(viewportWidth) ? viewportWidth : 0
-  return Math.floor(Math.min(viewport * 0.6, viewport - AUTH_ASIDE_WIDTH_MIN))
+  return Math.floor(viewport - AUTH_ASIDE_WIDTH_MIN)
 }
 
-/** 把表单栏宽度夹进 [380, min(视口×0.6, 视口−360)]；视口太窄时以 380 为准 */
+/** 把表单栏宽度夹进 [360, 视口−200]；视口太窄（最大 < 最小）时以 360 为准 */
 export function clampFormWidth(width: number, viewportWidth: number): number {
   const target = typeof width === 'number' && !Number.isNaN(width) ? width : AUTH_FORM_WIDTH_DEFAULT
   const max = maxFormWidth(viewportWidth)
