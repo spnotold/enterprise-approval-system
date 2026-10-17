@@ -253,7 +253,7 @@ onBeforeUnmount(() => {
     margin-top: 48px;
   }
 }
-/* < 360：再收紧——格子内边距 8px 10px，「同意」章缩小 */
+/* < 360：再收紧——格子内边距 8px 10px，「同意」章缩小（选择器带三层，盖过 Stamp.vue 的 .stamp.sm） */
 @container auth-aside (inline-size < 360px) {
   .slip {
     grid-template-columns: minmax(0, 1fr);
@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
   .cell {
     padding: 8px 10px;
   }
-  .cell-stamp {
+  .slip .cell .cell-stamp {
     padding: 1px 3px;
     margin-top: -9px;
   }
