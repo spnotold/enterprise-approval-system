@@ -155,10 +155,11 @@ public class AuthService {
         return issuePair(u, client, t.getFamilyId());
     }
 
-    /** 已轮换的令牌再次出现：宽限期内按并发刷新处理，超出宽限判定为泄露 */
+    /** 已轮换的令牌再次出现：未过期且在宽限期内按并发刷新处理，超出宽限判定为泄露 */
     private TokenPair refreshRotated(RefreshToken t, String client) {
         boolean withinGrace = !t.getRotatedAt().toInstant().isBefore(clock.instant().minus(ROTATION_GRACE));
-        if (withinGrace && CLIENT_WEB.equals(client)) {
+        // 宽限补发只限未过期的令牌；已过期按无效令牌拒绝，且不按泄露撤销整族
+        if (withinGrace && t.getExpiresAt().toInstant().isAfter(clock.instant()) && CLIENT_WEB.equals(client)) {
             // 多个标签页几乎同时刷新：先到的已经轮换并写回 Cookie，后到的只补发访问令牌，不再轮换
             SysUser u = userMapper.selectById(t.getUserId());
             if (u != null && SysUser.ACTIVE.equals(u.getStatus())) {
