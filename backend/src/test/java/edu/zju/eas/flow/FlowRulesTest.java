@@ -154,4 +154,26 @@ class FlowRulesTest extends IntegrationTestBase {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE action = 'TASK_TRANSFER'", Long.class)).isEqualTo(1);
         assertThat(approve(app, "ceo_zhao").getResponse().getStatus()).isEqualTo(200);
     }
+
+    @Test
+    void adminTransferRejectsTargetWhoAlreadyHasPendingTaskOnNode() throws Exception {
+        long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
+        Long task = pendingTask(app, "rd_head_li");
+        // 模拟会签节点上赵总已有未处理的待办
+        jdbc.update("""
+                INSERT INTO approval_task (application_id, node_instance_id, assignee_id, status)
+                SELECT application_id, node_instance_id, ?, 'PENDING' FROM approval_task WHERE id = ?
+                """, uid("ceo_zhao"), task);
+        MvcResult r = call(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/tasks/" + task + "/transfer"),
+                "admin", map("toUserId", uid("ceo_zhao"), "reason", "转给已有待办的人"));
+        // 报业务规则错误而不是唯一索引冲突被兜底成 409 申请状态已变化
+        assertThat(r.getResponse().getStatus()).as(r.getResponse().getContentAsString()).isEqualTo(422);
+        assertThat(body(r).path("errors").findValuesAsText("rule")).contains("TRANSFER_TARGET_INVALID");
+        // 原待办保持不变，没有插入新待办，也没有转办历史
+        assertThat(pendingTask(app, "rd_head_li")).isEqualTo(task);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM approval_task WHERE application_id = ? AND assignee_id = ?",
+                Long.class, app, uid("ceo_zhao"))).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM assignee_history WHERE from_task_id = ?",
+                Long.class, task)).isZero();
+    }
 }

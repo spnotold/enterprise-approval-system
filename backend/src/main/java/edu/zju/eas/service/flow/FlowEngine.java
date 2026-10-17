@@ -467,6 +467,9 @@ public class FlowEngine {
         if (taskMapper.actedOnNode(task.getNodeInstanceId(), to.getId())) {
             throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "新审批人已处理过该节点，不能重复审批");
         }
+        if (taskMapper.pendingOnNode(task.getNodeInstanceId(), to.getId())) {
+            throw BizException.rule("toUserId", "TRANSFER_TARGET_INVALID", "新审批人在该节点已有待办");
+        }
         if (taskMapper.markTransferred(taskId, req.reason()) == 0) {
             throw new BizException(ErrorCode.TASK_ALREADY_PROCESSED);
         }
