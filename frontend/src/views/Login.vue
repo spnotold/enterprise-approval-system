@@ -177,7 +177,7 @@ function fillDemo(a: DemoAccount) {
     <section v-if="demoMode" class="demo">
       <div class="demo-head">
         <span class="demo-title">演示账号</span>
-        <span class="demo-pwd">密码 {{ DEMO_PASSWORD }}</span>
+        <span class="demo-hint">点一个账号自动填入，密码都是 {{ DEMO_PASSWORD }}</span>
       </div>
       <ul class="demo-list">
         <li v-for="a in DEMO_ACCOUNTS" :key="a.username">
@@ -222,21 +222,23 @@ function fillDemo(a: DemoAccount) {
 
 /* 演示账号：分隔线 + 小标题行 + 两列平铺按钮，无内部滚动 */
 .demo {
-  margin-top: 24px;
-  padding-top: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--eas-rule);
 }
 .demo-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px 12px;
   margin-bottom: 12px;
 }
 .demo-title {
   font-size: var(--eas-fs-sm);
   font-weight: 600;
 }
-.demo-pwd {
+/* 说明与「演示账号」分开放，避免被读成账号名 */
+.demo-hint {
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-2);
 }
