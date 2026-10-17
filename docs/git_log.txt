@@ -1,3 +1,865 @@
+commit 02ceb3310f11fd9b00ca444ef97d1a31017e21c2
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Sat Oct 17 00:12:03 2026 -0400
+
+    docs: record web 190 / mobile 42 tests after the UI redesign
+
+ README.md           | 1 +
+ docs/test_report.md | 6 +++---
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+commit 29f8bd0d8b436b6536b3ae85c3f9fa8b4c40389b
+Merge: ff274da 03652ce
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 11:33:49 2026 +0800
+
+    Merge pull request #34 from spnotold/feature/ui-auth-split
+    
+    feat(web): 登录页左右分栏可拖动
+
+commit 03652cead0a228947d2069a5c59b69bb66c15e81
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 23:33:34 2026 -0400
+
+    fix(web): put the split handle after the form in tab order
+
+ frontend/src/components/AuthShell.vue | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+
+commit 1c642d27875886bb93c5daeac532ac672175fa01
+Merge: f436e3b 15e237a
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 11:32:41 2026 +0800
+
+    Merge pull request #33 from spnotold/feature/ui-auth-split-impl
+    
+    feat(web): 登录页左右分栏分界线可拖动
+
+commit 15e237a86c5276973bcac35e5d9c832990c26f9e
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 23:16:05 2026 -0400
+
+    feat(web): 登录页左右分栏分界线可拖动与键盘调整
+
+ frontend/src/components/AuthShell.vue | 159 +++++++++++++++++++++++++++++++++-
+ 1 file changed, 156 insertions(+), 3 deletions(-)
+
+commit d19887a0b807a57c478e1cb39bddab1705bab04e
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 23:13:58 2026 -0400
+
+    feat(web): 登录页分栏宽度的夹紧与记忆纯逻辑
+
+ frontend/src/components/authSplit.spec.ts | 184 ++++++++++++++++++++++++++++++
+ frontend/src/components/authSplit.ts      | 104 +++++++++++++++++
+ 2 files changed, 288 insertions(+)
+
+commit f436e3b9145634bed2949f2073f4ab6a4a63a7eb
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 23:06:48 2026 -0400
+
+    docs(ui): specify the draggable split on the login page
+
+ docs/ui_design.md | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+commit ff274da2b5c84fa67128ed033e6116196aa651e9
+Merge: 84dfb79 b33f34b
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 11:06:00 2026 +0800
+
+    Merge pull request #32 from spnotold/fix/ui-slip-note
+    
+    fix(web): 登录页示意图说明改为「审批流程」
+
+commit b33f34b66e6cbfe9e26564117e69bc4b90cac19a
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 23:05:45 2026 -0400
+
+    fix(web): label the login routing demo as 审批流程
+
+ docs/ui_design.md                        | 2 +-
+ frontend/src/components/slipDemo.spec.ts | 2 +-
+ frontend/src/components/slipDemo.ts      | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+commit 84dfb796b3c74991945fa4a3b0c1ce60812da680
+Merge: ef9f6c6 87fa76d
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 10:32:28 2026 +0800
+
+    Merge pull request #31 from spnotold/feature/ui-login-slip-demo
+    
+    feat(ui): 登录页流转演示、点阵涟漪与文案精简
+
+commit 87fa76d6822bd843c9e8c01ecd7ce46777f91207
+Merge: 9446f91 d4280d7
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 10:31:12 2026 +0800
+
+    Merge pull request #30 from spnotold/feature/ui-paper-ripple
+    
+    feat(web): 背景格纸点击效果改为点阵涟漪
+
+commit d4280d785a944336d8e9e0c4479797a7c7ec6b16
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 22:21:42 2026 -0400
+
+    feat(web): replace the click ring with a dot-grid ripple
+    
+    - draw the paper dots displaced by each active click ripple instead of a
+      thin ring: offset = A*sin(2pi*(r-d)/lambda)*exp(-((r-d)/sigma)^2), only
+      behind the wavefront d <= r; emphasis = |offset|/A0 drives the radius
+      (up to 1.8px) and the tint towards primary (alpha up to 0.5)
+    - final displacement per dot = cursor attraction + sum of ripple offsets;
+      emphasis = max(cursor influence, ripple emphasis)
+    - keep at most 3 ripples, drop the earliest, remove each after 1000ms
+    - per-frame dirty rect unions the cursor region with every ripple box
+      (current radius + amplitude + dot padding); rAF keeps running while
+      ripples are alive and still stops once settled
+    - no ripples under prefers-reduced-motion or touch (degraded mode keeps
+      listeners detached); ring math and tests removed
+
+ frontend/src/composables/paperMath.spec.ts     |  20 --
+ frontend/src/composables/paperMath.ts          |  21 ---
+ frontend/src/composables/usePaperField.spec.ts |  37 +++-
+ frontend/src/composables/usePaperField.ts      | 246 +++++++++++++++++++------
+ 4 files changed, 225 insertions(+), 99 deletions(-)
+
+commit 5367ce5c5bec472025a7fab86bef156a3648cd04
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 22:20:24 2026 -0400
+
+    feat(web): add dot-ripple math for the paper background
+    
+    Add rippleRadius/rippleAmplitude/rippleOffset/rippleEmphasis to
+    paperMath with constants from the design spec (0.24px/ms wavefront,
+    1000ms duration, lambda=36, sigma=48, A0=5) and vitest coverage.
+
+ frontend/src/composables/paperMath.spec.ts | 100 +++++++++++++++++++++++++++++
+ frontend/src/composables/paperMath.ts      |  61 ++++++++++++++++++
+ 2 files changed, 161 insertions(+)
+
+commit 9446f91a116256919fbf1c6df847eafab93f20e0
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 22:19:24 2026 -0400
+
+    fix(ui): cut narration from subtitles and empty states
+
+ frontend/src/components/tasks/TaskListContent.vue   | 4 ++--
+ frontend/src/views/Login.vue                        | 7 +------
+ frontend/src/views/Notifications.vue                | 4 ++--
+ frontend/src/views/Stats.vue                        | 3 +--
+ frontend/src/views/applications/ApplicationList.vue | 8 ++++----
+ frontend/src/views/apply/ApplyHome.vue              | 8 +-------
+ frontend/src/views/apply/PurchaseForm.vue           | 2 +-
+ mobile/pages/task/list.vue                          | 2 +-
+ 8 files changed, 13 insertions(+), 25 deletions(-)
+
+commit 53511c0e8e717ced475af29a78edf1802a147620
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 22:17:00 2026 -0400
+
+    docs(ui): replace the click ring with a dot-grid ripple
+
+ docs/ui_design.md | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+commit 8e186c51c42ddefcee63dd4d663ef83882a0d1b0
+Merge: bc50272 7e068a9
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 10:16:07 2026 +0800
+
+    Merge pull request #29 from spnotold/feature/ui-login-slip-demo-impl
+    
+    feat(web): 登录页流转演示动画，去掉介绍句
+
+commit 7e068a9850dec6462bd07d20459cf93686894518
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 22:15:54 2026 -0400
+
+    feat(web): animate the routing demo on the login page and drop the intro line
+
+ docs/ui_design.md                        |   2 +-
+ frontend/src/components/AuthShell.vue    |  58 +-------
+ frontend/src/components/SlipDemo.vue     | 243 +++++++++++++++++++++++++++++++
+ frontend/src/components/slipDemo.spec.ts |  96 ++++++++++++
+ frontend/src/components/slipDemo.ts      | 105 +++++++++++++
+ 5 files changed, 448 insertions(+), 56 deletions(-)
+
+commit bc50272c8824f5d7b0ce36b42a8758cb15da155e
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 22:10:33 2026 -0400
+
+    fix(mobile): drop the slogan line under the login title
+
+ mobile/pages/login/index.vue | 8 --------
+ 1 file changed, 8 deletions(-)
+
+commit 5ef74134d67a189b9d29812c4edd31eb9757bd67
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 22:05:06 2026 -0400
+
+    docs(ui): specify the animated routing demo on the login page
+
+ docs/ui_design.md | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+commit ef9f6c62273d86f02006b4eaecada064f3021fbe
+Merge: 24c2322 a1fbfe3
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:52:57 2026 +0800
+
+    Merge pull request #28 from spnotold/feature/ui-redesign
+    
+    feat(ui): 前端与移动端界面重设计「流转单」
+
+commit a1fbfe391fb074d7cc055f5e055981c5f9980d26
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:51:22 2026 -0400
+
+    fix(mobile): reuse the in-flight home load when onLoad and onShow fire together
+
+ mobile/pages/home/index.vue | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+commit 197df16d91020f8531ad2b31b0d7f58c7e380cd4
+Merge: aa90c88 f348ea5
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:51:07 2026 +0800
+
+    Merge pull request #27 from spnotold/fix/ui-mobile-home-sections
+    
+    fix(mobile): 首页区域独立请求与错误隔离，避免待办失败阻断工作台
+
+commit f348ea5fc81c2d45c3aca40b11b49ea2b4d56254
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:48:58 2026 -0400
+
+    fix(mobile): isolate home sections to prevent pending failures blocking dashboard
+
+ mobile/pages/home/homeData.ts  | 157 ++++++++++++++++++++++++++++++++++++++
+ mobile/pages/home/index.vue    | 154 ++++++++++++++++++++++++-------------
+ mobile/tests/homeData.test.mjs | 168 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 426 insertions(+), 53 deletions(-)
+
+commit aa90c88c655ecc03075c1d9fc13dbf5de74d6f41
+Merge: e579033 e894e48
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:48:02 2026 +0800
+
+    Merge pull request #26 from spnotold/fix/ui-paperfield
+    
+    fix(web): 修复格纸画布自适应与点击判定
+
+commit e5790335e24e4bbe650159697e633e7fa1ad8185
+Merge: 07f03da ad6b74b
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:46:50 2026 +0800
+
+    Merge pull request #24 from spnotold/fix/ui-slide-confirm
+    
+    fix(mobile): 滑动同意不因 touchcancel 误提交，H5 支持鼠标与键盘确认
+
+commit e894e48042f9b5652ba670d9d4fe884497ccdb89
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:46:24 2026 -0400
+
+    fix(web): keep paper field responsive and sharp
+
+ frontend/src/components/PaperField.vue         |   4 +
+ frontend/src/composables/usePaperField.spec.ts |  71 +++++++++++++-
+ frontend/src/composables/usePaperField.ts      | 125 ++++++++++++++++++++++---
+ 3 files changed, 184 insertions(+), 16 deletions(-)
+
+commit 07f03dae8db15a57189a99ec750d5bc5b3b86614
+Merge: f0229c4 42e442f
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:46:07 2026 +0800
+
+    Merge pull request #25 from spnotold/fix/ui-web-list-polish
+    
+    fix(web): 列表状态圆点颜色与 1280 宽度下的列宽
+
+commit 42e442f6a71d2b67af866cf70fb450fb3ceef76e
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:45:51 2026 -0400
+
+    fix(web): color task status dots by state and fit main lists at 1280px
+
+ frontend/src/components/tasks/TaskListContent.vue  | 39 +++++++++---------
+ frontend/src/components/tasks/dotStatus.spec.ts    | 47 ++++++++++++++++++++++
+ .../src/views/applications/ApplicationList.vue     | 17 ++++----
+ 3 files changed, 76 insertions(+), 27 deletions(-)
+
+commit ad6b74b15b343c3e852693b2077c9b554e5b7064
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:44:41 2026 -0400
+
+    fix(mobile): 滑动同意不因 touchcancel 误提交，H5 支持鼠标与键盘确认
+    
+    - 手势判定抽到 utils/slideGesture 纯状态机：只有正常抬起且位置 ≥ 90% 才确认，touchcancel / 窗口失焦一律回弹
+    - H5 支持鼠标拖动（全局 mousemove/mouseup 在结束和卸载时移除）；滑块可 Tab 聚焦，Enter / 空格两次确认，Esc、失焦或 4 秒超时取消待确认
+    - H5 滑块带 role="slider" 与 aria 属性；小程序端仍是纯触摸滑动
+    - touchend 阻止默认行为，避免点按后补发的鼠标事件重复触发
+
+ mobile/components/SlideConfirm.vue | 192 ++++++++++++++++++++++++++++---------
+ mobile/tests/slideGesture.test.mjs | 101 +++++++++++++++++++
+ mobile/utils/slideGesture.ts       |  79 +++++++++++++++
+ 3 files changed, 328 insertions(+), 44 deletions(-)
+
+commit f0229c4a5b14144b33e5e02c9177c43d9284981d
+Merge: fb1729c 7e895c2
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:42:39 2026 +0800
+
+    Merge pull request #23 from spnotold/fix/ui-applist-actions
+    
+    fix(mobile): 申请列表左滑操作权限改为按需加载
+
+commit 7e895c2e5567474da4638ee43e06eaef16906d12
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:41:50 2026 -0400
+
+    fix(mobile): 申请列表左滑操作权限改为按需加载
+    
+    列表数据不再等待逐条详情请求；左滑某条时才读取详情中的 allowedActions，加载中显示占位、失败显示重试，结果按（id + 版本 + 状态）缓存，列表刷新后失效，晚到的旧响应丢弃。
+
+ mobile/components/SwipeCell.vue            |  29 ++++++--
+ mobile/composables/useActionPermissions.ts |  51 +++++++++++++
+ mobile/pages/app/list.vue                  |  39 +++++-----
+ mobile/tests/actionPermissions.test.mjs    | 110 +++++++++++++++++++++++++++++
+ 4 files changed, 206 insertions(+), 23 deletions(-)
+
+commit fb1729c27f747fe4d2e819e18278ff6b8e691788
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:26:39 2026 -0400
+
+    fix(web): keep template designer issue locating and node-limit warning intact
+
+ frontend/src/components/TemplateDesigner/index.vue | 76 +++++++++++++++++-----
+ 1 file changed, 58 insertions(+), 18 deletions(-)
+
+commit 036d44e06cb06f4990e9ae6eb2970051c6bd54c3
+Merge: 7d7e3f9 4555f41
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:25:54 2026 +0800
+
+    Merge pull request #22 from spnotold/feature/ui-web-lists
+    
+    feat(web): 完成 Web 端列表页、通知、统计与管理后台改造 (W3)
+
+commit 4555f413cd025710feeea32e31f4a1097b0987b2
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:23:05 2026 -0400
+
+    fix(web): allow nullable path in template designer locate
+
+ frontend/src/components/TemplateDesigner/index.vue | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+commit 7d7e3f9f522515aa430c330303c0dfb125d43dbf
+Merge: cac8863 7a869e0
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 09:21:12 2026 +0800
+
+    Merge pull request #21 from spnotold/feature/ui-web-detail
+    
+    feat(web): 申请详情「单据」改造（W2）及评审修复
+
+commit 7a869e0d726881d46db64107c404af8475e0f02d
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:19:34 2026 -0400
+
+    fix(web): 上传区拖放、表单焦点环与报价表宽度
+    
+    - 带文件的拖放一律 preventDefault，只读 / 禁用 / 已满时 dropEffect 为 none，
+      避免浏览器直接打开文件离开页面
+    - 拖入高亮时提示文字改用 ink-2
+    - 表单分节的 el-card__body 改为 overflow: visible，不再裁掉按钮焦点环
+    - 报价单列最小宽度 230 → 218，1280 宽度下报价表不再横向溢出
+
+ frontend/src/components/AttachmentUploader.vue | 18 ++++++++++++------
+ frontend/src/components/QuoteTable.vue         |  2 +-
+ frontend/src/views/apply/FormShell.vue         |  2 ++
+ 3 files changed, 15 insertions(+), 7 deletions(-)
+
+commit 1ba8bd21519085091889c3d449ce2b717c0ad99b
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:19:34 2026 -0400
+
+    fix(web): 落章标记在提交发起时登记，提交中暂停自动刷新
+    
+    - ApprovePanel 新增 submit 事件，带待办 id 与本次提交结果的 Promise；
+      请求参数与幂等键不变
+    - 详情页按（申请 id、待办 id）快照登记落章标记：submitting → ready → 消费，
+      不依赖审批面板存活；提交进行中推送触发的刷新延后到结束后合并执行
+    - Stamp 在播完、animationcancel、中途卸载、减弱动效时都消费一次；
+      刷新后找不到这枚章或内容清空时清掉标记，避免之后重复播放
+    - 详情页提示条与操作栏标记为 surface，点击空白不触发背景格纸的环
+
+ frontend/src/components/ApprovePanel.vue           |  8 ++-
+ frontend/src/components/slip/Stamp.vue             | 28 +++++++-
+ .../src/views/applications/ApplicationDetail.vue   | 81 +++++++++++++++++-----
+ 3 files changed, 96 insertions(+), 21 deletions(-)
+
+commit ee6dccb4cf17696f712a11b3fd1a900edb574b80
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:19:34 2026 -0400
+
+    fix(web): 签批联动分开记录鼠标与焦点，意见浮层纳入悬停范围
+    
+    - hover.ts 分别记录 pointer 与 focus，有效值为 pointer ?? focus；
+      鼠标离开有 120ms 宽限，从格子移到意见浮层不会关闭
+    - 内容卸载或节点消失时 release 掉残留的悬停 / 焦点
+    - 当前格与联动格（primary-tint / paper 底）上的辅助文字改用 ink-2，
+      对比度达到 4.5:1
+
+ frontend/src/components/FlowTimeline.vue      | 27 ++++++++--
+ frontend/src/components/slip/SignatureBar.vue | 39 ++++++++++----
+ frontend/src/components/slip/hover.spec.ts    | 57 ++++++++++++++++++++
+ frontend/src/components/slip/hover.ts         | 75 ++++++++++++++++++++-------
+ 4 files changed, 165 insertions(+), 33 deletions(-)
+
+commit 0cfd399ea95aeff6b4b6fb4bac54e2735e33a43a
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:15:08 2026 -0400
+
+    feat(web): add drag reorder and drop target highlight in template designer
+
+ .../components/TemplateDesigner/FieldLibrary.vue   |  16 ++-
+ .../src/components/TemplateDesigner/FormCanvas.vue | 103 ++++++++++++++++++-
+ .../src/components/TemplateDesigner/NodeList.vue   |  58 ++++++++++-
+ frontend/src/components/TemplateDesigner/index.vue | 110 +++++++++------------
+ frontend/src/views/Notifications.vue               |   9 +-
+ 5 files changed, 220 insertions(+), 76 deletions(-)
+
+commit bb227cd22b4961168dd9b4b8c567b5c6e12b9673
+Merge: 923df2f cac8863
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:05:28 2026 -0400
+
+    Merge remote-tracking branch 'origin/feature/ui-redesign' into feature/ui-web-lists
+
+commit 923df2fccd7d656a49352e4de9a04b7900524bc0
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:05:18 2026 -0400
+
+    feat(web): polish stats chart and admin status styling
+
+ frontend/src/components/StatsChart.vue             |  7 ++++---
+ frontend/src/components/TemplateDesigner/index.vue |  6 +++++-
+ frontend/src/components/admin/admin.css            | 22 ++++++++++++++++++++++
+ frontend/src/views/Stats.vue                       |  2 +-
+ frontend/src/views/admin/Deliveries.vue            |  2 +-
+ frontend/src/views/admin/ExpenseTypes.vue          |  2 +-
+ frontend/src/views/admin/Grants.vue                |  2 +-
+ frontend/src/views/admin/TaskMonitor.vue           |  2 +-
+ frontend/src/views/admin/TemplateDesign.vue        |  7 ++++++-
+ frontend/src/views/admin/Users.vue                 |  2 +-
+ 10 files changed, 43 insertions(+), 11 deletions(-)
+
+commit 7f0a5ae65546f03adbd0e83e8b0b7a935f388722
+Merge: 86989c1 cac8863
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 21:04:54 2026 -0400
+
+    Merge remote-tracking branch 'origin/feature/ui-redesign' into feature/ui-web-detail
+    
+    # Conflicts:
+    #       frontend/src/styles/main.css
+
+commit cac8863fdb9279cb54ebb7a2362d91a986d53193
+Merge: 3d6b4b9 e3971ed
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 04:55:56 2026 +0800
+
+    Merge pull request #20 from spnotold/feature/ui-mobile-detail
+    
+    feat(mobile): 单据详情、滑动同意、底部面板与申请表单重绘 (M2)
+
+commit e3971ed3fe070ef5fbefd6042ed224ef72747c7d
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 16:54:02 2026 -0400
+
+    feat(mobile): 重绘申请表单与附件选择
+    
+    - 分组小标题 + 白底分组，输入框纸色底，聚焦主色边框，错误态 danger-tint
+    - 附件项增加按压态，长按附件可删除（保留原删除入口）
+    - MoneyInput、FormItem、CustomFormRenderer 与各申请页改用 token
+
+ mobile/components/AttachmentPicker.vue   | 117 +++++---
+ mobile/components/CustomFormRenderer.vue |  47 +++-
+ mobile/components/FormItem.vue           |  21 ++
+ mobile/components/MoneyInput.vue         |  64 +++--
+ mobile/pages/apply/custom.vue            |  65 ++++-
+ mobile/pages/apply/expense.vue           | 267 +++++++++++++++---
+ mobile/pages/apply/index.vue             | 110 +++++---
+ mobile/pages/apply/purchase.vue          | 452 +++++++++++++++++++++++++++----
+ mobile/pages/apply/travel.vue            | 103 +++++--
+ mobile/styles/form.css                   | 120 ++++++++
+ 10 files changed, 1148 insertions(+), 218 deletions(-)
+
+commit d59096b45f90f78251064258eb11d58f01fd05b4
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 16:54:02 2026 -0400
+
+    feat(mobile): 滑动同意与底部面板下拉关闭
+    
+    - 新增 SlideConfirm：拖动跟手，≥90% 松手触发，否则回弹；单点提示，成功短振动
+    - ApproveSheet 的同意改为滑动确认，驳回仍需填写理由
+    - BottomSheet 增加拖动条，下拉 >120rpx 或快速下划关闭，否则回弹
+    - 同意 / 驳回后签批栏当前格落章（只播一次）
+
+ mobile/components/ApproveSheet.vue |  75 +++++++++----
+ mobile/components/BottomSheet.vue  | 169 +++++++++++++++++++++++++---
+ mobile/components/SlideConfirm.vue | 219 +++++++++++++++++++++++++++++++++++++
+ mobile/pages/task/handle.vue       |  11 +-
+ 4 files changed, 433 insertions(+), 41 deletions(-)
+
+commit cae485b2cd4699cbc290afab713bb52acd3c0da3
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 16:54:02 2026 -0400
+
+    feat(mobile): 重绘单据头、签批栏与详情字段区
+    
+    - 单据头：宋体标题、长按单号复制、终态显示倾斜的章
+    - 新增签批栏 SignatureBar（横滑格子，点击展开节点审批意见）与 Stamp 章组件
+    - 字段区改为两列 kv + 细线分隔，无票明细用 warning-tint 底
+    - 流转时间线、关联单卡片、步骤条改用设计 token
+    - 「批准」统一为「同意」
+
+ mobile/components/FlowTimeline.vue          | 178 ++++++++++++-----
+ mobile/components/LinkedAppCard.vue         |  84 ++++++--
+ mobile/components/SignatureBar.vue          | 296 ++++++++++++++++++++++++++++
+ mobile/components/Stamp.vue                 |  98 +++++++++
+ mobile/components/StepBar.vue               |  35 ++--
+ mobile/components/detail/AppDetailBody.vue  |  28 ++-
+ mobile/components/detail/AppHeader.vue      | 228 +++++++++++++++------
+ mobile/components/detail/CustomDetail.vue   |   8 +-
+ mobile/components/detail/ExpenseDetail.vue  |  88 ++++++---
+ mobile/components/detail/LogList.vue        | 107 +++++++---
+ mobile/components/detail/PurchaseDetail.vue | 157 +++++++++------
+ mobile/components/detail/TravelDetail.vue   |  38 ++--
+ mobile/components/detail/fields.css         | 185 +++++++++++++++++
+ mobile/pages/app/detail.vue                 |  11 +-
+ mobile/utils/labels.ts                      |   2 +-
+ 15 files changed, 1267 insertions(+), 276 deletions(-)
+
+commit 468ecc986bc956af350e1b9b68e3f168b6e9e2c5
+Merge: 69022b2 3d6b4b9
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 16:46:24 2026 -0400
+
+    Merge remote-tracking branch 'origin/feature/ui-redesign' into feature/ui-web-lists
+
+commit 69022b2271743f10631483b5106da56eef5e9cf2
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 16:46:24 2026 -0400
+
+    fix(web): harden list and admin interactions
+
+ frontend/src/components/TemplateDesigner/ConditionEditor.vue |  2 +-
+ frontend/src/components/TemplateDesigner/FieldLibrary.vue    |  2 +-
+ frontend/src/components/TemplateDesigner/NodeList.vue        |  2 +-
+ frontend/src/components/tasks/TaskListContent.vue            |  2 +-
+ frontend/src/composables/useRowNavigation.ts                 |  3 ++-
+ frontend/src/views/Notifications.vue                         | 12 +++++++++---
+ frontend/src/views/admin/Roles.vue                           |  6 +++---
+ frontend/src/views/admin/Users.vue                           |  2 +-
+ 8 files changed, 19 insertions(+), 12 deletions(-)
+
+commit 7d99b574efa1e75e4db3ba8bf66f260dea196007
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 16:45:50 2026 -0400
+
+    feat(web): unify admin management surfaces
+
+ .../TemplateDesigner/ConditionEditor.vue           |  2 +-
+ .../components/TemplateDesigner/FieldLibrary.vue   |  6 +-
+ .../src/components/TemplateDesigner/FieldProps.vue |  3 +-
+ .../src/components/TemplateDesigner/FormCanvas.vue | 15 +++--
+ .../src/components/TemplateDesigner/NodeEditor.vue |  4 +-
+ .../src/components/TemplateDesigner/NodeList.vue   | 15 +++--
+ frontend/src/components/TemplateDesigner/index.vue | 15 +++--
+ frontend/src/components/admin/admin.css            | 71 ++++++++++++++++++++++
+ frontend/src/views/admin/AuditLogs.vue             | 18 +++---
+ frontend/src/views/admin/Deliveries.vue            | 11 ++--
+ frontend/src/views/admin/Departments.vue           | 14 +++--
+ frontend/src/views/admin/ExpenseTypes.vue          | 11 ++--
+ frontend/src/views/admin/Grants.vue                | 17 +++---
+ frontend/src/views/admin/Registrations.vue         |  7 ++-
+ frontend/src/views/admin/Roles.vue                 | 10 +--
+ frontend/src/views/admin/SysConfig.vue             |  5 +-
+ frontend/src/views/admin/TaskMonitor.vue           | 15 ++---
+ frontend/src/views/admin/TemplateDesign.vue        | 13 ++--
+ frontend/src/views/admin/Templates.vue             |  9 +--
+ frontend/src/views/admin/Users.vue                 | 21 ++++---
+ 20 files changed, 189 insertions(+), 93 deletions(-)
+
+commit 3d6b4b9dd73f2040362b6d18266a35b4f89858f0
+Merge: d3b4921 18990eb
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 04:44:05 2026 +0800
+
+    Merge pull request #18 from spnotold/feature/ui-mobile-lists
+    
+    feat(mobile): 统一移动端主题并完善首页与列表手势
+
+commit d3b4921260a9286000fd69a0cf871cc4d29ef780
+Merge: 4848765 d1836da
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 04:43:25 2026 +0800
+
+    Merge pull request #19 from spnotold/feature/ui-web-paperfield
+    
+    feat(web): 背景「格纸」鼠标交互与点阵渲染 (W4)
+
+commit d1836dae865a1ab55391b2db5d9bed8a8698bea0
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:50:04 2026 -0400
+
+    feat(web): 实现背景「格纸」鼠标交互与离屏点阵渲染 (W4)
+
+ frontend/src/components/AuthShell.vue          |  14 +
+ frontend/src/components/PaperField.vue         |  49 ++
+ frontend/src/composables/paperMath.spec.ts     | 146 ++++++
+ frontend/src/composables/paperMath.ts          | 144 ++++++
+ frontend/src/composables/usePaperField.spec.ts |  85 ++++
+ frontend/src/composables/usePaperField.ts      | 605 +++++++++++++++++++++++++
+ frontend/src/views/Layout.vue                  |  18 +-
+ 7 files changed, 1060 insertions(+), 1 deletion(-)
+
+commit 18990eb3fda198df92191f4fd68181f99f24a199
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:35:06 2026 -0400
+
+    fix(mobile): proxy H5 development API requests
+
+ mobile/vite.config.ts | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+commit a81f35029568caed70dcdee3b48c0d60963cd992
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:35:06 2026 -0400
+
+    feat(mobile): add swipe actions and list tab gestures
+
+ mobile/App.vue                     |   4 +-
+ mobile/components/AppCard.vue      |   9 +-
+ mobile/components/EmptyState.vue   |   2 +-
+ mobile/components/SwipeCell.vue    |  79 ++++++++++++++++
+ mobile/components/UChart.vue       |  29 +++++-
+ mobile/composables/useSwipeTabs.ts |  49 ++++++++++
+ mobile/pages/app/list.vue          | 154 ++++++++++++++++++++++--------
+ mobile/pages/home/index.vue        | 187 +++++++++----------------------------
+ mobile/pages/notice/list.vue       |  58 ++++++++----
+ mobile/pages/task/list.vue         |  84 +++++++++--------
+ 10 files changed, 406 insertions(+), 249 deletions(-)
+
+commit 1738a3ecfa7cb382857037c32a61cf3dd9f86e35
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:31:07 2026 -0400
+
+    feat(mobile): restyle account pages and statistical charts
+
+ mobile/components/UChart.vue    |  93 ++++++--
+ mobile/pages/login/index.vue    | 279 +++++++++++++++++-----
+ mobile/pages/me/index.vue       | 145 ++++++++----
+ mobile/pages/me/password.vue    | 143 ++++++++++--
+ mobile/pages/register/index.vue | 252 +++++++++++++++++---
+ mobile/pages/stats/index.vue    | 498 ++++++++++++++++++++++++++++++++--------
+ 6 files changed, 1156 insertions(+), 254 deletions(-)
+
+commit 62d06b20f400426cfb043083ffaac1d6d4b1affb
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:30:24 2026 -0400
+
+    feat(web): apply routing-slip chart palette and hover states
+
+ frontend/src/components/StatsChart.vue            |  47 +++++
+ frontend/src/components/tasks/TaskListContent.vue |   4 +-
+ frontend/src/views/Stats.vue                      | 203 +++++++++++++++-------
+ 3 files changed, 188 insertions(+), 66 deletions(-)
+
+commit 48487651b368ac93dd57908ac47334ad657aa261
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:28:47 2026 -0400
+
+    docs(ui): specify the pointer-reactive grid-paper background
+
+ docs/ui_design.md | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+commit b13193a1348cfc760531c3410889a5df9be2a144
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:27:42 2026 -0400
+
+    feat(mobile): apply paper theme and redraw tab bar icons
+
+ mobile/App.vue                         | 208 ++++++++++++++++++++-------------
+ mobile/components/AdminNotice.vue      |   4 +-
+ mobile/components/EmptyState.vue       |   4 +-
+ mobile/components/StatusTag.vue        |  39 ++++---
+ mobile/pages.json                      |  12 +-
+ mobile/static/tabbar/apply-active.png  | Bin 522 -> 1308 bytes
+ mobile/static/tabbar/apply.png         | Bin 522 -> 1307 bytes
+ mobile/static/tabbar/home-active.png   | Bin 610 -> 1592 bytes
+ mobile/static/tabbar/home.png          | Bin 609 -> 1593 bytes
+ mobile/static/tabbar/me-active.png     | Bin 725 -> 1972 bytes
+ mobile/static/tabbar/me.png            | Bin 723 -> 1972 bytes
+ mobile/static/tabbar/notice-active.png | Bin 614 -> 1806 bytes
+ mobile/static/tabbar/notice.png        | Bin 613 -> 1816 bytes
+ mobile/static/tabbar/task-active.png   | Bin 595 -> 1572 bytes
+ mobile/static/tabbar/task.png          | Bin 594 -> 1573 bytes
+ 15 files changed, 156 insertions(+), 111 deletions(-)
+
+commit 57e4d4413feb9402b505d4630fd2d5986f1d191b
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:26:00 2026 -0400
+
+    feat(web): unify list rows and notification interactions
+
+ frontend/src/components/tasks/TaskListContent.vue  |  62 +++++++---
+ frontend/src/composables/useRowNavigation.ts       | 105 ++++++++++++++++
+ frontend/src/styles/listRows.css                   | 109 +++++++++++++++++
+ frontend/src/views/Notifications.vue               | 132 +++++++++++++++++----
+ .../src/views/applications/ApplicationList.vue     | 113 ++++++++++++------
+ 5 files changed, 442 insertions(+), 79 deletions(-)
+
+commit 356e38ed8fdf856dca9ef53a91dacff9bad45bdf
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:21:37 2026 -0400
+
+    fix(web): raise sidebar group title contrast on paper-deep
+
+ frontend/src/views/Layout.vue | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 86989c17318e5e01d54da9a8d1dcb7522af0b54f
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:21:30 2026 -0400
+
+    feat(web): slip-style application forms, quiet template list and drag-and-drop uploads
+
+ frontend/src/components/AmountInput.vue        |   1 +
+ frontend/src/components/AttachmentUploader.vue | 105 +++++++++--
+ frontend/src/components/FormRenderer.vue       |   6 +-
+ frontend/src/components/UserPicker.vue         |  11 +-
+ frontend/src/views/apply/ApplyHome.vue         | 224 ++++++++++++++---------
+ frontend/src/views/apply/CustomForm.vue        |  11 +-
+ frontend/src/views/apply/ExpenseForm.vue       |  16 +-
+ frontend/src/views/apply/FormShell.vue         | 235 ++++++++++++++++++++-----
+ frontend/src/views/apply/PurchaseForm.vue      |   3 +-
+ frontend/src/views/apply/TravelForm.vue        |   3 +-
+ 10 files changed, 458 insertions(+), 157 deletions(-)
+
+commit 59a0a376312726ece81fd8367bc350365287cf14
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:21:30 2026 -0400
+
+    style(web): align detail field area and item tables with design tokens
+
+ frontend/src/components/ExpenseItemTable.vue       |  11 +-
+ frontend/src/components/FilePreviewDialog.vue      |   2 +
+ frontend/src/components/ItemTable.vue              |  14 ++-
+ frontend/src/components/JsonDiff.vue               |  25 ++--
+ frontend/src/components/QuoteTable.vue             |   9 +-
+ .../applications/ApplicationBusiness.vue           | 133 +++++++++++----------
+ .../applications/LinkedApplicationCard.vue         |  48 +++++---
+ frontend/src/styles/main.css                       |   2 +-
+ 8 files changed, 137 insertions(+), 107 deletions(-)
+
+commit 01be1261966ffe6cd8f57c29e00dc665bf1fcfa4
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:21:30 2026 -0400
+
+    feat(web): render application detail as a routing slip with signature bar and stamps
+    
+    - slip header with copyable number, serif title and tilted terminal stamp
+    - signature bar cells per flow node, hover/focus linked with the flow timeline and log
+    - stamp drops once in the cell the current user just approved or rejected
+    - approve panel wording: 同意 / 已同意, reject as secondary outline
+
+ frontend/src/components/ApprovePanel.vue           |  23 +-
+ frontend/src/components/FlowTimeline.vue           | 193 ++++++++----
+ frontend/src/components/slip/SignatureBar.vue      | 345 +++++++++++++++++++++
+ frontend/src/components/slip/SlipField.vue         |  38 +++
+ frontend/src/components/slip/SlipFields.vue        |  26 ++
+ frontend/src/components/slip/SlipHeader.vue        | 157 ++++++++++
+ frontend/src/components/slip/SlipSection.vue       |  34 ++
+ frontend/src/components/slip/Stamp.vue             |  69 +++++
+ frontend/src/components/slip/hover.ts              |  46 +++
+ .../src/views/applications/ApplicationDetail.vue   | 172 ++++++----
+ 10 files changed, 983 insertions(+), 120 deletions(-)
+
+commit 2af030f232f67aacf348f971fc7e8cfa34570414
+Merge: 577be55 846b177
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Sat Oct 17 00:21:28 2026 +0800
+
+    Merge pull request #17 from spnotold/feature/ui-web-shell
+    
+    feat(web): 外壳、登录注册与工作台重设计（W1）
+
+commit 846b1779c9bee6e614178daedcc4b1449b82687b
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:18:17 2026 -0400
+
+    feat(web): 重做外壳、登录注册与工作台视觉和交互
+    
+    - 侧边栏夹板底色、选中项白底加左侧竖线，品牌标记改描边方块，顶栏 52px
+    - main.css：卡片无阴影线框、表格表头与悬停底色、按钮按下下沉、统一焦点框、.row-actions
+    - StatusTag 改为圆点加文字，新增 variant=box 描边小框
+    - 登录、注册改左右分栏（新增 AuthShell），演示账号整行可点
+    - 工作台改单面板分节，直接列出前 5 条待办，状态条、发起入口、通知未读圆点
+    - 通知铃铛角标与弹层、404、403、个人信息按 token 调整
+
+ frontend/src/components/AuthShell.vue  | 164 ++++++
+ frontend/src/components/ListEmpty.vue  |  18 +-
+ frontend/src/components/NoticeBell.vue | 137 +++--
+ frontend/src/components/StatusTag.vue  | 111 +++-
+ frontend/src/styles/main.css           | 160 ++++--
+ frontend/src/views/Forbidden.vue       |  22 +-
+ frontend/src/views/Layout.vue          | 142 ++++--
+ frontend/src/views/Login.vue           | 246 +++++----
+ frontend/src/views/NotFound.vue        |  22 +-
+ frontend/src/views/Profile.vue         |  10 +-
+ frontend/src/views/Register.vue        | 353 ++++++-------
+ frontend/src/views/Workbench.vue       | 900 ++++++++++++++++++++-------------
+ 12 files changed, 1453 insertions(+), 832 deletions(-)
+
+commit 577be5561c46569ce568b74cc21fe8d44925f537
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 12:06:05 2026 -0400
+
+    feat(ui): add routing-slip design spec and shared design tokens
+
+ docs/ui_design.md              | 146 ++++++++++++++++++++++++++++++++++++++
+ frontend/src/main.ts           |   1 +
+ frontend/src/styles/tokens.css | 156 +++++++++++++++++++++++++++++++++++++++++
+ mobile/App.vue                 |   2 +
+ mobile/styles/tokens.css       |  66 +++++++++++++++++
+ 5 files changed, 371 insertions(+)
+
+commit 24c232258e046e0f1c42d3ce1b8c7cfb7b5886cf
+Merge: b9f4422 eb4df0e
+Author: Yuhang Li <liyuhangnice666@gmail.com>
+Date:   Fri Oct 16 21:02:59 2026 +0800
+
+    Merge pull request #16 from spnotold/feature/docs-sync-test-counts-2
+    
+    docs: record 84 backend tests after the follow-up fixes
+
+commit eb4df0edf0d46f1a2fb5eca6b067df50121dce2b
+Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
+Date:   Fri Oct 16 09:02:42 2026 -0400
+
+    docs: refresh git log export
+
+ docs/git_log.txt | 123 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 123 insertions(+)
+
 commit 62017725753d8b39b39e435861faad1060a0c273
 Author: Yuhang Li <207801918+spnotold@users.noreply.github.com>
 Date:   Fri Oct 16 09:02:42 2026 -0400
