@@ -174,6 +174,20 @@ class CoreWorkflowIntegrationTest {
         assertTrue(pending(id,enterprise)>0);
     }
 
+    @Test void customAmountConditionTextShowsYuan()throws Exception{
+        long template=customAmountConditionTemplate();
+        Long version=jdbc.queryForObject("SELECT current_version_id FROM process_template WHERE id=?",Long.class,template);
+        MvcResult created=call(post("/applications/custom"),employee,map("templateId",template,"templateVersionId",version,"title","自定义流程","formValues",map("fee",1000000)));
+        assertEquals(200,created.getResponse().getStatus(),created.getResponse().getContentAsString());
+        long id=data(created).path("id").asLong();
+        assertEquals(200,action("/applications/"+id+"/submit",employee,0,"custom-amount-cond-"+id).getResponse().getStatus());
+        MvcResult detail=call(get("/applications/"+id),employee,null);
+        assertEquals(200,detail.getResponse().getStatus(),detail.getResponse().getContentAsString());
+        JsonNode nodes=data(detail).path("flow").path("nodes");
+        assertTrue(nodes.isArray() && nodes.size()>=1);
+        assertEquals("费用 ≥ 10,000.00 元",nodes.get(0).path("conditionText").asText());
+    }
+
     @Test void customSchemaAndPublishedVersionAreEnforced()throws Exception{
         long template=customTemplate("COUNTERSIGN");long version=jdbc.queryForObject("SELECT current_version_id FROM process_template WHERE id=?",Long.class,template);
         MvcResult invalid=call(post("/applications/custom"),employee,map("templateId",template,"templateVersionId",version,"title","非法字段","formValues",map("amount",100,"injected",true)));assertEquals(400,invalid.getResponse().getStatus());
@@ -207,6 +221,14 @@ class CoreWorkflowIntegrationTest {
         }finally{pool.shutdownNow();}
     }
 
+    private long customAmountConditionTemplate(){
+        Long template=jdbc.queryForObject("INSERT INTO process_template(code,name,category,biz_type,enabled) VALUES (?,?, 'CUSTOM','CUSTOM',true) RETURNING id",Long.class,"IT_"+UUID.randomUUID().toString().replace("-","").substring(0,20),"测试自定义金额条件");
+        var schema=map("fields",List.of(map("key","fee","label","费用","type","AMOUNT","required",true,"statAmount",true)));
+        var condition=map("logic","AND","rules",List.of(map("var","fee","op","GTE","value","1000000")));
+        var nodes=map("nodes",List.of(map("nodeKey","N1","name","审批","approverRule",map("type","SPECIFIED_USER","userId",head),"condition",condition)));
+        Long version=jdbc.queryForObject("INSERT INTO process_template_version(template_id,version_no,status,form_schema,node_config,published_at) VALUES (?,1,'PUBLISHED',?::jsonb,?::jsonb,now()) RETURNING id",Long.class,template,Jsons.write(schema),Jsons.write(nodes));
+        jdbc.update("UPDATE process_template SET current_version_id=? WHERE id=?",version,template);return template;
+    }
     private long customTemplate(String mode){
         Long template=jdbc.queryForObject("INSERT INTO process_template(code,name,category,biz_type,enabled) VALUES (?,?,'CUSTOM','CUSTOM',true) RETURNING id",Long.class,"IT_"+UUID.randomUUID().toString().replace("-","").substring(0,20),"测试自定义");
         var schema=map("fields",List.of(map("key","amount","label","金额","type","AMOUNT","required",true,"statAmount",true)));

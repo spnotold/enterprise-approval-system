@@ -150,7 +150,7 @@ public class BusinessDataService {
             CustomFormData d=customs.selectById(app.getId());amount=customAmount(d);
             ProcessTemplateVersion v=versions.selectById(d.getTemplateVersionId());
             for(FormField f:v.getFormSchema().getFields()) {
-                labels.put(f.getKey(),f.getLabel());JsonNode value=d.getFormValues().get(f.getKey());
+                putFieldLabel(labels,f);JsonNode value=d.getFormValues().get(f.getKey());
                 variables.put(f.getKey(),conditionValue(f,value));
             }
         }
@@ -234,6 +234,11 @@ public class BusinessDataService {
         return refs;
     }
 
+    /** 字段显示名；AMOUNT 类型额外登记 #type，供条件说明换算成元 */
+    private static void putFieldLabel(Map<String,String> labels, FormField f) {
+        labels.put(f.getKey(), f.getLabel());
+        if ("AMOUNT".equals(f.getType())) labels.put(f.getKey() + "#type", "AMOUNT");
+    }
     private Long customAmount(CustomFormData d) {
         var v=versions.selectById(d.getTemplateVersionId());
         for(FormField f:v.getFormSchema().getFields())if(f.isStatAmount()){JsonNode value=d.getFormValues().get(f.getKey());return value==null||value.isNull()?null:value.longValue();}return null;
