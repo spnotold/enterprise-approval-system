@@ -2,7 +2,7 @@
 // 登录：用户名或邮箱 + 密码；失败原因在按钮上方提示，演示账号点击即可填入
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { FormInstance, FormRules } from 'element-plus'
+import type { ButtonInstance, FormInstance, FormRules } from 'element-plus'
 import { Lock, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/lib/api'
@@ -13,21 +13,34 @@ import AuthShell from '@/components/AuthShell.vue'
 interface DemoAccount {
   username: string
   name: string
+  /** 按钮第二行的短身份 */
+  role: string
+  /** 完整说明，放在按钮 title 里 */
   desc: string
 }
 
 const DEMO_PASSWORD = 'Demo@2026'
 const DEMO_ACCOUNTS: DemoAccount[] = [
-  { username: 'admin', name: '系统管理员', desc: '总经办，系统管理员：管理功能；验证管理员不能审批' },
-  { username: 'ceo_zhao', name: '赵总', desc: '总经办，部门负责人、企业负责人' },
-  { username: 'rd_head_li', name: '李研', desc: '研发部，部门负责人' },
-  { username: 'rd_emp_wang', name: '王工', desc: '研发部，员工，主演示员工' },
-  { username: 'rd_emp_chen', name: '陈工', desc: '研发部，员工' },
-  { username: 'mkt_head_sun', name: '孙经理', desc: '市场部，部门负责人' },
-  { username: 'mkt_emp_zhou', name: '周敏', desc: '市场部，员工' },
-  { username: 'fin_head_qian', name: '钱会计', desc: '财务部，部门负责人、财务审批人' },
-  { username: 'fin_auditor_wu', name: '吴审', desc: '财务部，财务审批人主办人' },
-  { username: 'pending_he', name: '何晓', desc: '注册审核演示：申请加入市场部，审核通过前登录会提示待审核' },
+  {
+    username: 'admin',
+    name: '系统管理员',
+    role: '系统管理员',
+    desc: '总经办，系统管理员：管理功能；验证管理员不能审批',
+  },
+  { username: 'ceo_zhao', name: '赵总', role: '企业负责人', desc: '总经办，部门负责人、企业负责人' },
+  { username: 'rd_head_li', name: '李研', role: '研发部负责人', desc: '研发部，部门负责人' },
+  { username: 'rd_emp_wang', name: '王工', role: '研发部员工', desc: '研发部，员工，主演示员工' },
+  { username: 'rd_emp_chen', name: '陈工', role: '研发部员工', desc: '研发部，员工' },
+  { username: 'mkt_head_sun', name: '孙经理', role: '市场部负责人', desc: '市场部，部门负责人' },
+  { username: 'mkt_emp_zhou', name: '周敏', role: '市场部员工', desc: '市场部，员工' },
+  { username: 'fin_head_qian', name: '钱会计', role: '财务部负责人', desc: '财务部，部门负责人、财务审批人' },
+  { username: 'fin_auditor_wu', name: '吴审', role: '财务审批主办', desc: '财务部，财务审批人主办人' },
+  {
+    username: 'pending_he',
+    name: '何晓',
+    role: '待审核账号',
+    desc: '注册审核演示：申请加入市场部，审核通过前登录会提示待审核',
+  },
 ]
 
 /** 需要在按钮上方提示的错误码；其余错误走统一提示 */
@@ -53,7 +66,8 @@ const rules: FormRules = {
 }
 const loading = ref(false)
 const inlineError = ref<{ text: string; type: 'error' | 'warning' } | null>(null)
-const demoOpen = ref<string[]>([])
+/** 「登录」按钮：填入演示账号后把焦点交给它 */
+const submitBtnRef = ref<ButtonInstance>()
 // 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
 const demoMode = ref(false)
 
@@ -100,6 +114,9 @@ function fillDemo(a: DemoAccount) {
   form.password = DEMO_PASSWORD
   inlineError.value = null
   formRef.value?.clearValidate()
+  // 填好后直接可以回车登录：焦点移到「登录」按钮（el-button 根元素是 $el）
+  const el = submitBtnRef.value?.$el
+  if (el instanceof HTMLElement) el.focus()
 }
 </script>
 
@@ -147,32 +164,33 @@ function fillDemo(a: DemoAccount) {
         class="form-alert"
       />
 
-      <el-button type="primary" native-type="submit" :loading="loading" class="submit">登录</el-button>
+      <el-button ref="submitBtnRef" type="primary" native-type="submit" :loading="loading" class="submit">
+        登录
+      </el-button>
     </el-form>
 
     <div class="switch-line">
       还没有账号？<router-link to="/register" class="link">注册新账号</router-link>
     </div>
 
-    <el-collapse v-if="demoMode" v-model="demoOpen" class="demo">
-      <el-collapse-item name="demo">
-        <template #title>
-          <span class="demo-title">演示账号</span>
-          <span class="muted small">密码均为 {{ DEMO_PASSWORD }}，点击一行填入</span>
-        </template>
-        <ul class="demo-list">
-          <li v-for="a in DEMO_ACCOUNTS" :key="a.username">
-            <button type="button" class="demo-item" @click="fillDemo(a)">
-              <span class="demo-head">
-                <span class="demo-name">{{ a.name }}</span>
-                <span class="demo-user">{{ a.username }}</span>
-              </span>
-              <span class="demo-desc">{{ a.desc }}</span>
-            </button>
-          </li>
-        </ul>
-      </el-collapse-item>
-    </el-collapse>
+    <!-- 演示账号：直接平铺，不折叠，10 个账号两列放完 -->
+    <section v-if="demoMode" class="demo">
+      <div class="demo-head">
+        <span class="demo-title">演示账号</span>
+        <span class="demo-pwd">密码 {{ DEMO_PASSWORD }}</span>
+      </div>
+      <ul class="demo-list">
+        <li v-for="a in DEMO_ACCOUNTS" :key="a.username">
+          <button type="button" class="demo-item" :title="a.desc" @click="fillDemo(a)">
+            <span class="demo-line">
+              <span class="demo-name">{{ a.name }}</span>
+              <span class="demo-user">{{ a.username }}</span>
+            </span>
+            <span class="demo-role">{{ a.role }}</span>
+          </button>
+        </li>
+      </ul>
+    </section>
   </AuthShell>
 </template>
 
@@ -202,77 +220,88 @@ function fillDemo(a: DemoAccount) {
   text-decoration: underline;
 }
 
-/* 演示账号：整行可点，悬停高亮 */
+/* 演示账号：分隔线 + 小标题行 + 两列平铺按钮，无内部滚动 */
 .demo {
-  --el-collapse-header-height: 44px;
   margin-top: 24px;
+  padding-top: 16px;
   border-top: 1px solid var(--eas-rule);
-  border-bottom: none;
 }
-.demo :deep(.el-collapse-item__header) {
+.demo-head {
+  display: flex;
+  align-items: baseline;
   gap: 8px;
-  border-bottom: none;
-}
-.demo :deep(.el-collapse-item__wrap) {
-  border-bottom: none;
-}
-.demo :deep(.el-collapse-item__content) {
-  padding-bottom: 8px;
+  margin-bottom: 12px;
 }
 .demo-title {
+  font-size: var(--eas-fs-sm);
   font-weight: 600;
-  margin-right: 8px;
+}
+.demo-pwd {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
 }
 .demo-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 300px;
-  overflow-y: auto;
+}
+/* 表单栏窄于 400px：网格改单列 */
+@container auth-main (max-width: 399px) {
+  .demo-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .demo-item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 2px;
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 10px 8px 7px;
-  border: none;
-  border-left: 3px solid transparent;
-  background: transparent;
+  padding: 8px 10px;
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-control);
+  background: var(--eas-surface);
   text-align: left;
   cursor: pointer;
   font: inherit;
-  color: inherit;
+  color: var(--eas-ink);
   line-height: 1.5;
+  transition:
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    transform var(--eas-dur-fast) var(--eas-ease);
 }
-.demo-item:hover,
-.demo-item:focus-visible {
+.demo-item:hover {
+  border-color: var(--eas-primary);
   background: var(--eas-paper);
-  border-left-color: var(--eas-primary);
-}
-.demo-item:focus-visible {
-  outline-offset: -2px;
 }
 .demo-item:active {
-  background: var(--eas-paper-deep);
+  transform: translateY(1px);
 }
-.demo-head {
+.demo-item:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 1px;
+}
+.demo-line {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: baseline;
 }
 .demo-name {
-  font-weight: 500;
+  font-size: var(--eas-fs-sm);
+  font-weight: 600;
 }
 .demo-user {
-  color: var(--eas-ink-2);
   font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
   font-variant-numeric: tabular-nums;
 }
-.demo-desc {
-  color: var(--eas-ink-3);
+.demo-role {
   font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
 }
 </style>

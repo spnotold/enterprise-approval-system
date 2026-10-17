@@ -124,6 +124,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
 .auth-page {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--auth-form-w, 540px);
+  /* 内容比视口高时随内容长高，交给整页滚动，不裁剪 */
   min-height: 100%;
   background: var(--eas-surface);
   transition: grid-template-columns var(--eas-dur) var(--eas-ease);
@@ -209,7 +210,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
 .auth-main {
   position: relative;
   display: flex;
-  align-items: center;
+  /* 放得下才垂直居中；内容超出视口时从顶部开始（safe），配合整页滚动不截掉标题 */
+  align-items: safe center;
   justify-content: center;
   /* 表单栏自身是容器：窄于 440px 时 .auth-box 收紧内边距并占满 */
   container-type: inline-size;
