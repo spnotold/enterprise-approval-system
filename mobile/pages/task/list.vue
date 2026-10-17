@@ -153,7 +153,7 @@ onReachBottom(() => void list.loadMore())
 
         <EmptyState
           v-if="list.loaded.value && !list.items.value.length"
-          :text="hasFilter ? '没有符合条件的记录' : tab === 'pending' ? '暂无待办，休息一下' : '暂无已办记录'"
+          :text="hasFilter ? '没有符合条件的记录' : tab === 'pending' ? '暂无待办' : '暂无已办记录'"
           :action-text="hasFilter ? '清空筛选' : ''"
           @action="clearFilter"
         />

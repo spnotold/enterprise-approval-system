@@ -594,7 +594,6 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
     <div class="page-header">
       <div>
         <h2 class="page-title">统计</h2>
-        <div class="page-subtitle">个人、本部门、财务与企业统计，按权限显示</div>
       </div>
       <div class="toolbar">
         <el-date-picker
@@ -656,7 +655,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
         <el-card shadow="never">
           <template #header><span class="card-title">我的申请状态分布</span></template>
           <StatsChart v-if="personalPie" :option="personalPie" :height="320" />
-          <el-empty v-else :image-size="80" description="还没有申请记录" />
+          <el-empty v-else :image-size="80" description="暂无申请，先到“发起申请”提交一单。" />
         </el-card>
       </template>
     </section>

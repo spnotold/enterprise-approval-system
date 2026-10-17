@@ -28,7 +28,7 @@ const { isMobile } = useBreakpoint()
 const { isMobile: isCompact } = useBreakpoint('(max-width: 1439px)')
 
 const TITLES: Record<ListScope, { title: string; sub: string }> = {
-  mine: { title: '我的申请', sub: '包含草稿；草稿可编辑、删除，审批中可撤回，已驳回 / 已撤回可复制修改后重新提交。' },
+  mine: { title: '我的申请', sub: '' },
   dept: { title: '本部门申请', sub: '本人负责部门的已提交申请（不含草稿），部门按提交时所属部门统计。' },
   granted: { title: '授权范围申请', sub: '管理员授予的数据范围内的已提交申请。' },
 }
@@ -111,8 +111,8 @@ const { wrap: navWrap, onRowClick } = useRowNavigation<ApplicationSummary>({ tar
 
 const EMPTY_TEXT: Record<ListScope, string> = {
   mine: '暂无申请。点击右上角「发起申请」开始填写。',
-  dept: '本部门暂无已提交的申请。新申请提交后会出现在这里。',
-  granted: '授权范围内暂无已提交的申请。新申请提交后会出现在这里。',
+  dept: '本部门暂无已提交的申请。',
+  granted: '授权范围内暂无已提交的申请。',
 }
 </script>
 
@@ -121,7 +121,7 @@ const EMPTY_TEXT: Record<ListScope, string> = {
     <div class="page-header">
       <div>
         <h2 class="page-title">{{ TITLES[scope].title }}</h2>
-        <div class="page-subtitle">{{ TITLES[scope].sub }}</div>
+        <div v-if="TITLES[scope].sub" class="page-subtitle">{{ TITLES[scope].sub }}</div>
       </div>
       <el-button v-if="scope === 'mine' && auth.can('APP_CREATE')" type="primary" @click="router.push('/apply')">发起申请</el-button>
     </div>

@@ -77,7 +77,7 @@ function switchKind() {
     <div class="page-header">
       <div>
         <h2 class="page-title">{{ title }}</h2>
-        <div class="page-subtitle">{{ pending ? '只显示分配给本人的待办；进入详情核对业务内容和流程后审批。' : '显示本人已批准、已驳回或已转办的任务，保留处理结果与意见。' }}</div>
+        <div v-if="!pending" class="page-subtitle">本人已批准、已驳回或已转办的任务。</div>
       </div>
       <div class="toolbar">
         <el-button @click="switchKind">{{ pending ? '查看已办' : '查看待办' }}</el-button>
@@ -136,7 +136,7 @@ function switchKind() {
         <template #empty>
           <ListEmpty
             :filtered="hasFilters"
-            :description="hasFilters ? undefined : pending ? '暂无待办。新的审批到达时会出现在这里。' : '暂无已办记录。处理过的审批会出现在这里。'"
+            :description="hasFilters ? undefined : pending ? '暂无待办' : '暂无已办记录'"
             @reset="list.reset()"
           />
         </template>

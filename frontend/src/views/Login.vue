@@ -106,7 +106,6 @@ function fillDemo(a: DemoAccount) {
 <template>
   <AuthShell>
     <h1 class="auth-title">登录</h1>
-    <p class="auth-sub">使用用户名或邮箱登录</p>
 
     <el-form
       ref="formRef"
@@ -179,14 +178,10 @@ function fillDemo(a: DemoAccount) {
 
 <style scoped>
 .auth-title {
-  margin: 0;
+  margin: 0 0 24px;
   font-size: var(--eas-fs-lg);
   font-weight: 600;
   line-height: 1.4;
-}
-.auth-sub {
-  margin: 4px 0 24px;
-  color: var(--eas-ink-2);
 }
 .form-alert {
   margin-bottom: 16px;
