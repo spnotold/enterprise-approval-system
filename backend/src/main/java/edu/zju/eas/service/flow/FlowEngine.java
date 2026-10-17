@@ -261,11 +261,21 @@ public class FlowEngine {
         return m;
     }
 
-    /** 审批路径预览：按草稿当前内容求值，不落库 */
+    /** 审批路径预览：按草稿当前内容求值，不落库。模板问题与提交同口径，以 errors 返回而不用异常打断预览 */
     public PathPreview preview(Application app, CurrentUser u) {
         SysUser applicant = userMapper.selectById(u.id());
         ProcessTemplate tpl = templateMapper.selectById(app.getTemplateId());
+        TemplateIssue issue = templateIssue(tpl, applicant.getDeptId());
+        if (issue != null) {
+            return new PathPreview(List.of(), List.of(issue.message()));
+        }
         ProcessTemplateVersion ver = versionMapper.selectById(tpl.getCurrentVersionId());
+        if ("CUSTOM".equals(app.getType())) {
+            CustomFormData custom = customMapper.selectById(app.getId());
+            if (custom == null || !ver.getId().equals(custom.getTemplateVersionId())) {
+                return new PathPreview(List.of(), List.of(ErrorCode.TEMPLATE_UPDATED.message()));   // 草稿按旧版本填写
+            }
+        }
         BizHandler.SubmitData data = handler(app.getType()).previewVariables(app);
         List<PlannedNode> plan = plan(ver, data, u.id(), applicant.getDeptId(), true);
         Map<Long, UserBrief> briefs = users.briefs(plan.stream().filter(p -> p.resolution() != null)
@@ -279,16 +289,29 @@ public class FlowEngine {
         return new PathPreview(nodes, errors);
     }
 
+    /** 模板可用性问题：规则码 + 提示，提交时抛异常、预览时进 errors */
+    private record TemplateIssue(String rule, String message) {
+    }
+
     /** 模板启用、适用于申请人部门 */
     public ProcessTemplate requireUsableTemplate(Long templateId, Long deptId) {
         ProcessTemplate tpl = templateMapper.selectById(templateId);
-        if (tpl == null || !Boolean.TRUE.equals(tpl.getEnabled()) || tpl.getCurrentVersionId() == null) {
-            throw BizException.rule(null, "TPL_DISABLED", "该流程模板已停用，不能新建或提交");
-        }
-        if (!templateDeptMapper.appliesTo(templateId, deptId)) {
-            throw BizException.rule(null, "TPL_NOT_APPLICABLE", "该流程模板不适用于您所在的部门");
+        TemplateIssue issue = templateIssue(tpl, deptId);
+        if (issue != null) {
+            throw BizException.rule(null, issue.rule(), issue.message());
         }
         return tpl;
+    }
+
+    /** 模板可用性判定（提交与路径预览共用）：启用、有当前版本、适用于该部门；null 表示可用 */
+    private TemplateIssue templateIssue(ProcessTemplate tpl, Long deptId) {
+        if (tpl == null || !Boolean.TRUE.equals(tpl.getEnabled()) || tpl.getCurrentVersionId() == null) {
+            return new TemplateIssue("TPL_DISABLED", "该流程模板已停用，不能新建或提交");
+        }
+        if (!templateDeptMapper.appliesTo(tpl.getId(), deptId)) {
+            return new TemplateIssue("TPL_NOT_APPLICABLE", "该流程模板不适用于您所在的部门");
+        }
+        return null;
     }
 
     // =====================================================================
