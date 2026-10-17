@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { isBackgroundClick, isPaperBackgroundChain, resolvePaperColors } from './usePaperField'
+import {
+  MAX_ACTIVE_RIPPLES,
+  isBackgroundClick,
+  isPaperBackgroundChain,
+  pruneRipples,
+  pushRipple,
+  resolvePaperColors,
+  type RippleItem,
+} from './usePaperField'
 
 interface MockTarget {
   tagName: string
@@ -149,6 +157,33 @@ describe('usePaperField helpers', () => {
 
       const aside = createMockElement('aside', 'auth-aside')
       expect(isBackgroundClick({ target: aside } as unknown as PointerEvent)).toBe(true)
+    })
+  })
+
+  describe('ripple queue helpers', () => {
+    const ripple = (x: number, t0: number): RippleItem => ({ x, y: 0, t0 })
+
+    it('appends ripples without mutating the input array', () => {
+      const base = [ripple(1, 0)]
+      const next = pushRipple(base, ripple(2, 10))
+      expect(next.map((item) => item.x)).toEqual([1, 2])
+      expect(base).toHaveLength(1)
+    })
+
+    it('keeps at most 3 ripples and drops the earliest one', () => {
+      let ripples: RippleItem[] = []
+      for (let i = 0; i < 5; i++) {
+        ripples = pushRipple(ripples, ripple(i, i * 100))
+      }
+      expect(ripples).toHaveLength(MAX_ACTIVE_RIPPLES)
+      expect(ripples.map((item) => item.x)).toEqual([2, 3, 4])
+    })
+
+    it('prunes ripples once they reach the 1000ms lifetime', () => {
+      const ripples = [ripple(1, 0), ripple(2, 400), ripple(3, 900)]
+      expect(pruneRipples(ripples, 1500).map((item) => item.x)).toEqual([3])
+      expect(pruneRipples(ripples, 1899).map((item) => item.x)).toEqual([3])
+      expect(pruneRipples(ripples, 1900)).toEqual([])
     })
   })
 })
