@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 字段库：点击追加一个字段到表单末尾
+// 字段库：点击追加一个字段到表单末尾，或拖拽到画布中
 import type { Component } from 'vue'
 import { Calendar, CircleCheck, Document, EditPen, Money, Odometer, Paperclip } from '@element-plus/icons-vue'
 import type { FieldType } from '@/lib/types'
@@ -18,12 +18,20 @@ const ICONS: Record<FieldType, Component> = {
   RADIO: CircleCheck,
   ATTACHMENT: Paperclip,
 }
+
+function onDragStart(e: DragEvent, type: FieldType) {
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('application/x-eas-field-type', type)
+    e.dataTransfer.setData('text/plain', type)
+    e.dataTransfer.effectAllowed = 'copy'
+  }
+}
 </script>
 
 <template>
   <div class="field-library">
     <div class="panel-title">字段库</div>
-    <div class="muted small hint">点击添加到表单末尾</div>
+    <div class="muted small hint">点击或拖拽添加到表单</div>
     <div class="lib-list">
       <button
         v-for="t in FIELD_TYPES"
@@ -31,9 +39,11 @@ const ICONS: Record<FieldType, Component> = {
         type="button"
         class="lib-item"
         :disabled="disabled"
+        :draggable="!disabled"
+        @dragstart="onDragStart($event, t)"
         @click="emit('add', t)"
       >
-        <el-icon><component :is="ICONS[t]" /></el-icon>
+        <el-icon><component :is="ICONS[t]!" /></el-icon>
         <span>{{ FIELD_TYPE_LABEL[t] }}</span>
       </button>
     </div>

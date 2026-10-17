@@ -243,7 +243,9 @@ watch(
   padding: 0 8px;
   cursor: pointer;
   border-bottom: 1px solid var(--el-border-color-extra-light);
-  transition: background-color var(--eas-dur-fast) var(--eas-ease);
+  transition:
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 .notice-row:last-child {
   border-bottom: none;
@@ -251,6 +253,7 @@ watch(
 .notice-row:hover,
 .notice-row:focus-within {
   background: var(--eas-paper);
+  box-shadow: inset 3px 0 0 var(--eas-primary);
 }
 .notice-main {
   flex: 1;
@@ -316,6 +319,10 @@ watch(
   min-height: 32px;
   min-width: 64px;
   text-align: right;
+}
+.notice-actions .el-button {
+  min-height: 32px;
+  min-width: 32px;
 }
 /* “标为已读”默认透明，行悬停 / 行内聚焦时显示；触屏与窄屏常显 */
 .notice-actions:has(.el-button) {

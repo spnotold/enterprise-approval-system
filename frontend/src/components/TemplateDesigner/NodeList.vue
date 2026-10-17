@@ -1,12 +1,12 @@
 <script setup lang="ts">
-// 审批节点列表：按顺序依次审批；上移 / 下移、添加、删除、选中编辑
-import { inject } from 'vue'
+// 审批节点列表：按顺序依次审批；上移 / 下移、拖拽重排、添加、删除、选中编辑
+import { inject, ref } from 'vue'
 import { ArrowDown, ArrowUp, Delete, Plus, WarningFilled } from '@element-plus/icons-vue'
 import type { NodeDef } from '@/lib/types'
 import { NODE_MODE_LABEL } from '@/lib/labels'
 import { MAX_NODES, MIN_NODES, USER_NAMES_KEY, approverRuleText, conditionText, uidOf, type CondVar } from './utils'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     nodes: NodeDef[]
     selected: number | null
@@ -23,9 +23,46 @@ const emit = defineEmits<{
   move: [index: number, delta: -1 | 1]
   remove: [index: number]
   add: []
+  reorder: [from: number, to: number]
 }>()
 
 const names = inject(USER_NAMES_KEY, undefined)
+const dropTargetIndex = ref<number | null>(null)
+
+function onNodeDragStart(e: DragEvent, index: number) {
+  if (props.readonly || !e.dataTransfer) return
+  e.dataTransfer.setData('application/x-eas-node-index', String(index))
+  e.dataTransfer.setData('text/plain', String(index))
+  e.dataTransfer.effectAllowed = 'move'
+}
+
+function onNodeDragOver(e: DragEvent, index: number) {
+  if (props.readonly) return
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  dropTargetIndex.value = index
+}
+
+function onNodeDragLeave(_e: DragEvent, index: number) {
+  if (dropTargetIndex.value === index) {
+    dropTargetIndex.value = null
+  }
+}
+
+function onNodeDrop(e: DragEvent, index: number) {
+  if (props.readonly) return
+  e.preventDefault()
+  dropTargetIndex.value = null
+  const nodeIndex = e.dataTransfer?.getData('application/x-eas-node-index')
+  if (nodeIndex !== undefined && nodeIndex !== '') {
+    const from = Number(nodeIndex)
+    if (!Number.isNaN(from) && from !== index) {
+      emit('reorder', from, index)
+    }
+  }
+}
 </script>
 
 <template>
@@ -41,13 +78,22 @@ const names = inject(USER_NAMES_KEY, undefined)
       v-for="(n, i) in nodes"
       :key="uidOf(n)"
       class="node-card"
-      :class="{ 'is-selected': selected === i, 'has-issue': (issueCounts[i] ?? 0) > 0 }"
+      :class="{
+        'is-selected': selected === i,
+        'has-issue': (issueCounts[i] ?? 0) > 0,
+        'is-drop-target': dropTargetIndex === i,
+      }"
       :data-path="`nodes[${i}]`"
+      :draggable="!readonly"
       role="button"
       tabindex="0"
       @click="emit('select', i)"
       @keydown.enter.self="emit('select', i)"
       @keydown.space.self.prevent="emit('select', i)"
+      @dragstart="onNodeDragStart($event, i)"
+      @dragover.stop="onNodeDragOver($event, i)"
+      @dragleave.stop="onNodeDragLeave($event, i)"
+      @drop.stop="onNodeDrop($event, i)"
     >
       <div class="seq">{{ i + 1 }}</div>
       <div class="body">
@@ -124,6 +170,10 @@ const names = inject(USER_NAMES_KEY, undefined)
 .node-card:hover {
   border-color: var(--eas-primary);
   background: var(--eas-primary-tint);
+}
+.node-card.is-drop-target {
+  border: 2px dashed var(--eas-primary) !important;
+  background: var(--eas-primary-tint) !important;
 }
 .node-card:focus-visible {
   outline: 2px solid var(--eas-primary);
