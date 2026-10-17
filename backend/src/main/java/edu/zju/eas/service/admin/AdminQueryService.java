@@ -7,6 +7,7 @@ import edu.zju.eas.dto.admin.AdminDtos.*;
 import edu.zju.eas.response.BizException;
 import edu.zju.eas.response.PageResponse;
 import edu.zju.eas.security.Perms;
+import edu.zju.eas.service.AuditService;
 import edu.zju.eas.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,6 +26,7 @@ import static edu.zju.eas.service.admin.AdminSupport.*;
 public class AdminQueryService {
     private final JdbcTemplate jdbc;
     private final SysConfigService config;
+    private final AuditService audit;
     public PageResponse<MonitorTask> tasks(int page,int size,String assigneeStatus,String keyword) {
         require(Perms.ADMIN_TRANSFER);
         String from="""
@@ -56,7 +58,14 @@ public class AdminQueryService {
     public PageResponse<DeliveryView> deliveries(int page,int size,String status) {
         CurrentUser u=require(Perms.ADMIN_CONFIG);String from=" FROM notification_delivery d JOIN notification n ON n.id=d.notification_id LEFT JOIN application a ON a.id=n.application_id WHERE 1=1";List<Object> args=new ArrayList<>();
         if(status!=null && !status.isBlank()){from+=" AND d.status=?";args.add(status);}
-        return page("SELECT d.*,n.title,a.app_no,a.dept_id",from,"d.id DESC",args,(r,n)->new DeliveryView(r.getLong("id"),r.getLong("notification_id"),r.getString("recipient_email"),deliveryTitle(u,r),r.getString("status"),r.getInt("attempts"),time(r,"next_retry_at"),r.getString("last_error"),time(r,"sent_at"),time(r,"created_at")),page,size);
+        List<Long> bizIds=new ArrayList<>();
+        var result=page("SELECT d.*,n.title,a.id application_id,a.app_no,a.dept_id",from,"d.id DESC",args,(r,n)->{
+            Long deptId=r.getObject("dept_id",Long.class);
+            if(deptId!=null && u.covers(Perms.GRANT_BIZ_CONTENT_READ,deptId))bizIds.add(r.getLong("application_id"));
+            return new DeliveryView(r.getLong("id"),r.getLong("notification_id"),r.getString("recipient_email"),deliveryTitle(u,r),r.getString("status"),r.getInt("attempts"),time(r,"next_retry_at"),r.getString("last_error"),time(r,"sent_at"),time(r,"created_at"));
+        },page,size);
+        if(!bizIds.isEmpty())audit.logBizList(u,"DELIVERIES",bizIds.stream().distinct().toList());
+        return result;
     }
 
     /** 投递查询只用于运维排障；未覆盖申请部门的 BIZ_CONTENT_READ 授权时，标题脱敏为不含业务标题的通用描述。 */
