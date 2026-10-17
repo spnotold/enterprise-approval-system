@@ -121,6 +121,24 @@ class FlowRulesTest extends IntegrationTestBase {
     }
 
     @Test
+    void rejectReasonShorterThan5AfterTrimReturns422() throws Exception {
+        long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
+        Long task = pendingTask(app, "rd_head_li");
+        // 原始串 6 字符可通过 @Size(min=5)，trim 后仅 2 字，服务端必须复检并拒绝
+        MvcResult r = action("/tasks/" + task + "/reject", "rd_head_li",
+                map("appVersion", version(app), "comment", "  ab  "), key());
+        assertThat(r.getResponse().getStatus()).as(r.getResponse().getContentAsString()).isEqualTo(422);
+        assertThat(code(r)).isEqualTo(42201);
+        assertThat(body(r).path("errors").get(0).path("field").asText()).isEqualTo("comment");
+        assertThat(body(r).path("errors").get(0).path("message").asText()).isEqualTo("驳回理由 5-500 字");
+        // 复检在任何写库动作之前：申请仍 IN_APPROVAL，待办仍 PENDING
+        assertThat(status(app)).isEqualTo("IN_APPROVAL");
+        assertThat(pendingTask(app, "rd_head_li")).isNotNull();
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM approval_log WHERE application_id = ? AND action = 'REJECT'", Long.class, app)).isZero();
+    }
+
+    @Test
     void adminTransferWith500CharReasonSucceeds() throws Exception {
         long app = submitted("travel", "rd_emp_wang", travelBody(100_000));
         Long task = pendingTask(app, "rd_head_li");
