@@ -4,6 +4,7 @@ import edu.zju.eas.response.BizException;
 import edu.zju.eas.security.AuthInfoService;
 import edu.zju.eas.security.CurrentUser;
 import edu.zju.eas.security.SecurityUtils;
+import edu.zju.eas.service.notify.SseHub;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ import java.time.OffsetDateTime;
 public class AdminSupport {
     private final JdbcTemplate jdbc;
     private final AuthInfoService auth;
+    private final SseHub sseHub;
 
     public static CurrentUser require(String permission) {
         CurrentUser u = SecurityUtils.currentOrNull();
@@ -36,6 +38,7 @@ public class AdminSupport {
         jdbc.update("UPDATE sys_user SET token_version=token_version+1 WHERE id=?", userId);
         if (revokeRefresh) jdbc.update("UPDATE refresh_token SET revoked_at=now() WHERE user_id=? AND revoked_at IS NULL", userId);
         invalidateCaches();
+        sseHub.closeAfterCommit(userId);   // 令牌已作废，已打开的 SSE 连接一并关闭
     }
 
     public void invalidateCaches() {

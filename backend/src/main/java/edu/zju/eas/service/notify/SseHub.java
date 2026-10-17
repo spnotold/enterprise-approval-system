@@ -3,6 +3,8 @@ package edu.zju.eas.service.notify;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -70,6 +72,32 @@ public class SseHub {
                     list.remove(e);
                 }
             }
+        });
+    }
+
+    /** 用户全部会话失效（停用、重置密码、改密码、角色变更）后关闭其所有连接，避免失效后仍继续收到推送 */
+    public void close(Long userId) {
+        List<SseEmitter> list = emitters.remove(userId);
+        if (list == null) {
+            return;
+        }
+        for (SseEmitter e : list) {
+            try {
+                e.complete();
+            } catch (Exception ex) {
+                log.debug("关闭 SSE 连接失败 userId={}", userId, ex);
+            }
+        }
+    }
+
+    /** 会话失效一般在事务内发生，提交后再断连接：事务回滚就不该误断已登录用户的连接 */
+    public void closeAfterCommit(Long userId) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            close(userId);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCommit() { close(userId); }
         });
     }
 

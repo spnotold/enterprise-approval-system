@@ -17,6 +17,7 @@ import edu.zju.eas.service.*;
 import edu.zju.eas.service.flow.FlowEngine;
 import edu.zju.eas.service.admin.*;
 import edu.zju.eas.service.notify.NotificationService;
+import edu.zju.eas.service.notify.SseHub;
 import edu.zju.eas.service.stats.StatsService;
 import edu.zju.eas.service.template.*;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -364,5 +365,6 @@ class AdminTemplateStatsTest {
         @Bean PasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder();}
         @Bean Clock clock(){return Clock.systemUTC();}
         @Bean NotificationService notifications(){return mock(NotificationService.class);}
+        @Bean SseHub sseHub(){return new SseHub();}
     }
 }
