@@ -168,17 +168,20 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* 格子在横排、竖排下保持同一尺寸（宽 140px），只改变排列方向 */
 .slip-demo {
+  --slip-cell-w: 140px;
   margin-top: 32px;
 }
 .slip-stage {
   position: relative;
+  width: max-content;
 }
 
 /* 签批格示意：已办实线落章、当前虚线、未到留空 */
 .slip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, var(--slip-cell-w));
   gap: 8px;
   margin: 0;
   padding: 0;
@@ -215,15 +218,14 @@ onBeforeUnmount(() => {
 .cell.waiting .cell-state {
   color: var(--eas-ink-3);
 }
-/* 章盖在格子右侧，不占文档流，格子高度不随步骤变化 */
+/* 章盖在格子右下角（与较短的状态文字同一行，不挤名字），不占文档流，格子高度不随步骤变化 */
 .cell-stamp {
   position: absolute;
-  top: 50%;
-  right: 10px;
-  margin-top: -11px;
+  right: 8px;
+  bottom: 8px;
 }
 
-/* 行尾的「已通过」章：宋体、倾斜，落在这一行下方右侧，与说明文字同一行 */
+/* 行尾的「已通过」章：宋体、倾斜，落在最后一格下方右侧，与说明文字同一行 */
 .slip-stamp {
   position: absolute;
   right: 0;
@@ -241,39 +243,10 @@ onBeforeUnmount(() => {
   font-size: var(--eas-fs-xs);
 }
 
-/* 左栏变窄时竖排：容器是 AuthShell 里的 .auth-aside（跨组件匹配祖先容器） */
-/* 360–599：单列、最大宽度 320px；舞台也收在 320px 内，让「已通过」章正好落在最后一格下方右侧；
-   并给说明文字让出空间，避免压住它 */
-@container auth-aside (360px <= inline-size < 600px) {
-  .slip,
-  .slip-stage {
-    max-width: 320px;
-  }
+/* 左栏窄于 600px 时竖排：同样尺寸的格子排成一列（容器是 AuthShell 里的 .auth-aside，跨组件匹配祖先容器） */
+@container auth-aside (inline-size < 600px) {
   .slip {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .slip-note {
-    margin-top: 48px;
-  }
-}
-/* < 360：再收紧——格子内边距 8px 10px，「同意」章缩小（选择器带三层，盖过 Stamp.vue 的 .stamp.sm） */
-@container auth-aside (inline-size < 360px) {
-  .slip {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .slip,
-  .slip-stage {
-    max-width: 320px;
-  }
-  .cell {
-    padding: 8px 10px;
-  }
-  .slip .cell .cell-stamp {
-    padding: 1px 3px;
-    margin-top: -9px;
-  }
-  .slip-note {
-    margin-top: 48px;
+    grid-template-columns: var(--slip-cell-w);
   }
 }
 </style>
