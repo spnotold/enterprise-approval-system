@@ -211,6 +211,8 @@ function back() {
 }
 .sheet-body :deep(.el-card__body) {
   padding: 0 0 20px;
+  /* Element Plus 默认 overflow:auto，会把贴左边按钮的焦点外框裁掉；宽表格自带横向滚动 */
+  overflow: visible;
 }
 .sheet-body :deep(.el-card__body:first-child) {
   padding-top: 16px;

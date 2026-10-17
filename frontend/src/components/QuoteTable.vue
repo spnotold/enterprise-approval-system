@@ -129,7 +129,7 @@ function remove(i: number) {
           </template>
         </template>
       </el-table-column>
-      <el-table-column v-if="!readonly || showAttachments" label="报价单 / 截图" min-width="230">
+      <el-table-column v-if="!readonly || showAttachments" label="报价单 / 截图" min-width="218">
         <template #default="{ row, $index }">
           <div :class="{ 'cell-error': err($index, 'attachmentIds') }">
             <AttachmentUploader

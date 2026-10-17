@@ -127,32 +127,34 @@ function addFiles(files: File[]) {
   void drain()
 }
 
-// 拖放：用计数器抵消子元素的 dragenter / dragleave 抖动；只响应带文件的拖动
+// 拖放：用计数器抵消子元素的 dragenter / dragleave 抖动；只响应带文件的拖动。
+// 带文件的拖放一律先 preventDefault（只读、禁用、已满时也是），否则浏览器会直接打开文件、离开当前页面；
+// 能否接收再按 readonly / disabled / 剩余数量决定。
 function hasFiles(e: DragEvent): boolean {
   return Array.from(e.dataTransfer?.types ?? []).includes('Files')
 }
 
 function onDragEnter(e: DragEvent) {
-  if (props.readonly || !hasFiles(e)) return
+  if (!hasFiles(e)) return
   e.preventDefault()
   dragDepth += 1
   if (canUpload.value) dragging.value = true
 }
 
 function onDragOver(e: DragEvent) {
-  if (props.readonly || !hasFiles(e)) return
-  e.preventDefault() // 允许放下；同时避免浏览器直接打开文件
+  if (!hasFiles(e)) return
+  e.preventDefault()
   if (e.dataTransfer) e.dataTransfer.dropEffect = canUpload.value ? 'copy' : 'none'
 }
 
 function onDragLeave(e: DragEvent) {
-  if (props.readonly || !hasFiles(e)) return
+  if (!hasFiles(e)) return
   dragDepth = Math.max(0, dragDepth - 1)
   if (dragDepth === 0) dragging.value = false
 }
 
 function onDrop(e: DragEvent) {
-  if (props.readonly || !hasFiles(e)) return
+  if (!hasFiles(e)) return
   e.preventDefault()
   dragDepth = 0
   dragging.value = false
@@ -311,6 +313,10 @@ onBeforeUnmount(() => {
   font-size: var(--eas-fs-xs);
   line-height: 1.5;
   color: var(--eas-ink-3);
+}
+/* 拖入时底色是 primary-tint，ink-3 不到 4.5:1 */
+.uploader-bar.is-dragging .uploader-hint {
+  color: var(--eas-ink-2);
 }
 .file-list {
   list-style: none;
