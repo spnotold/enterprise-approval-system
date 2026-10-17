@@ -1,13 +1,20 @@
 <script setup lang="ts">
 // 流转记录：每个节点的审批人、状态、意见与时间；当前节点高亮，跳过的节点灰色并显示条件。
 // 悬停或聚焦某个节点条目时，与上方签批栏对应的格子联动。
+import { onBeforeUnmount, watch } from 'vue'
 import type { FlowView, FlowNodeView, NodeStatus, TaskStatus } from '@/lib/types'
 import { NODE_MODE_LABEL, NODE_STATUS_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { nodeKeyOf, useSlipHover } from '@/components/slip/hover'
 
-defineProps<{ flow: FlowView | null }>()
+const props = defineProps<{ flow: FlowView | null }>()
 const hover = useSlipHover()
+// 节点消失或时间线卸载时清掉它留下的悬停 / 焦点
+watch(() => props.flow?.nodes, (nodes) => {
+  const keys = new Set((nodes ?? []).map(nodeKeyOf))
+  hover.release('flow', (key) => keys.has(key))
+})
+onBeforeUnmount(() => hover.release('flow'))
 
 const COLOR: Record<NodeStatus, string> = {
   WAITING: 'var(--eas-rule-strong)',
@@ -64,10 +71,10 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
             class="node"
             :class="{ active: n.status === 'ACTIVE', dim: dim(n), rejected: n.status === 'REJECTED', linked: hover.key.value === nodeKeyOf(n) }"
             tabindex="0"
-            @mouseenter="hover.enter(nodeKeyOf(n), 'flow')"
-            @mouseleave="hover.leave(nodeKeyOf(n))"
-            @focus="hover.enter(nodeKeyOf(n), 'flow')"
-            @blur="hover.leave(nodeKeyOf(n))"
+            @mouseenter="hover.enter(nodeKeyOf(n), 'flow', 'pointer')"
+            @mouseleave="hover.leave(nodeKeyOf(n), 'pointer')"
+            @focus="hover.enter(nodeKeyOf(n), 'flow', 'focus')"
+            @blur="hover.leave(nodeKeyOf(n), 'focus')"
           >
             <div class="node-head">
               <span class="node-name">{{ n.seq }}. {{ n.name }}</span>
@@ -242,6 +249,16 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   color: var(--eas-ink-3);
   font-size: var(--eas-fs-xs);
   font-variant-numeric: tabular-nums;
+}
+/* 当前节点（primary-tint）与联动节点（paper）底色上 ink-3 不到 4.5:1，改用 ink-2 */
+.node.active .task-time,
+.node.linked .task-time,
+.node.linked.dim,
+.node.linked .node-status.is-skipped,
+.node.linked .node-status.is-not_reached,
+.node.linked .node-status.is-waiting,
+.node.linked .node-status.is-canceled {
+  color: var(--eas-ink-2);
 }
 .comment {
   margin-top: 2px;

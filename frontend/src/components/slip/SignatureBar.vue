@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 签批栏：每个审批节点一格。已办格写处理人、结果章与时间；当前格虚线框 +「处理中」与待处理人；未到的格子留空。
 // 悬停或聚焦某格时，与下方流转记录联动，并弹出该节点的审批意见。
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { FlowNodeView, FlowView, TaskView } from '@/lib/types'
 import { fmtDateTime } from '@/lib/datetime'
 import Stamp from './Stamp.vue'
@@ -17,7 +17,7 @@ const props = withDefaults(
   }>(),
   { showComments: true, freshTaskId: null },
 )
-const emit = defineEmits<{ stamped: []; locate: [key: string] }>()
+const emit = defineEmits<{ stamped: [taskId: number]; locate: [key: string] }>()
 
 type CellState = 'approved' | 'rejected' | 'active' | 'waiting' | 'skipped' | 'canceled'
 interface SignRow {
@@ -76,6 +76,12 @@ function toCell(node: FlowNodeView): Cell {
 
 const cells = computed(() => props.flow.nodes.map(toCell))
 const hover = useSlipHover()
+// 节点消失或签批栏卸载时，清掉它留下的悬停 / 焦点（被移除的格子不会再触发 mouseleave / blur）
+watch(cells, (list) => {
+  const keys = new Set(list.map((cell) => cell.key))
+  hover.release('bar', (key) => keys.has(key))
+})
+onBeforeUnmount(() => hover.release('bar'))
 
 const popoverFor = (cell: Cell) =>
   props.showComments && (cell.rows.length > 0 || !!cell.node.resolveNote) && (cell.state === 'approved' || cell.state === 'rejected' || cell.state === 'active')
@@ -122,10 +128,10 @@ function cellLabel(cell: Cell): string {
             class="cell"
             :class="[cell.state, { linked: hover.key.value === cell.key }]"
             :aria-label="cellLabel(cell)"
-            @mouseenter="hover.enter(cell.key, 'bar')"
-            @mouseleave="hover.leave(cell.key)"
-            @focus="hover.enter(cell.key, 'bar')"
-            @blur="hover.leave(cell.key)"
+            @mouseenter="hover.enter(cell.key, 'bar', 'pointer')"
+            @mouseleave="hover.leave(cell.key, 'pointer')"
+            @focus="hover.enter(cell.key, 'bar', 'focus')"
+            @blur="hover.leave(cell.key, 'focus')"
             @click="emit('locate', cell.key)"
           >
             <span class="cell-name">{{ cell.node.name }}</span>
@@ -138,7 +144,7 @@ function cellLabel(cell: Cell): string {
                   :text="RESULT_TEXT[row.result]"
                   :animate="row.task.id === freshTaskId"
                   class="sign-stamp"
-                  @played="emit('stamped')"
+                  @played="emit('stamped', row.task.id)"
                 />
                 <span v-else class="sign-transfer">已转办</span>
                 <span class="sign-time">{{ shortTime(row.task.actedAt) }}</span>
@@ -153,7 +159,8 @@ function cellLabel(cell: Cell): string {
             </span>
           </button>
         </template>
-        <div class="sign-notes">
+        <!-- 浮层也算交互范围：鼠标移进来读意见时不关闭 -->
+        <div class="sign-notes" @mouseenter="hover.enter(cell.key, 'bar', 'pointer')" @mouseleave="hover.leave(cell.key, 'pointer')">
           <div class="sign-notes-title">{{ cell.node.name }}</div>
           <p v-if="cell.node.resolveNote" class="sign-note-resolve">{{ cell.node.resolveNote }}</p>
           <template v-if="cell.notes.length">
@@ -286,6 +293,16 @@ function cellLabel(cell: Cell): string {
 .cell.canceled .cell-name {
   color: var(--eas-ink-3);
 }
+/* 当前格（primary-tint）与联动格（paper）底色上 ink-3 不到 4.5:1，辅助文字改用 ink-2 */
+.cell.active .sign-time,
+.cell.active .sign-transfer,
+.cell.active .aside,
+.cell.linked:not(.active) .cell-name,
+.cell.linked .sign-time,
+.cell.linked .sign-transfer,
+.cell.linked .aside {
+  color: var(--eas-ink-2);
+}
 .cell.skipped,
 .cell.canceled {
   border-color: var(--eas-rule);
@@ -313,8 +330,12 @@ function cellLabel(cell: Cell): string {
 
 <style>
 .sign-popover.el-popover.el-popper {
-  padding: 12px 14px;
+  padding: 0;
   border-color: var(--eas-rule);
+}
+/* 内边距放在内容上，让整个浮层都在 mouseenter / mouseleave 的范围内 */
+.sign-notes {
+  padding: 12px 14px;
 }
 .sign-notes-title {
   margin-bottom: 6px;
