@@ -4,7 +4,7 @@
 //   提交：先保存最新内容 → 预览审批路径 → 打开确认框时生成幂等键 →
 //         POST /applications/{id}/submit {appVersion}；网络失败重试时复用同一个键
 import { reactive, watch, type WatchSource } from 'vue'
-import { onUnload } from '@dcloudio/uni-app'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { api } from '@/lib/api'
 import { ApiError } from '@/lib/http'
 import type { TypePath } from '@/lib/api/applications'
@@ -72,6 +72,14 @@ export function useDraft<K extends TypePath>(type: K) {
 
   let tracking = false
   let revision = 0
+  let navigationTimer: ReturnType<typeof setTimeout> | undefined
+  let unloaded = false
+  let page: ReturnType<typeof getCurrentPages>[number] | undefined
+
+  onLoad(() => {
+    const pages = getCurrentPages()
+    page = pages[pages.length - 1]
+  })
 
   /** 监听表单数据，有修改时标记 dirty 并开启离开提示 */
   function trackDirty(source: WatchSource<unknown>): void {
@@ -101,7 +109,12 @@ export function useDraft<K extends TypePath>(type: K) {
     setLeaveAlert(false)
   }
 
-  onUnload(() => setLeaveAlert(false))
+  // 离开页面时取消延时跳转，避免影响用户当前页面
+  onUnload(() => {
+    unloaded = true
+    clearTimeout(navigationTimer)
+    setLeaveAlert(false)
+  })
 
   /** 编辑已有草稿：加载详情；不是本人可编辑的草稿时提示并转到详情页 */
   async function load(id: number): Promise<ApplicationDetail | null> {
@@ -132,6 +145,7 @@ export function useDraft<K extends TypePath>(type: K) {
     draft.version = r.version
     draft.appNo = r.appNo
     if (revision === sentRevision) markClean()
+    uni.$emit('eas:app-changed', r.id)
     if (!opts.silent) toast('草稿已保存', 'success')
     return r
   }
@@ -190,7 +204,10 @@ export function useDraft<K extends TypePath>(type: K) {
         return null
       }
       const r = await runIdempotent(idemKey, (key) => api.applications.submit(id, { appVersion: saved.version }, key), '提交中')
-      if (r && revision === sentRevision) markClean()
+      if (r) {
+        if (revision === sentRevision) markClean()
+        uni.$emit('eas:app-changed', id)
+      }
       return r
     } finally {
       draft.busy = false
@@ -199,10 +216,17 @@ export function useDraft<K extends TypePath>(type: K) {
 
   /** 提交成功：提示当前审批人并转到详情页 */
   function finishSubmit(r: ActionResult): void {
+    if (unloaded) return
     draft.busy = true // 跳转前保持锁定，避免成功提示期间重复提交
     const who = r.currentNode?.assigneeName
     toast(who ? `提交成功，当前审批人：${who}` : '提交成功', 'none')
-    setTimeout(() => goDetail(r.applicationId, true), 1200)
+    const pages = getCurrentPages()
+    if (!page || pages[pages.length - 1] !== page) return
+    clearTimeout(navigationTimer)
+    navigationTimer = setTimeout(() => {
+      const current = getCurrentPages()
+      if (current[current.length - 1] === page) goDetail(r.applicationId, true)
+    }, 1200)
   }
 
   return { draft, trackDirty, startTracking, markClean, load, save, submit, finishSubmit }
