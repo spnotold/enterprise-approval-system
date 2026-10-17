@@ -390,6 +390,11 @@ public class FlowEngine {
         }
         FlowNodeInstance node = nodeMapper.selectById(task.getNodeInstanceId());
         String reason = req.comment().trim();
+        // trim 后复检字数（codePoint 计数，与前端字数口径一致）：@Size 校验的是原始串，空白可绕过 5 字下限
+        int reasonLen = reason.codePointCount(0, reason.length());
+        if (reasonLen < 5 || reasonLen > 500) {
+            throw BizException.rule("comment", "REASON_INVALID", "驳回理由 5-500 字");
+        }
         if (appMapper.reject(app.getId(), req.appVersion(), node.getSeq(), u.id()) == 0) {
             throw BizException.stateChanged();
         }
