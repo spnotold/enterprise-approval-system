@@ -1,23 +1,37 @@
 <script setup lang="ts">
 // 工作台：待办数、我的申请状态、最近通知、发起申请
-import { computed, ref } from 'vue'
+import { computed, reactive, ref, toRefs } from 'vue'
 import { onLoad, onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { api } from '@/lib/api'
-import type { NotificationItem, PersonalStats, TaskItem, TemplateOption } from '@/lib/types'
+import type { NotificationItem, TemplateOption } from '@/lib/types'
 import AdminNotice from '@/components/AdminNotice.vue'
 import { auth, requireLogin } from '@/stores/auth'
 import { notice } from '@/stores/notice'
-import { showError } from '@/utils/feedback'
 import { APP_STATUS_LABEL, APP_STATUS_ORDER, APP_TYPE_LABEL } from '@/utils/labels'
 import { go, goAppList, goForm, goTaskHandle, openLink } from '@/utils/nav'
 import { fmtShort } from '@/utils/time'
+import {
+  createInitialHomeState,
+  loadAllSections,
+  loadNoticesSection,
+  loadPendingSection,
+  loadStatsSection,
+  loadTemplatesSection,
+  type HomeApis,
+} from './homeData'
 
 const ready = ref(false)
-const stats = ref<PersonalStats | null>(null)
-const notices = ref<NotificationItem[]>([])
-const templates = ref<TemplateOption[]>([])
-const loading = ref(false)
-const pending = ref<TaskItem[]>([])
+const state = reactive(createInitialHomeState())
+const {
+  stats,
+  statsError,
+  notices,
+  noticesError,
+  templates,
+  templatesError,
+  pending,
+  pendingError,
+} = toRefs(state)
 
 const me = computed(() => auth.state.me)
 const adminOnly = computed(() => auth.isAdminOnly)
@@ -29,45 +43,56 @@ const greeting = computed(() => {
   return h < 6 ? '夜深了' : h < 12 ? '上午好' : h < 18 ? '下午好' : '晚上好'
 })
 
-async function load(): Promise<void> {
-  if (loading.value) return
-  loading.value = true
-  try {
-    if (adminOnly.value) {
-      notices.value = (await api.notifications.list({ page: 1, size: 5 })).records
-      return
-    }
-    const [s, n, t, p] = await Promise.all([
-      api.stats.personal(),
-      api.notifications.list({ page: 1, size: 5 }),
-      canCreate.value ? api.templates.available() : Promise.resolve([] as TemplateOption[]),
-      canHandle.value ? api.tasks.pending({ page: 1, size: 3 }) : Promise.resolve(null),
-    ])
-    stats.value = s
-    notices.value = n.records
-    templates.value = t
-    pending.value = p?.records ?? []
-  } catch (e) {
-    showError(e)
-  } finally {
-    loading.value = false
-    uni.stopPullDownRefresh()
-  }
+const apis: HomeApis = {
+  fetchStats: () => api.stats.personal(),
+  fetchNotices: () => api.notifications.list({ page: 1, size: 5 }),
+  fetchTemplates: () => api.templates.available(),
+  fetchPending: () => api.tasks.pending({ page: 1, size: 3 }),
+}
+
+const permissions = computed(() => ({
+  adminOnly: adminOnly.value,
+  canCreate: canCreate.value,
+  canHandle: canHandle.value,
+}))
+
+async function loadAll(): Promise<void> {
+  await loadAllSections(apis, state, permissions.value)
+}
+
+function retryPending(): void {
+  void loadPendingSection(apis, state, permissions.value)
+}
+
+function retryStats(): void {
+  void loadStatsSection(apis, state, permissions.value)
+}
+
+function retryTemplates(): void {
+  void loadTemplatesSection(apis, state, permissions.value)
+}
+
+function retryNotices(): void {
+  void loadNoticesSection(apis, state)
 }
 
 onLoad(async () => {
   if (!(await requireLogin())) return
   ready.value = true
-  await load()
+  await loadAll()
 })
 
 onShow(() => {
   notice.applyBadge()
-  if (ready.value) void load()
+  if (ready.value) void loadAll()
 })
 
-onPullDownRefresh(() => {
-  void load()
+onPullDownRefresh(async () => {
+  try {
+    await loadAll()
+  } finally {
+    uni.stopPullDownRefresh()
+  }
 })
 
 async function tapNotice(n: NotificationItem): Promise<void> {
@@ -99,14 +124,20 @@ function startTemplate(t: TemplateOption): void {
 
     <template v-else-if="ready">
       <view v-if="canHandle" class="card">
-        <view class="card-title">待你审批 <text class="pending-count">{{ stats?.pendingTaskCount ?? 0 }}</text></view>
-        <view v-if="!pending.length" class="muted">暂无待办</view>
-        <view v-for="t in pending" :key="t.taskId" class="pending-row" hover-class="is-pressed" hover-stay-time="60" @tap="goTaskHandle(t.taskId, t.applicationId)">
-          <view class="row between"><text class="tag tag-blue">{{ APP_TYPE_LABEL[t.type] }}</text><text class="muted">{{ fmtShort(t.createdAt) }}</text></view>
-          <view class="bold ellipsis">{{ t.title || t.templateName }}</view>
-          <view class="row between"><text class="muted">{{ t.applicant.realName }}</text><text class="text-primary">去处理</text></view>
+        <view class="card-title">待你审批 <text class="pending-count">{{ stats?.pendingTaskCount ?? state.pendingTotal ?? 0 }}</text></view>
+        <view v-if="pendingError" class="section-error">
+          <text class="section-error-text">{{ pendingError }}</text>
+          <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryPending">重试</view>
         </view>
-        <view class="link-btn section-link" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/task/list')">查看全部待办</view>
+        <template v-else>
+          <view v-if="!pending.length" class="muted">暂无待办</view>
+          <view v-for="t in pending" :key="t.taskId" class="pending-row" hover-class="is-pressed" hover-stay-time="60" @tap="goTaskHandle(t.taskId, t.applicationId)">
+            <view class="row between"><text class="tag tag-blue">{{ APP_TYPE_LABEL[t.type] }}</text><text class="muted">{{ fmtShort(t.createdAt) }}</text></view>
+            <view class="bold ellipsis">{{ t.title || t.templateName }}</view>
+            <view class="row between"><text class="muted">{{ t.applicant.realName }}</text><text class="text-primary">去处理</text></view>
+          </view>
+          <view class="link-btn section-link" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/task/list')">查看全部待办</view>
+        </template>
       </view>
 
       <view class="card">
@@ -114,7 +145,11 @@ function startTemplate(t: TemplateOption): void {
           我的申请
           <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="goAppList()">查看全部申请</view>
         </view>
-        <view class="status-grid">
+        <view v-if="statsError" class="section-error">
+          <text class="section-error-text">{{ statsError }}</text>
+          <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryStats">重试</view>
+        </view>
+        <view v-else class="status-grid">
           <view v-for="s in APP_STATUS_ORDER" :key="s" class="status-cell" hover-class="is-pressed" hover-stay-time="60" @tap="goAppList({ status: s })">
             <view class="status-count" :class="`status-${s.toLowerCase()}`">{{ stats?.statusCounts?.[s] ?? 0 }}</view>
             <view class="muted">{{ APP_STATUS_LABEL[s] }}</view>
@@ -122,12 +157,17 @@ function startTemplate(t: TemplateOption): void {
         </view>
       </view>
 
-      <view v-if="templates.length" class="card">
+      <view v-if="canCreate" class="card">
         <view class="card-title">
           发起申请
           <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/apply/index')">查看发起入口</view>
         </view>
-        <view class="quick">
+        <view v-if="templatesError" class="section-error">
+          <text class="section-error-text">{{ templatesError }}</text>
+          <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryTemplates">重试</view>
+        </view>
+        <view v-else-if="!templates.length" class="muted">暂无可发起的模板</view>
+        <view v-else class="quick">
           <view v-for="t in templates.slice(0, 8)" :key="t.id" class="quick-item" hover-class="is-pressed" hover-stay-time="60" @tap="startTemplate(t)">
             <view class="quick-icon">{{ t.name.slice(0, 1) }}</view>
             <text class="quick-name ellipsis">{{ t.name }}</text>
@@ -142,14 +182,20 @@ function startTemplate(t: TemplateOption): void {
         最近通知
         <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/notice/list')">查看全部通知</view>
       </view>
-      <view v-if="!notices.length" class="muted">暂无通知</view>
-      <view v-for="n in notices" :key="n.id" class="notice" hover-class="is-pressed" hover-stay-time="60" @tap="tapNotice(n)">
-        <view v-if="!n.read" class="dot" />
-        <view class="flex1">
-          <view class="ellipsis" :class="{ bold: !n.read }">{{ n.title }}</view>
-          <view class="muted">{{ fmtShort(n.createdAt) }}</view>
-        </view>
+      <view v-if="noticesError" class="section-error">
+        <text class="section-error-text">{{ noticesError }}</text>
+        <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryNotices">重试</view>
       </view>
+      <template v-else>
+        <view v-if="!notices.length" class="muted">暂无通知</view>
+        <view v-for="n in notices" :key="n.id" class="notice" hover-class="is-pressed" hover-stay-time="60" @tap="tapNotice(n)">
+          <view v-if="!n.read" class="dot" />
+          <view class="flex1">
+            <view class="ellipsis" :class="{ bold: !n.read }">{{ n.title }}</view>
+            <view class="muted">{{ fmtShort(n.createdAt) }}</view>
+          </view>
+        </view>
+      </template>
     </view>
 
     <view v-if="!adminOnly" class="card row between" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/stats/index')">
@@ -166,6 +212,8 @@ function startTemplate(t: TemplateOption): void {
 .pending-row { padding: 20rpx 0; border-bottom: 1rpx solid var(--eas-rule); min-height: 88rpx; }
 .pending-row .bold { margin: 10rpx 0; }
 .section-link { display: flex; }
+.section-error { display: flex; align-items: center; justify-content: space-between; padding: 12rpx 0; min-height: 88rpx; }
+.section-error-text { color: var(--eas-danger); font-size: 26rpx; flex: 1; margin-right: 16rpx; }
 .status-grid { display: flex; }
 .status-cell { flex: 1; text-align: center; padding: 12rpx 0; min-height: 88rpx; }
 .status-count { font-size: var(--eas-fs-lg); font-weight: 600; color: var(--eas-ink-2); }
