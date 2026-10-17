@@ -4,7 +4,7 @@
 //   到临时文件，再用 uni.previewImage / uni.openDocument 打开。
 
 import { API_BASE } from './config'
-import { ApiError, authFailed, authHeaders, currentAccessToken, parseResponse, refreshOnce, toApiError } from './http'
+import { ApiError, authFailed, authHeaders, currentAccessToken, parseResponse, refreshOnce, sessionGeneration, toApiError } from './http'
 import type { AttachmentMeta, AttachmentRefType } from './types'
 
 type CallbackUploadFileOption = UniApp.UploadFileOption &
@@ -105,21 +105,23 @@ export function uploadFile(
     if (aborted) t.abort()
   }
   const run = async (): Promise<AttachmentMeta> => {
+    const gen = sessionGeneration()
     const tokenAtSend = currentAccessToken()
     try {
       return await uploadOnce(local, refType, onProgress, setTask)
     } catch (err) {
       const e = toApiError(err)
-      if (e.code !== 40102 || aborted) throw e
+      if (e.code !== 40102 || aborted || gen !== sessionGeneration()) throw e
       const current = currentAccessToken()
       if (!current || current === tokenAtSend) {
         try {
           await refreshOnce()
         } catch {
-          authFailed()
+          authFailed(gen)
           throw e
         }
       }
+      if (gen !== sessionGeneration()) throw e
       return uploadOnce(local, refType, onProgress, setTask)
     }
   }
@@ -144,19 +146,22 @@ export async function downloadAttachment(id: number, download = false): Promise<
         fail: () => reject(new ApiError({ code: -1, message: '下载失败，请检查网络后重试' }, null)),
       })
     })
+  const gen = sessionGeneration()
   const tokenAtSend = currentAccessToken()
   let res = await once()
   if (res.statusCode === 401) {
+    if (gen !== sessionGeneration()) throw new ApiError({ code: 40102, message: '登录状态已变化' }, 401)
     // 下载响应体是文件流，拿不到错误码；401 统一按令牌过期处理，刷新后重试一次
     const current = currentAccessToken()
     if (!current || current === tokenAtSend) {
       try {
         await refreshOnce()
       } catch {
-        authFailed()
+        authFailed(gen)
         throw new ApiError({ code: 40102, message: '登录已过期，请重新登录' }, 401)
       }
     }
+    if (gen !== sessionGeneration()) throw new ApiError({ code: 40102, message: '登录状态已变化' }, 401)
     res = await once()
   }
   if (res.statusCode === 403 || res.statusCode === 404) {

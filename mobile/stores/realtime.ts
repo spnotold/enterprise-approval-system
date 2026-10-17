@@ -14,6 +14,8 @@ import { API_BASE } from '@/lib/config'
 
 const POLL_MS = 15_000
 
+// 启停时递增，隔离旧会话的初始化等待、轮询与 SSE 回调。
+let generation = 0
 let running = false
 let initDone: Promise<void> | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -21,15 +23,17 @@ let polling = false
 
 async function pullChanges(): Promise<void> {
   if (!running || polling) return
+  const gen = generation
   polling = true
   try {
     await initDone
+    if (!running || gen !== generation) return
     const r = await api.notifications.changes(notice.state.lastId)
-    if (running) notice.receive(r.items, r.unreadCount)
+    if (running && gen === generation) notice.receive(r.items, r.unreadCount)
   } catch {
     // 拉取失败（网络波动等）等下一轮
   } finally {
-    polling = false
+    if (gen === generation) polling = false
   }
 }
 
@@ -71,18 +75,22 @@ function onSseFailure(): void {
 
 async function connectSse(): Promise<void> {
   if (!running || es) return
+  const gen = generation
   try {
     await initDone
+    if (!running || gen !== generation) return
     // EventSource 不能设置请求头，先用访问令牌换一次性票据
     const { ticket } = await api.auth.sseTicket()
-    if (!running) return
+    if (!running || gen !== generation) return
     const source = new EventSource(`${API_BASE}/notifications/stream?ticket=${encodeURIComponent(ticket)}`)
     es = source
     source.addEventListener('open', () => {
+      if (!running || gen !== generation || es !== source) return
       failures = 0
       void pullChanges() // 补齐断线期间的通知
     })
     source.addEventListener('notification', (e) => {
+      if (!running || gen !== generation || es !== source) return
       failures = 0
       try {
         const ev = JSON.parse((e as MessageEvent<string>).data) as NoticeEvent
@@ -92,10 +100,10 @@ async function connectSse(): Promise<void> {
       }
     })
     source.onerror = () => {
-      if (es === source) onSseFailure()
+      if (gen === generation && es === source) onSseFailure()
     }
   } catch {
-    onSseFailure()
+    if (gen === generation) onSseFailure()
   }
 }
 // #endif
@@ -104,6 +112,7 @@ export const realtime = {
   /** 登录后（或带着令牌启动时）调用 */
   start(): void {
     if (running) return
+    generation++
     running = true
     initDone = notice.init().catch(() => {})
     // #ifdef H5
@@ -117,7 +126,9 @@ export const realtime = {
   },
 
   stop(): void {
+    generation++
     running = false
+    polling = false
     initDone = null
     stopPolling()
     // #ifdef H5
