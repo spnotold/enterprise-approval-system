@@ -33,7 +33,7 @@ export const SLIP_STATE_TEXT: Record<SlipCellState, string> = {
 
 export const SLIP_CELL_STAMP_TEXT = '同意'
 export const SLIP_PASSED_STAMP_TEXT = '已通过'
-export const SLIP_NOTE = '一张申请怎么一级级批下来'
+export const SLIP_NOTE = '审批流程'
 
 /** 前三步各停 2400ms，第 ④ 步停 3200ms */
 export const SLIP_STEP_DURATION = 2400

@@ -36,7 +36,7 @@ describe('slip demo steps', () => {
   })
 
   it('carries the caption that sits below the diagram', () => {
-    expect(SLIP_NOTE).toBe('一张申请怎么一级级批下来')
+    expect(SLIP_NOTE).toBe('审批流程')
   })
 
   it('drops the passed stamp only on the final step', () => {
