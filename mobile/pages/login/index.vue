@@ -92,7 +92,6 @@ function goRegister(): void {
   <view class="login">
     <view class="head">
       <view class="title">企业审批系统</view>
-      <view class="lead">提交申请，查看进度，处理待办。</view>
     </view>
 
     <view class="panel">
@@ -194,13 +193,6 @@ function goRegister(): void {
   font-weight: 600;
   line-height: 1.3;
   color: var(--eas-ink);
-}
-
-.lead {
-  margin-top: 12rpx;
-  font-size: var(--eas-fs-sm);
-  line-height: 1.6;
-  color: var(--eas-ink-2);
 }
 
 .panel {
