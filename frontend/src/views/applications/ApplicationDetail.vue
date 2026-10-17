@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
-import type { AppAction, ApplicationDetail, FlowView } from '@/lib/types'
+import type { ActionResult, AppAction, ApplicationDetail, FlowView } from '@/lib/types'
 import { APP_STATUS_LABEL, LOG_ACTION_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { ApiError, errorText, isServerError, showError, toApiError } from '@/lib/errors'
@@ -75,11 +75,49 @@ function locateNode(key: string) {
   document.getElementById(`flow-node-${key}`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
 }
 
-// 本人刚同意 / 驳回的待办：刷新后它在签批栏里落章，动画只播这一次
-const freshTaskId = ref<number | null>(null)
-function onHandled() {
-  freshTaskId.value = detail.value?.myTaskId ?? null
-  void load()
+// 本人刚同意 / 驳回的待办：刷新后它在签批栏里落章，动画只播这一次。
+// 落章标记按（申请 id、待办 id）快照登记：请求发出时为 submitting，成功后转为 ready（等待展示），
+// 章播完、动画被取消、章卸载或刷新后找不到这枚章时消费掉，不依赖审批面板是否还在。
+interface StampMark { appId: number; taskId: number; phase: 'submitting' | 'ready' }
+const stampMark = ref<StampMark | null>(null)
+const freshTaskId = computed(() => {
+  const mark = stampMark.value
+  return mark?.phase === 'ready' && mark.appId === detail.value?.id ? mark.taskId : null
+})
+function onStamped(taskId: number) {
+  if (stampMark.value?.taskId === taskId) stampMark.value = null
+}
+function hasStamp(result: ApplicationDetail, taskId: number): boolean {
+  return !!result.flow?.nodes.some((node) => node.tasks.some((task) => task.id === taskId && (task.status === 'APPROVED' || task.status === 'REJECTED')))
+}
+
+// 审批提交进行中：推送触发的自动刷新先记下，结束后再刷，避免提前换掉审批面板、丢掉提交结果
+const submitting = ref(false)
+let refreshQueued = false
+let submitSeq = 0
+async function onSubmit({ taskId, result }: { taskId: number; result: Promise<ActionResult | undefined> }) {
+  const seq = ++submitSeq
+  const appId = props.id
+  stampMark.value = { appId, taskId, phase: 'submitting' }
+  submitting.value = true
+  let ok = false
+  try {
+    ok = !!(await result)
+  } catch {
+    ok = false
+  }
+  if (seq !== submitSeq) return
+  submitting.value = false
+  const mark = stampMark.value
+  if (mark?.appId === appId && mark.taskId === taskId) stampMark.value = ok ? { ...mark, phase: 'ready' } : null
+  if (ok || refreshQueued) {
+    refreshQueued = false
+    void load()
+  }
+}
+function autoRefresh() {
+  if (submitting.value) refreshQueued = true
+  else void load()
 }
 
 let requestSeq = 0
@@ -93,6 +131,8 @@ async function load() {
     const result = await api.applications.detail(id)
     if (seq !== requestSeq || id !== props.id || generation !== sessionGeneration()) return
     detail.value = result
+    const mark = stampMark.value
+    if (mark?.phase === 'ready' && (mark.appId !== result.id || !hasStamp(result, mark.taskId))) stampMark.value = null
     now.value = Date.now()
     const limit = urgeLimit.value
     if (result.status !== 'IN_APPROVAL' || result.applicant.id !== auth.me?.id ||
@@ -106,7 +146,10 @@ async function load() {
     if (seq !== requestSeq || id !== props.id || generation !== sessionGeneration()) return
     loadError.value = toApiError(e)
     // 临时刷新失败保留输入；权限失效时立即移除旧内容。
-    if ([40101, 40102, 40301, 40401].includes(loadError.value.code)) detail.value = null
+    if ([40101, 40102, 40301, 40401].includes(loadError.value.code)) {
+      detail.value = null
+      stampMark.value = null
+    }
     if (isServerError(loadError.value)) showError(loadError.value)
   } finally {
     if (seq === requestSeq) loading.value = false
@@ -115,14 +158,17 @@ async function load() {
 watch([() => props.id, () => auth.me?.id], () => {
   detail.value = null
   urgeLimit.value = null
-  freshTaskId.value = null
+  stampMark.value = null
+  submitting.value = false
+  refreshQueued = false
+  submitSeq += 1
   if (auth.me) void load()
   else { requestSeq += 1; loading.value = false; loadError.value = null }
 }, { immediate: true, flush: 'sync' })
 watch(() => notice.lastAppEvent, (event) => {
-  if (event?.applicationId === props.id) void load()
+  if (event?.applicationId === props.id) autoRefresh()
 })
-onBeforeUnmount(() => { requestSeq += 1 })
+onBeforeUnmount(() => { requestSeq += 1; submitSeq += 1 })
 
 function back() {
   if (window.history.state?.back) router.back()
@@ -220,16 +266,17 @@ async function urge() {
     <div class="detail-toolbar">
       <el-button :disabled="acting !== null" @click="back">返回</el-button>
       <span class="flex-1" />
-      <el-button :icon="Refresh" :loading="loading" :disabled="loading || acting !== null" @click="load">刷新</el-button>
+      <el-button :icon="Refresh" :loading="loading" :disabled="loading || acting !== null || submitting" @click="load">刷新</el-button>
     </div>
     <el-skeleton v-if="loading && !detail" :rows="12" animated />
     <el-result v-else-if="loadError && !detail" icon="warning" :title="loadError.code === 40401 || loadError.httpStatus === 404 ? '无权查看或已不存在' : errorText(loadError)">
       <template #extra><el-button @click="back">返回</el-button><el-button type="primary" @click="load">重新加载</el-button></template>
     </el-result>
     <template v-else-if="detail">
-      <el-alert v-if="loadError" :title="errorText(loadError, '刷新失败，请重试后再操作')" type="warning" :closable="false" show-icon />
-      <el-alert v-if="!full" title="关联申请只读摘要" description="此查看方式仅展示关联摘要及流程结果，附件和审批意见不可见。" type="info" :closable="false" show-icon />
-      <el-alert v-else-if="!detail.canReadAttachments" title="可查看业务内容；当前无权预览或下载附件。" type="info" :closable="false" show-icon />
+      <!-- surface：背景格纸据此把提示条、操作栏识别为内容，点击其中空白不荡开背景环 -->
+      <el-alert v-if="loadError" class="surface" :title="errorText(loadError, '刷新失败，请重试后再操作')" type="warning" :closable="false" show-icon />
+      <el-alert v-if="!full" class="surface" title="关联申请只读摘要" description="此查看方式仅展示关联摘要及流程结果，附件和审批意见不可见。" type="info" :closable="false" show-icon />
+      <el-alert v-else-if="!detail.canReadAttachments" class="surface" title="可查看业务内容；当前无权预览或下载附件。" type="info" :closable="false" show-icon />
 
       <article class="slip" :aria-label="`${detail.appNo} 申请单`">
         <SlipHeader :detail="detail" />
@@ -238,7 +285,7 @@ async function urge() {
           :flow="visibleFlow"
           :show-comments="full"
           :fresh-task-id="freshTaskId"
-          @stamped="freshTaskId = null"
+          @stamped="onStamped"
           @locate="locateNode"
         />
         <SlipSection v-if="!full" title="关联摘要">
@@ -279,7 +326,7 @@ async function urge() {
           <template #empty><el-empty description="暂无审批日志" :image-size="60" /></template>
         </el-table>
       </section>
-      <div v-if="full && hasActions" class="form-actions detail-actions">
+      <div v-if="full && hasActions" class="form-actions detail-actions surface">
         <span v-if="nextUrgeAt && ownerAction('URGE')" class="muted small">下次可催办：{{ fmtDateTime(nextUrgeAt) }}</span><span class="flex-1" />
         <el-button v-if="ownerAction('EDIT')" :disabled="busy" @click="router.push(`/applications/${detail.id}/edit`)">编辑草稿</el-button>
         <el-button v-if="ownerAction('DELETE')" type="danger" plain :loading="acting === 'DELETE'" :disabled="busy" @click="ownerOperation('DELETE')">删除草稿</el-button>
@@ -287,7 +334,7 @@ async function urge() {
         <el-button v-if="ownerAction('WITHDRAW')" type="danger" plain :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
         <el-button v-if="ownerAction('URGE')" :loading="acting === 'URGE'" :disabled="busy || !!nextUrgeAt" @click="urge">催办</el-button>
         <el-button v-if="ownerAction('SUBMIT')" type="primary" :loading="acting === 'SUBMIT'" :disabled="busy" @click="ownerOperation('SUBMIT')">提交申请</el-button>
-        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @done="onHandled" @refresh="load" />
+        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.version}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @submit="onSubmit" @refresh="load" />
       </div>
     </template>
   </div>

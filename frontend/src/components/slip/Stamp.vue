@@ -1,6 +1,9 @@
 <script setup lang="ts">
 // 章：描边方框、状态色、倾斜 -6°，不填色。animate 时从 1.15 倍缩到 1、透明度 0→1，只播一次。
-withDefaults(
+// played 表示这次落章已经「用掉」：正常播完、动画被取消、播放中途卸载、或减弱动效下直接显示，都只发一次。
+import { onBeforeUnmount, onMounted, watch } from 'vue'
+
+const props = withDefaults(
   defineProps<{
     tone: 'success' | 'danger'
     text: string
@@ -10,10 +13,31 @@ withDefaults(
   { size: 'sm', animate: false },
 )
 const emit = defineEmits<{ played: [] }>()
+
+let consumed = false
+function consume() {
+  if (!props.animate || consumed) return
+  consumed = true
+  emit('played')
+}
+const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+onMounted(() => {
+  if (reducedMotion()) consume()
+})
+watch(
+  () => props.animate,
+  (on) => {
+    if (!on) return
+    consumed = false
+    if (reducedMotion()) consume()
+  },
+)
+onBeforeUnmount(consume)
 </script>
 
 <template>
-  <span class="stamp" :class="[tone, size, { animate }]" @animationend="emit('played')">{{ text }}</span>
+  <span class="stamp" :class="[tone, size, { animate }]" @animationend="consume" @animationcancel="consume">{{ text }}</span>
 </template>
 
 <style scoped>
