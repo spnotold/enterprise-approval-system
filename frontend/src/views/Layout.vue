@@ -1,49 +1,94 @@
 <script setup lang="ts">
-// 应用外壳：顶部栏（通知铃铛、用户菜单）+ 按权限过滤的侧边菜单
+// 案卷外壳：顶栏栏目、案卷页签、管理索引和铺满桌面的格纸。
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElNotification } from 'element-plus'
-import { ArrowDown, Expand, Fold } from '@element-plus/icons-vue'
+import { ArrowDown, Menu as MenuIcon } from '@element-plus/icons-vue'
+import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { noticeTarget, useNoticeStore } from '@/stores/notice'
 import { useSse } from '@/composables/useSse'
 import { useBreakpoint } from '@/composables/useBreakpoint'
-import { activeMenuPath, visibleMenu } from '@/router/menu'
+import { activeMenuPath, activeSection, visibleSections } from '@/router/menu'
+import { detailSectionHint } from '@/router/sectionContext'
 import { NOTIFICATION_TYPE_LABEL, ROLE_LABEL } from '@/lib/labels'
+import AdminIndex from '@/components/AdminIndex.vue'
 import NoticeBell from '@/components/NoticeBell.vue'
 import PaperField from '@/components/PaperField.vue'
+import SectionTabs from '@/components/SectionTabs.vue'
 
 const auth = useAuthStore()
 const notice = useNoticeStore()
 const route = useRoute()
 const router = useRouter()
-const { isMobile } = useBreakpoint()
-
-// 这些路由的参数变化时重新创建页面组件（不同申请 / 模板）
+const { isMobile } = useBreakpoint('(max-width: 767px)')
 const KEYED_ROUTES = new Set(['application-detail', 'application-edit', 'apply-custom', 'admin-template-design'])
-
-const collapsed = ref(false)
 const drawer = ref(false)
-
-const groups = computed(() => visibleMenu((p) => auth.can(p)))
-const active = computed(() => activeMenuPath(route.path, groups.value))
+const desk = ref<HTMLElement | null>(null)
+const pendingCount = ref(0)
+const detailOrigin = ref<string>()
+const sections = computed(() => visibleSections((p) => auth.can(p)))
+const activeId = computed(() => activeSection(route.path, sections.value, detailOrigin.value))
+const currentSection = computed(() => sections.value.find((section) => section.id === activeId.value))
+const activePath = computed(() => activeMenuPath(route.path, sections.value.map((section) => ({ title: section.label, items: section.items }))))
+const tabSection = computed(() => {
+  const section = currentSection.value
+  return section && section.id !== 'admin' && section.items.length >= 2 && section.items.some((item) => item.path === route.path)
+    ? section : undefined
+})
+const adminSection = computed(() => sections.value.find((section) => section.id === 'admin' && section.items.some((item) => item.path === route.path)))
 const roleText = computed(() => (auth.me?.roles ?? []).map((r) => ROLE_LABEL[r.code] ?? r.name).join('、'))
-// 两字姓名只取首字，避免头像与旁边的姓名重复；三字及以上取末两字
 const avatarText = computed(() => {
-  const name = auth.me?.realName?.trim() ?? ''
-  if (!name) return ''
-  const chars = Array.from(name)
+  const chars = Array.from(auth.me?.realName?.trim() ?? '')
   return chars.length <= 2 ? chars[0] : chars.slice(-2).join('')
 })
 
-watch(
-  () => route.fullPath,
-  () => (drawer.value = false),
-)
+let pendingRequest = 0
+async function refreshPending() {
+  const request = ++pendingRequest
+  if (!auth.can('TASK_HANDLE')) {
+    pendingCount.value = 0
+    return
+  }
+  try {
+    const result = await api.tasks.pendingCount()
+    if (request === pendingRequest) pendingCount.value = result.count
+  } catch {
+    // 计数只是提示，接口失败时保留上次结果。
+  }
+}
 
-// 实时通知：更新角标、弹出提醒；详情页根据 notice.lastAppEvent 自动刷新
+watch(() => route.fullPath, async (_path, previousPath, onCleanup) => {
+  let current = true
+  onCleanup(() => { current = false })
+  drawer.value = false
+  void refreshPending()
+  if (route.name !== 'application-detail' && route.name !== 'application-edit') {
+    detailOrigin.value = undefined
+    return
+  }
+  const path = route.path
+  const state = window.history.state
+  const sources = [route.query.from, state?.sectionFrom, previousPath, state?.back, detailOrigin.value]
+  detailOrigin.value = detailSectionHint(sources, sections.value)
+  if (!detailOrigin.value) {
+    try {
+      const detail = await api.applications.detail(Number(route.params.id))
+      if (!current || route.path !== path) return
+      detailOrigin.value = detailSectionHint([], sections.value, detail.applicant.id, auth.me?.id)
+    } catch {
+      // 详情页自身呈现读取错误，外壳保持权限允许的默认栏目。
+    }
+  }
+  if (current && route.path === path && detailOrigin.value) {
+    window.history.replaceState({ ...window.history.state, sectionFrom: detailOrigin.value }, '')
+  }
+}, { immediate: true })
+
+// 实时通知：保留未读角标、用户提醒、详情页自动刷新与通知点击行为。
 useSse((e) => {
   notice.onEvent(e)
+  void refreshPending()
   const target = noticeTarget(e)
   const n = ElNotification({
     title: NOTIFICATION_TYPE_LABEL[e.type] ?? '新通知',
@@ -59,8 +104,10 @@ useSse((e) => {
   })
 })
 
-onBeforeUnmount(() => notice.reset())
-
+onBeforeUnmount(() => {
+  pendingRequest += 1
+  notice.reset()
+})
 function onCommand(cmd: string) {
   if (cmd === 'profile') void router.push('/profile')
   if (cmd === 'logout') void auth.logout()
@@ -68,67 +115,31 @@ function onCommand(cmd: string) {
 </script>
 
 <template>
-  <el-container class="layout">
-    <el-aside v-if="!isMobile" :width="collapsed ? '64px' : '216px'" class="aside">
-      <div class="brand" :class="{ collapsed }">
-        <span class="logo" aria-hidden="true">审</span>
-        <transition name="brand-fade">
-          <span v-if="!collapsed" class="brand-text">企业审批系统</span>
-        </transition>
-      </div>
-      <el-scrollbar>
-        <el-menu :default-active="active" :collapse="collapsed" router class="menu">
-          <template v-for="g in groups" :key="g.title ?? 'root'">
-            <el-menu-item-group v-if="g.title && !collapsed" :title="g.title">
-              <el-menu-item v-for="item in g.items" :key="item.path" :index="item.path">
-                <el-icon><component :is="item.icon" /></el-icon>
-                <span>{{ item.title }}</span>
-              </el-menu-item>
-            </el-menu-item-group>
-            <template v-else>
-              <el-menu-item v-for="item in g.items" :key="item.path" :index="item.path">
-                <el-icon><component :is="item.icon" /></el-icon>
-                <template #title>{{ item.title }}</template>
-              </el-menu-item>
-            </template>
-          </template>
-        </el-menu>
-      </el-scrollbar>
-    </el-aside>
-
-    <el-drawer v-else v-model="drawer" direction="ltr" size="240px" :with-header="false" class="nav-drawer">
-      <div class="brand"><span class="logo" aria-hidden="true">审</span><span class="brand-text">企业审批系统</span></div>
-      <el-menu :default-active="active" router class="menu">
-        <template v-for="g in groups" :key="g.title ?? 'root'">
-          <el-menu-item-group :title="g.title ?? undefined">
-            <el-menu-item v-for="item in g.items" :key="item.path" :index="item.path">
-              <el-icon><component :is="item.icon" /></el-icon>
-              <span>{{ item.title }}</span>
-            </el-menu-item>
-          </el-menu-item-group>
-        </template>
-      </el-menu>
-    </el-drawer>
-
-    <el-container class="main-wrap">
-      <el-header class="header" :height="'52px'">
-        <button
-          class="icon-btn"
-          type="button"
-          :aria-label="isMobile ? '打开菜单' : collapsed ? '展开菜单' : '折叠菜单'"
-          @click="isMobile ? (drawer = true) : (collapsed = !collapsed)"
+  <div class="layout">
+    <header class="topbar">
+      <button v-if="isMobile" class="icon-btn" type="button" aria-label="打开菜单" :aria-expanded="drawer" @click="drawer = true">
+        <el-icon :size="20"><MenuIcon /></el-icon>
+      </button>
+      <router-link class="brand" to="/" aria-label="企业审批，工作台">
+        <span class="logo" aria-hidden="true">审</span><span class="brand-text">企业审批</span>
+      </router-link>
+      <nav v-if="!isMobile" class="section-nav" aria-label="主导航">
+        <router-link
+          v-for="section in sections" :key="section.id" :to="section.items[0].path"
+          class="section-link" :class="{ 'is-active': activeId === section.id }"
+          :aria-current="activeId === section.id ? 'true' : undefined"
         >
-          <el-icon :size="20"><Fold v-if="!collapsed || isMobile" /><Expand v-else /></el-icon>
-        </button>
-        <span class="header-title">{{ route.meta.title }}</span>
-        <div class="flex-1" />
+          {{ section.label }}<span v-if="section.id === 'approval' && pendingCount" class="pending-count">{{ pendingCount }}</span>
+        </router-link>
+      </nav>
+      <div class="topbar-right">
         <NoticeBell />
         <el-dropdown trigger="click" @command="onCommand">
-          <span class="user" role="button" tabindex="0" aria-label="用户菜单">
+          <button class="user" type="button" aria-label="用户菜单">
             <el-avatar :size="28" class="avatar">{{ avatarText }}</el-avatar>
             <span v-if="!isMobile" class="user-name">{{ auth.me?.realName }}</span>
-            <el-icon><ArrowDown /></el-icon>
-          </span>
+            <el-icon v-if="!isMobile"><ArrowDown /></el-icon>
+          </button>
           <template #dropdown>
             <div class="user-card">
               <div class="user-card-name">{{ auth.me?.realName }}（{{ auth.me?.username }}）</div>
@@ -141,243 +152,96 @@ function onCommand(cmd: string) {
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-      </el-header>
-      <PaperField class="layout-paper" />
-      <el-main class="main">
-        <router-view v-slot="{ Component, route: r }">
-          <component :is="Component" :key="KEYED_ROUTES.has(String(r.name)) ? r.path : undefined" />
-        </router-view>
-      </el-main>
-    </el-container>
-  </el-container>
+      </div>
+    </header>
+
+    <el-drawer v-if="isMobile" v-model="drawer" direction="ltr" size="280px" title="页面导航" class="nav-drawer">
+      <nav aria-label="全部页面" class="drawer-nav">
+        <section v-for="section in sections" :key="section.id" class="drawer-section">
+          <h2>{{ section.label }}<span v-if="section.id === 'approval' && pendingCount" class="pending-count">{{ pendingCount }}</span></h2>
+          <router-link
+            v-for="item in section.items" :key="item.path" :to="item.path"
+            :class="{ 'is-active': activePath === item.path }" :aria-current="activePath === item.path ? 'page' : undefined"
+          >{{ item.title }}</router-link>
+        </section>
+      </nav>
+    </el-drawer>
+
+    <div ref="desk" class="desk">
+      <PaperField base="--eas-desk" class="layout-paper" :container="() => desk" />
+      <main class="content-column">
+        <SectionTabs v-if="tabSection" :section="tabSection" :active-path="route.path" :pending-count="pendingCount" :hide-tabs="isMobile" />
+        <div class="route-layout" :class="{ 'has-admin-index': adminSection && !isMobile }">
+          <AdminIndex v-if="adminSection && !isMobile" :items="adminSection.items" :active-path="activePath" />
+          <div class="routed-page" :class="{ 'section-page': tabSection && !isMobile, 'admin-page': adminSection && !isMobile, sheet: adminSection && !isMobile }">
+            <router-view v-slot="{ Component, route: r }">
+              <component :is="Component" :key="KEYED_ROUTES.has(String(r.name)) ? r.path : undefined" />
+            </router-view>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.layout {
-  height: 100vh;
-}
-.aside {
-  display: flex;
-  flex-direction: column;
-  background: var(--eas-paper-deep);
-  border-right: 1px solid var(--eas-rule);
-  transition: width var(--eas-dur) var(--eas-ease);
-  overflow: hidden;
-}
-
-/* 品牌：描边方块，像一枚印章边框 */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 52px;
-  flex: none;
+.layout { min-height: 100vh; background: var(--eas-desk); }
+.topbar {
   position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
   box-sizing: border-box;
-  padding: 0 18px;
-  font-size: var(--eas-fs-md);
-  font-weight: 600;
-  white-space: nowrap;
+  height: 56px;
+  padding: 0 32px;
+  gap: 40px;
+  background: var(--eas-sheet);
   border-bottom: 1px solid var(--eas-rule);
 }
-.brand.collapsed {
-  justify-content: flex-start;
-  padding: 0 18px;
+.brand { display: inline-flex; align-items: center; align-self: center; gap: 10px; flex: none; color: var(--eas-primary); text-decoration: none; white-space: nowrap; }
+.logo { display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; border: 1.5px solid var(--eas-primary); border-radius: var(--eas-radius-control); font: 700 16px var(--eas-font-serif); }
+.brand-text { font: 600 17px var(--eas-font-serif); letter-spacing: 0.04em; }
+.section-nav { display: flex; gap: 4px; height: 44px; margin-bottom: -1px; }
+.section-link { display: flex; align-items: center; gap: 6px; padding: 0 18px; border-radius: 8px 8px 0 0; color: var(--eas-ink-2); text-decoration: none; font-size: 15px; white-space: nowrap; }
+.section-link:hover { background: var(--eas-row-hover); color: var(--eas-ink); }
+.section-link.is-active { background: var(--eas-desk); color: var(--eas-ink); font-weight: 600; }
+.pending-count { color: var(--eas-primary); font-size: var(--eas-fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
+.topbar-right { display: flex; align-items: center; gap: 20px; align-self: center; margin-left: auto; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--eas-radius-control); background: transparent; color: var(--eas-ink); cursor: pointer; }
+.icon-btn:hover, .user:hover { background: var(--eas-row-hover); }
+.user { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 8px; border: 0; border-radius: var(--eas-radius-control); background: transparent; color: var(--eas-ink); font: inherit; cursor: pointer; }
+.avatar { background: var(--eas-primary-tint); color: var(--eas-primary); font-size: var(--eas-fs-xs); font-weight: 600; }
+.user-card { padding: 10px 16px 6px; min-width: 180px; border-bottom: 1px solid var(--eas-rule); }
+.user-card-name { font-weight: 600; margin-bottom: 2px; }
+.desk { position: relative; min-height: calc(100vh - 56px); }
+.layout-paper { z-index: 0; }
+.content-column { position: relative; z-index: 1; box-sizing: border-box; max-width: 1280px; margin: 0 auto; padding: 32px 40px 40px; }
+.route-layout, .routed-page { min-width: 0; }
+.route-layout.has-admin-index { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: start; }
+.routed-page.admin-page { padding: 24px; }
+/* 页内第一张单据与外壳页签相接；页面迁移后保持 .page > .sheet 结构。 */
+.section-page :deep(.page > .sheet:not(.sheet ~ .sheet)), .section-page :deep(> .sheet) { border-top-left-radius: 0; }
+.admin-page :deep(.page > .sheet:not(.sheet ~ .sheet)), .admin-page :deep(> .sheet) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.drawer-section + .drawer-section { margin-top: 20px; }
+.drawer-section h2 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 0 16px; color: var(--eas-ink-2); font-size: var(--eas-fs-xs); font-weight: 500; }
+.drawer-section a { display: flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--eas-radius-control); color: var(--eas-ink); text-decoration: none; }
+.drawer-section a:hover { background: var(--eas-row-hover); }
+.drawer-section a.is-active { background: var(--eas-sheet); font-weight: 600; }
+@media (min-width: 768px) and (max-width: 1000px) {
+  .topbar { gap: 16px; padding: 0 20px; }
+  .section-link { padding: 0 12px; }
+  .topbar-right { gap: 8px; }
 }
-/* 折叠时文字先淡出，宽度再收起；淡出中的文字脱离占位，logo 不会被挤走 */
-.brand-fade-enter-active,
-.brand-fade-leave-active {
-  transition:
-    opacity var(--eas-dur-fast) var(--eas-ease),
-    transform var(--eas-dur-fast) var(--eas-ease);
-}
-.brand-fade-leave-active {
-  position: absolute;
-  left: 56px;
-}
-.brand-fade-enter-from,
-.brand-fade-leave-to {
-  opacity: 0;
-  transform: translateX(-4px);
-}
-.logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 28px;
-  height: 28px;
-  border: 1.5px solid var(--eas-primary);
-  border-radius: 3px;
-  color: var(--eas-primary);
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-md);
-  font-weight: 600;
-  line-height: 1;
-  flex: none;
-}
-
-/* 侧边菜单：夹板底色，选中项白底 + 左侧 3px 主色竖线 */
-.menu {
-  --el-menu-bg-color: transparent;
-  --el-menu-text-color: var(--eas-ink);
-  --el-menu-hover-bg-color: var(--eas-paper);
-  --el-menu-active-color: var(--eas-ink);
-  --el-menu-item-height: 40px;
-  --el-menu-base-level-padding: 20px;
-  border-right: none;
-  padding-bottom: 12px;
-}
-.menu.el-menu--collapse {
-  width: 100%;
-}
-.menu :deep(.el-menu-item-group__title) {
-  padding: 16px 20px 6px;
-  font-size: var(--eas-fs-xs);
-  line-height: 1.4;
-  color: var(--eas-ink-2);
-}
-.menu :deep(.el-menu-item-group__title:empty) {
-  display: none;
-}
-.menu :deep(.el-menu-item) {
-  position: relative;
-  height: 40px;
-  line-height: 40px;
-  font-size: var(--eas-fs-sm);
-  transition:
-    background-color var(--eas-dur-fast) var(--eas-ease),
-    color var(--eas-dur-fast) var(--eas-ease);
-}
-/* 选中竖线从中间展开，像笔尖落下；只在切换菜单时出现 */
-.menu :deep(.el-menu-item)::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--eas-primary);
-  transform: scaleY(0);
-  transform-origin: 50% 50%;
-  transition: transform var(--eas-dur-fast) var(--eas-ease);
-}
-.menu :deep(.el-menu-item.is-active)::before {
-  transform: scaleY(1);
-}
-.menu :deep(.el-menu-item .el-icon) {
-  color: var(--eas-ink-2);
-}
-.menu :deep(.el-menu-item.is-active),
-.menu :deep(.el-menu-item.is-active:hover) {
-  background: var(--eas-surface);
-  font-weight: 600;
-}
-.menu :deep(.el-menu-item.is-active .el-icon) {
-  color: var(--eas-primary);
-}
-.menu :deep(.el-menu-item:focus-visible) {
-  outline-offset: -2px;
-}
-
-.main-wrap {
-  position: relative;
-  min-width: 0;
-}
-.layout-paper {
-  position: absolute;
-  top: 52px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: calc(100% - 52px);
-  pointer-events: none;
-  z-index: 0;
-}
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--eas-surface);
-  border-bottom: 1px solid var(--eas-rule);
-}
-.header-title {
-  margin-left: 4px;
-  font-weight: 600;
-}
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: none;
-  border-radius: var(--eas-radius-control);
-  background: transparent;
-  cursor: pointer;
-  color: var(--eas-ink);
-  transition: background var(--eas-dur-fast) var(--eas-ease);
-}
-.icon-btn:hover {
-  background: var(--eas-paper);
-}
-.icon-btn:active {
-  background: var(--eas-paper-deep);
-}
-.user {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: var(--eas-radius-control);
-  cursor: pointer;
-  transition: background var(--eas-dur-fast) var(--eas-ease);
-}
-.user:hover {
-  background: var(--eas-paper);
-}
-.user:active {
-  background: var(--eas-paper-deep);
-}
-.avatar {
-  background: var(--eas-primary-tint);
-  color: var(--eas-primary);
-  font-size: var(--eas-fs-xs);
-  font-weight: 600;
-}
-.user-card {
-  padding: 10px 16px 6px;
-  min-width: 180px;
-  border-bottom: 1px solid var(--eas-rule);
-}
-.user-card-name {
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-.main {
-  position: relative;
-  z-index: 1;
-  --el-main-padding: 24px;
-  background: transparent;
-  overflow-y: auto;
-}
-@media (max-width: 768px) {
-  .main {
-    --el-main-padding: 12px;
-  }
+@media (max-width: 767px) {
+  .topbar { align-items: center; gap: 10px; padding: 0 12px; }
+  .topbar-right { gap: 8px; }
+  .user { padding: 4px; }
+  .content-column { padding: 24px 16px 32px; }
 }
 </style>
 
 <style>
-.clickable-notification {
-  cursor: pointer;
-}
-.nav-drawer.el-drawer {
-  background: var(--eas-paper-deep);
-}
-.nav-drawer .el-drawer__body {
-  padding: 0;
-}
+.clickable-notification { cursor: pointer; }
+.nav-drawer.el-drawer { background: var(--eas-desk); }
+.nav-drawer .el-drawer__body { padding: 8px 16px 24px; }
 </style>

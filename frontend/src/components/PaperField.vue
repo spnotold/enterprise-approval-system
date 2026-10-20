@@ -11,7 +11,7 @@ const props = withDefaults(
     container?: HTMLElement | (() => HTMLElement | null) | null
   }>(),
   {
-    base: 'paper',
+    base: '--eas-desk',
     radius: 140,
     spacing: 20,
     dotRadius: 1,

@@ -45,10 +45,11 @@ function createMockElement(tag: string, className = '', parent: MockTarget | nul
 
 describe('usePaperField helpers', () => {
   describe('resolvePaperColors', () => {
-    it('returns default paper palette in node environment', () => {
+    it('returns the v2 desk palette in node environment', () => {
       const colors = resolvePaperColors('paper')
-      expect(colors.baseColor).toBe('#f2f3f0')
-      expect(colors.baseDotColor.a).toBe(0.6)
+      expect(colors.baseColor).toBe('#e6e9e5')
+      expect(colors.baseDotColor).toEqual({ r: 191, g: 198, b: 191, a: 1 })
+      expect(colors.sheetRgb).toEqual({ r: 255, g: 255, b: 255 })
       expect(colors.primaryRgb).toBeDefined()
       expect(colors.primaryDotColor.a).toBe(0.55)
     })
