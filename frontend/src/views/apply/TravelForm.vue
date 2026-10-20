@@ -284,6 +284,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
             <span v-else-if="reversed" class="text-danger">结束时间不能早于开始时间</span>
             <span v-else class="muted">选择起止时间后自动计算</span>
           </div>
+          <div class="duration-note">按上海时区自然日计算</div>
           <div v-if="lateReport" class="muted small">开始时间早于当前时间（今天 {{ today }}），将标记为事后补报。</div>
         </el-form-item>
         <el-row :gutter="16">
@@ -355,6 +356,11 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.duration-note {
+  width: 100%;
+  font-size: var(--eas-fs-12);
+  color: var(--eas-ink-3);
 }
 .companion {
   display: flex;

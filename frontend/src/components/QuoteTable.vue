@@ -154,7 +154,7 @@ function remove(i: number) {
     </div>
     <div v-if="!readonly" class="table-foot">
       <el-button size="small" :icon="Plus" :disabled="quotes.length >= maxRows" @click="add">添加报价</el-button>
-      <span class="muted small">非单一来源采购需 2 家不同供应商报价。最低价已标记。</span>
+      <span class="muted small">非单一来源采购至少需 2 家不同供应商报价。最低价已标记。</span>
     </div>
   </div>
 </template>

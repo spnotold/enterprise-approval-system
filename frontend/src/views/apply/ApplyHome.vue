@@ -59,7 +59,7 @@ onMounted(async () => {
     <el-skeleton v-if="loading" class="sheet-section" :rows="4" animated />
     <template v-else>
       <section v-for="group in [{ title: '业务申请', items: builtin }, { title: '其他申请', items: custom }]" :key="group.title" class="sheet-section">
-        <h3 class="block-title">{{ group.title }}</h3>
+        <h2 class="block-title">{{ group.title }}</h2>
         <p v-if="!group.items.length" class="empty-line">暂无可发起的{{ group.title }}</p>
         <div v-else class="grid">
           <router-link v-for="t in group.items" :key="t.id" :to="target(t)" class="tpl">
@@ -73,7 +73,7 @@ onMounted(async () => {
 
     <section class="drafts">
       <div class="block-head">
-        <h3 class="block-title">我的草稿</h3>
+        <h2 class="block-title">我的草稿</h2>
         <el-button link type="primary" @click="router.push('/applications/mine?status=DRAFT')">查看全部草稿</el-button>
       </div>
       <el-table v-loading="draftsLoading" :data="drafts">
