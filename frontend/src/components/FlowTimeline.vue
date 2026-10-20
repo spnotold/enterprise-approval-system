@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 流转记录：每个节点的审批人、状态、意见与时间；当前节点高亮，跳过的节点灰色并显示条件。
+// 流转记录：单据里的一张登记簿，每个节点一行（时间、节点、审批人、动作、意见）；
+// 当前节点浅底，跳过的节点灰色并显示条件。
 // 悬停或聚焦某个节点条目时，与上方签批栏对应的格子联动。
 import { onBeforeUnmount, watch } from 'vue'
 import type { FlowView, FlowNodeView, NodeStatus, TaskStatus } from '@/lib/types'
@@ -16,14 +17,15 @@ watch(() => props.flow?.nodes, (nodes) => {
 })
 onBeforeUnmount(() => hover.release('flow'))
 
+// 节点名前的 6px 圆点
 const COLOR: Record<NodeStatus, string> = {
   WAITING: 'var(--eas-rule-strong)',
   ACTIVE: 'var(--eas-primary)',
   APPROVED: 'var(--eas-success)',
   REJECTED: 'var(--eas-danger)',
   CANCELED: 'var(--eas-muted)',
-  SKIPPED: 'var(--eas-rule)',
-  NOT_REACHED: 'var(--eas-rule)',
+  SKIPPED: 'var(--eas-rule-strong)',
+  NOT_REACHED: 'var(--eas-rule-strong)',
 }
 
 // 与签批栏、审批按钮同一套说法
@@ -35,10 +37,10 @@ const TASK_TEXT: Record<TaskStatus, string> = {
   TRANSFERRED: '已转办',
 }
 
-function nodeTime(n: FlowNodeView): string {
-  if (n.finishedAt) return `结束于 ${fmtDateTime(n.finishedAt)}`
-  if (n.activatedAt) return `开始于 ${fmtDateTime(n.activatedAt)}`
-  return ''
+function nodeTime(n: FlowNodeView): { label: string; value: string } | null {
+  if (n.finishedAt) return { label: '结束于', value: fmtDateTime(n.finishedAt) }
+  if (n.activatedAt) return { label: '开始于', value: fmtDateTime(n.activatedAt) }
+  return null
 }
 
 /** 会签 1/3、或签 */
@@ -53,87 +55,111 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
 
 <template>
   <div class="flow">
-    <el-empty v-if="!flow || flow.nodes.length === 0" :image-size="60" description="提交后生成审批流程" />
+    <p v-if="!flow || flow.nodes.length === 0" class="flow-empty">提交后生成审批流程</p>
     <template v-else>
       <div class="flow-meta"><span>模板 {{ flow.templateCode }}</span><span>版本 v{{ flow.versionNo }}</span></div>
-      <el-timeline>
-        <el-timeline-item
-          v-for="n in flow.nodes"
-          :key="n.seq"
-          :color="COLOR[n.status]"
-          :size="n.status === 'ACTIVE' ? 'large' : 'normal'"
-          :hollow="n.status === 'WAITING' || dim(n)"
-          :timestamp="nodeTime(n)"
-          placement="top"
-        >
+      <ol class="flow-rows">
+        <li v-for="n in flow.nodes" :key="n.seq" class="flow-row">
           <div
             :id="`flow-node-${nodeKeyOf(n)}`"
             class="node"
             :class="{ active: n.status === 'ACTIVE', dim: dim(n), rejected: n.status === 'REJECTED', linked: hover.key.value === nodeKeyOf(n) }"
+            :aria-current="n.status === 'ACTIVE' ? 'step' : undefined"
             tabindex="0"
             @mouseenter="hover.enter(nodeKeyOf(n), 'flow', 'pointer')"
             @mouseleave="hover.leave(nodeKeyOf(n), 'pointer')"
             @focus="hover.enter(nodeKeyOf(n), 'flow', 'focus')"
             @blur="hover.leave(nodeKeyOf(n), 'focus')"
           >
-            <div class="node-head">
-              <span class="node-name">{{ n.seq }}. {{ n.name }}</span>
-              <span class="node-status" :class="`is-${n.status.toLowerCase()}`">{{ NODE_STATUS_LABEL[n.status] ?? n.status }}</span>
-              <span v-if="n.mode && n.mode !== 'SINGLE'" class="node-mode">{{ modeText(n) }}</span>
+            <div class="node-time">
+              <template v-if="nodeTime(n)">
+                <span class="time-label">{{ nodeTime(n)!.label }}</span>
+                <span class="time-value">{{ nodeTime(n)!.value }}</span>
+              </template>
             </div>
-            <div v-if="n.status === 'SKIPPED' || !n.effective" class="muted small">
-              条件不满足，已跳过<template v-if="n.conditionText">：{{ n.conditionText }}</template>
+            <div class="node-body">
+              <div class="node-head">
+                <span class="node-dot" :class="{ hollow: n.status === 'WAITING' || dim(n) }" :style="{ '--dot': COLOR[n.status] }" aria-hidden="true" />
+                <span class="node-name">{{ n.seq }}. {{ n.name }}</span>
+                <span class="node-status" :class="`is-${n.status.toLowerCase()}`">{{ NODE_STATUS_LABEL[n.status] ?? n.status }}</span>
+                <span v-if="n.mode && n.mode !== 'SINGLE'" class="node-mode">{{ modeText(n) }}</span>
+              </div>
+              <div v-if="n.status === 'SKIPPED' || !n.effective" class="muted small">
+                条件不满足，已跳过<template v-if="n.conditionText">：{{ n.conditionText }}</template>
+              </div>
+              <template v-else>
+                <div v-if="n.mode && n.mode !== 'SINGLE' && n.candidates?.length" class="small">
+                  审批人：<span v-for="(c, k) in n.candidates" :key="c.id"
+                    >{{ k > 0 ? '、' : '' }}{{ c.realName }}<span v-if="c.deptName" class="muted">（{{ c.deptName }}）</span></span
+                  >
+                </div>
+                <div v-else-if="n.assignee" class="small">
+                  审批人：{{ n.assignee.realName }}<span v-if="n.assignee.deptName" class="muted">（{{ n.assignee.deptName }}）</span>
+                </div>
+                <div v-if="n.conditionText" class="muted small">生效条件：{{ n.conditionText }}</div>
+              </template>
+              <div v-if="n.resolveNote" class="resolve-note small">{{ n.resolveNote }}</div>
+              <ul v-if="n.tasks.length" class="tasks">
+                <li v-for="t in n.tasks" :key="t.id" class="task" :class="`task-${t.status.toLowerCase()}`">
+                  <div class="task-head">
+                    <span class="task-who">{{ t.assignee.realName }}</span>
+                    <span class="task-status">{{ TASK_TEXT[t.status] ?? t.status }}</span>
+                    <span class="task-time">{{ fmtDateTime(t.actedAt ?? t.createdAt) }}</span>
+                  </div>
+                  <div v-if="t.comment" class="comment pre-wrap">
+                    {{ t.status === 'REJECTED' ? '驳回理由：' : '意见：' }}{{ t.comment }}
+                  </div>
+                </li>
+              </ul>
             </div>
-            <template v-else>
-              <div v-if="n.mode && n.mode !== 'SINGLE' && n.candidates?.length" class="small">
-                审批人：<span v-for="(c, k) in n.candidates" :key="c.id"
-                  >{{ k > 0 ? '、' : '' }}{{ c.realName }}<span v-if="c.deptName" class="muted">（{{ c.deptName }}）</span></span
-                >
-              </div>
-              <div v-else-if="n.assignee" class="small">
-                审批人：{{ n.assignee.realName }}<span v-if="n.assignee.deptName" class="muted">（{{ n.assignee.deptName }}）</span>
-              </div>
-              <div v-if="n.conditionText" class="muted small">生效条件：{{ n.conditionText }}</div>
-            </template>
-            <div v-if="n.resolveNote" class="resolve-note small">{{ n.resolveNote }}</div>
-            <ul v-if="n.tasks.length" class="tasks">
-              <li v-for="t in n.tasks" :key="t.id" class="task" :class="`task-${t.status.toLowerCase()}`">
-                <div class="task-head">
-                  <span class="task-who">{{ t.assignee.realName }}</span>
-                  <span class="task-status">{{ TASK_TEXT[t.status] ?? t.status }}</span>
-                  <span class="task-time">{{ fmtDateTime(t.actedAt ?? t.createdAt) }}</span>
-                </div>
-                <div v-if="t.comment" class="comment pre-wrap">
-                  {{ t.status === 'REJECTED' ? '驳回理由：' : '意见：' }}{{ t.comment }}
-                </div>
-              </li>
-            </ul>
           </div>
-        </el-timeline-item>
-      </el-timeline>
+        </li>
+      </ol>
     </template>
   </div>
 </template>
 
 <style scoped>
+.flow {
+  min-width: 0;
+}
+.flow-empty {
+  margin: 0;
+  padding: 12px 0;
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-sm);
+}
 .flow-meta {
   display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 4px;
   color: var(--eas-ink-3);
   font-size: var(--eas-fs-xs);
-}
-.flow :deep(.el-timeline) {
-  padding-left: 2px;
-}
-.flow :deep(.el-timeline-item__timestamp) {
-  color: var(--eas-ink-3);
   font-variant-numeric: tabular-nums;
 }
+.flow-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--eas-rule-strong);
+}
+.flow-row {
+  border-bottom: 1px solid var(--eas-rule);
+}
+.flow-row:last-child {
+  border-bottom: 0;
+}
+/* 行内：左边时间列，右边节点内容；--sub 是浅底上也够对比度的辅助文字色 */
 .node {
+  --sub: var(--eas-ink-3);
   position: relative;
-  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  column-gap: 16px;
+  padding: 12px 12px;
   border-radius: var(--eas-radius-control);
+  line-height: var(--eas-lh-body);
   transition: background-color var(--eas-dur-fast) var(--eas-ease);
 }
 /* 左侧 3px 线：当前节点常显，联动高亮时也显示 */
@@ -149,6 +175,7 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   transition: background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .node.active {
+  --sub: var(--eas-ink-2);
   background: var(--eas-primary-tint);
 }
 .node.active::before {
@@ -158,7 +185,11 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   background: var(--eas-danger);
 }
 .node.linked {
-  background: var(--eas-paper);
+  --sub: var(--eas-ink-2);
+  background: var(--eas-row-hover);
+}
+.node.active.linked {
+  background: var(--eas-primary-tint);
 }
 .node.linked::before {
   background: var(--eas-primary);
@@ -170,12 +201,40 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
 .node.dim {
   color: var(--eas-ink-3);
 }
+.node.linked.dim {
+  color: var(--eas-ink-2);
+}
+.node-time {
+  display: flex;
+  flex-direction: column;
+  color: var(--sub);
+  font-size: var(--eas-fs-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.node-body {
+  min-width: 0;
+}
 .node-head {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 4px 12px;
   flex-wrap: wrap;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+}
+.node-dot {
+  align-self: center;
+  flex: none;
+  box-sizing: border-box;
+  width: 6px;
+  height: 6px;
+  margin-right: -4px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+.node-dot.hollow {
+  border: 1px solid var(--eas-rule-strong);
+  background: transparent;
 }
 .node-name {
   font-weight: 600;
@@ -199,7 +258,7 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
 .node-status.is-not_reached,
 .node-status.is-waiting,
 .node-status.is-canceled {
-  color: var(--eas-ink-3);
+  color: var(--sub);
 }
 .resolve-note {
   margin-top: 2px;
@@ -208,29 +267,20 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
 .tasks {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.task {
-  padding: 2px 0 2px 10px;
-  border-left: 2px solid var(--eas-rule-strong);
-}
-.task-approved {
-  border-left-color: var(--eas-success);
-}
-.task-rejected {
-  border-left-color: var(--eas-danger);
-}
-.task-pending {
-  border-left-color: var(--eas-primary);
-}
 .task-head {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 2px 12px;
   flex-wrap: wrap;
+}
+.task-who {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .task-status {
   font-size: var(--eas-fs-xs);
@@ -245,26 +295,34 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
 .task-pending .task-status {
   color: var(--eas-primary);
 }
+.task-canceled .task-status {
+  color: var(--sub);
+}
 .task-time {
-  color: var(--eas-ink-3);
+  color: var(--sub);
   font-size: var(--eas-fs-xs);
   font-variant-numeric: tabular-nums;
-}
-/* 当前节点（primary-tint）与联动节点（paper）底色上 ink-3 不到 4.5:1，改用 ink-2 */
-.node.active .task-time,
-.node.linked .task-time,
-.node.linked.dim,
-.node.linked .node-status.is-skipped,
-.node.linked .node-status.is-not_reached,
-.node.linked .node-status.is-waiting,
-.node.linked .node-status.is-canceled {
-  color: var(--eas-ink-2);
 }
 .comment {
   margin-top: 2px;
   color: var(--eas-ink);
+  font-size: var(--eas-fs-note);
+  overflow-wrap: anywhere;
 }
 .task-rejected .comment {
   color: var(--eas-danger);
+}
+@media (max-width: 640px) {
+  .node {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  .node-time {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .node-time:empty {
+    display: none;
+  }
 }
 </style>
