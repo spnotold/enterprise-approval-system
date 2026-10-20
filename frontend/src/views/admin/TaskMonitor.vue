@@ -101,96 +101,94 @@ async function submit() {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">待办监控</h2>
-        <div class="page-subtitle">
-          全部待处理的审批待办，只显示单据元数据。审批人停用（如离职）后，其名下待办需在此转办给新审批人。
-        </div>
+        <h2 class="sheet-title">待办监控</h2>
+        <p class="sheet-sub">只显示单据元数据；审批人停用（如离职）后，其名下待办需在此转办给新审批人。</p>
       </div>
+    </header>
+
+    <div class="toolbar list-filters">
+      <el-input
+        v-model="filters.keyword"
+        placeholder="申请编号 / 申请人 / 审批人"
+        clearable
+        :prefix-icon="Search"
+        @keyup.enter="search"
+        @clear="search"
+      />
+      <el-select v-model="filters.assigneeStatus" placeholder="审批人状态" clearable @change="search">
+        <el-option v-for="o in assigneeStatusOptions" :key="o.value" :value="o.value" :label="`审批人${o.label}`" />
+      </el-select>
+      <el-button
+        :type="filters.assigneeStatus === 'DISABLED' ? 'warning' : 'default'"
+        :plain="filters.assigneeStatus !== 'DISABLED'"
+        :icon="Warning"
+        @click="onlyDisabled"
+      >
+        已停用审批人名下的待办
+      </el-button>
+      <el-button type="primary" @click="search">查询</el-button>
+      <el-button link type="primary" @click="reset">重置</el-button>
     </div>
 
-    <el-card shadow="never">
-      <div class="toolbar">
-        <el-input
-          v-model="filters.keyword"
-          placeholder="申请编号 / 申请人 / 审批人"
-          clearable
-          :prefix-icon="Search"
-          @keyup.enter="search"
-          @clear="search"
-        />
-        <el-select v-model="filters.assigneeStatus" placeholder="审批人状态" clearable @change="search">
-          <el-option v-for="o in assigneeStatusOptions" :key="o.value" :value="o.value" :label="`审批人${o.label}`" />
-        </el-select>
-        <el-button
-          :type="filters.assigneeStatus === 'DISABLED' ? 'warning' : 'default'"
-          :plain="filters.assigneeStatus !== 'DISABLED'"
-          :icon="Warning"
-          @click="onlyDisabled"
-        >
-          已停用审批人名下的待办
-        </el-button>
-        <el-button type="primary" @click="search">查询</el-button>
-        <el-button link type="primary" @click="reset">重置</el-button>
-      </div>
-
-      <el-table v-loading="loading" :data="records" row-key="taskId" class="task-table eas-row-table">
-        <el-table-column label="申请编号" min-width="190">
-          <template #default="{ row }"><span class="eas-tnum">{{ row.appNo }}</span></template>
-        </el-table-column>
-        <el-table-column label="类型" width="100">
-          <template #default="{ row }">{{ APP_TYPE_LABEL[row.type as AppType] ?? row.type }}</template>
-        </el-table-column>
-        <el-table-column prop="templateName" label="模板" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="applicantName" label="申请人" min-width="90" />
-        <el-table-column label="部门" min-width="100">
-          <template #default="{ row }">{{ row.deptName ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column prop="nodeName" label="当前节点" min-width="110" />
-        <el-table-column label="审批人" min-width="140">
-          <template #default="{ row }">
-            <span>{{ row.assignee.realName }}</span>
-            <el-tag
-              :type="USER_STATUS_TAG[row.assignee.status as UserStatus]"
-              size="small"
-              class="admin-status ml6"
-              disable-transitions
-            >
-              {{ USER_STATUS_LABEL[row.assignee.status as UserStatus] ?? row.assignee.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="到达时间" width="150">
-          <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="已等待" width="130">
-          <template #default="{ row }">
-            <span :class="['eas-tnum', { 'text-danger': row.overdue }]">{{ fmtHours(row.pendingHours) }}</span>
-            <el-tag v-if="row.overdue" type="danger" size="small" class="ml6" disable-transitions>超时</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="90">
-          <template #default="{ row }">
-            <el-button link type="primary" :disabled="acting" @click="openTransfer(row as MonitorTask)">转办</el-button>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty :filtered="hasFilters" @reset="reset" />
+    <el-table v-loading="loading" :data="records" row-key="taskId" class="task-table eas-row-table">
+      <el-table-column label="申请编号" min-width="190">
+        <template #default="{ row }"><span class="eas-tnum">{{ row.appNo }}</span></template>
+      </el-table-column>
+      <el-table-column label="类型" width="100">
+        <template #default="{ row }">{{ APP_TYPE_LABEL[row.type as AppType] ?? row.type }}</template>
+      </el-table-column>
+      <el-table-column prop="templateName" label="模板" min-width="120" show-overflow-tooltip />
+      <el-table-column prop="applicantName" label="申请人" min-width="90" />
+      <el-table-column label="部门" min-width="100">
+        <template #default="{ row }">{{ row.deptName ?? '—' }}</template>
+      </el-table-column>
+      <el-table-column prop="nodeName" label="当前节点" min-width="110" />
+      <el-table-column label="审批人" min-width="140">
+        <template #default="{ row }">
+          <span>{{ row.assignee.realName }}</span>
+          <el-tag
+            :type="USER_STATUS_TAG[row.assignee.status as UserStatus]"
+            size="small"
+            class="admin-status ml6"
+            disable-transitions
+          >
+            {{ USER_STATUS_LABEL[row.assignee.status as UserStatus] ?? row.assignee.status }}
+          </el-tag>
         </template>
-      </el-table>
+      </el-table-column>
+      <el-table-column label="到达时间" width="150">
+        <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
+      </el-table-column>
+      <el-table-column label="已等待" width="130">
+        <template #default="{ row }">
+          <span :class="['eas-tnum', { 'text-danger': row.overdue }]">{{ fmtHours(row.pendingHours) }}</span>
+          <el-tag v-if="row.overdue" type="danger" size="small" class="ml6" disable-transitions>超时</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="90">
+        <template #default="{ row }">
+          <span class="row-actions">
+            <el-button link type="primary" :disabled="acting" @click="openTransfer(row as MonitorTask)">转办</el-button>
+          </span>
+        </template>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty :filtered="hasFilters" @reset="reset" />
+      </template>
+    </el-table>
 
-      <el-pagination
-        class="pager"
-        layout="total, sizes, prev, pager, next"
-        :total="total"
-        :current-page="page"
-        :page-size="size"
-        background
-        @current-change="onPageChange"
-        @size-change="onSizeChange"
-      />
-    </el-card>
+    <el-pagination
+      class="pager"
+      layout="total, sizes, prev, pager, next"
+      :total="total"
+      :current-page="page"
+      :page-size="size"
+      background
+      @current-change="onPageChange"
+      @size-change="onSizeChange"
+    />
 
     <el-dialog v-model="dlg.visible" title="转办待办" width="min(560px, 94vw)" :close-on-click-modal="false">
       <template v-if="dlg.task">
@@ -250,7 +248,6 @@ async function submit() {
 
 <style scoped>
 .task-table {
-  margin-top: 12px;
   width: 100%;
 }
 .ml6 {

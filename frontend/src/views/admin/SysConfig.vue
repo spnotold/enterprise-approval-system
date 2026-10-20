@@ -101,44 +101,47 @@ function openAudit(c: SysConfigItem) {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">系统配置</h2>
-        <div class="page-subtitle">修改需填写原因并写入审计日志；修改前请确认配置值的格式与含义。</div>
+        <h2 class="sheet-title">系统配置</h2>
+        <p class="sheet-sub">修改需填写原因并写入审计日志；修改前请确认配置值的格式与含义。</p>
       </div>
-      <div class="toolbar">
-        <el-input v-model="keyword" placeholder="按键名或说明过滤" clearable :prefix-icon="Search" />
+      <div class="head-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
+    </header>
+
+    <div class="toolbar list-filters">
+      <el-input v-model="keyword" placeholder="按键名或说明过滤" clearable :prefix-icon="Search" />
     </div>
 
-    <el-card shadow="never">
-      <el-table v-loading="loading" :data="filtered" row-key="key" class="eas-row-table" style="width: 100%">
-        <el-table-column label="键" min-width="200">
-          <template #default="{ row }"><span class="mono">{{ row.key }}</span></template>
-        </el-table-column>
-        <el-table-column label="值" min-width="200">
-          <template #default="{ row }"><span class="mono pre-wrap">{{ row.value }}</span></template>
-        </el-table-column>
-        <el-table-column label="说明" min-width="220">
-          <template #default="{ row }">
-            <span class="pre-wrap">{{ row.description ?? '—' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="更新时间" width="160">
-          <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="140">
-          <template #default="{ row }">
+    <el-table v-loading="loading" :data="filtered" row-key="key" class="eas-row-table" style="width: 100%">
+      <el-table-column label="键" min-width="200">
+        <template #default="{ row }"><span class="mono">{{ row.key }}</span></template>
+      </el-table-column>
+      <el-table-column label="值" min-width="200">
+        <template #default="{ row }"><span class="mono pre-wrap">{{ row.value }}</span></template>
+      </el-table-column>
+      <el-table-column label="说明" min-width="220">
+        <template #default="{ row }">
+          <span class="pre-wrap">{{ row.description ?? '—' }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="更新时间" width="160">
+        <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="140">
+        <template #default="{ row }">
+          <span class="row-actions">
             <el-button link type="primary" :disabled="acting" @click="openEdit(row as SysConfigItem)">修改</el-button>
             <el-button v-if="auth.can('ADMIN_AUDIT')" link @click="openAudit(row as SysConfigItem)">变更记录</el-button>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty :filtered="!!keyword.trim()" @reset="keyword = ''" />
+          </span>
         </template>
-      </el-table>
-    </el-card>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty :filtered="!!keyword.trim()" @reset="keyword = ''" />
+      </template>
+    </el-table>
 
     <el-dialog v-model="form.visible" title="修改配置" width="min(560px, 94vw)" :close-on-click-modal="false">
       <ServerErrorAlert :error="form.error" />

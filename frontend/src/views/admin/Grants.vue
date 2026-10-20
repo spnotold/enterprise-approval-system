@@ -251,100 +251,90 @@ async function submit() {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">授权管理</h2>
-        <div class="page-subtitle">数据范围授权：权限点、范围、有效期、原因；回收只记录回收时间，授权记录保留。</div>
+        <h2 class="sheet-title">授权管理</h2>
+        <p class="sheet-sub">按权限点和范围授权，可设有效期；回收只记录回收时间，授权记录保留。</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="openCreate">新建授权</el-button>
+      <div class="head-actions">
+        <el-button type="primary" :icon="Plus" @click="openCreate">新建授权</el-button>
+      </div>
+    </header>
+
+    <p class="page-note">
+      APP_READ 选“全部部门”可查询统计全企业申请，选“指定部门”只查询该部门；FIN_STATS_READ
+      为财务统计；BIZ_CONTENT_READ 为查看业务正文，每次访问留痕。
+    </p>
+
+    <div class="toolbar list-filters">
+      <div class="user-filter">
+        <UserPicker
+          :model-value="filters.userId"
+          :preset="filterPreset"
+          placeholder="按被授权用户筛选"
+          @update:model-value="onFilterUser"
+          @change="(u: UserOption[]) => (pickedUsers = toPresets(u))"
+        />
+      </div>
+      <el-switch v-model="filters.activeOnly" active-text="仅显示有效授权" @change="search" />
+      <el-button link type="primary" @click="reset">重置</el-button>
     </div>
 
-    <el-alert type="info" :closable="false" show-icon>
-      <template #title>权限点说明</template>
-      <ul class="meaning-list">
-        <li>APP_READ@ALL → 企业范围查询与统计；APP_READ@DEPT → 查询指定部门的申请</li>
-        <li>FIN_STATS_READ → 财务统计</li>
-        <li>BIZ_CONTENT_READ → 管理员查看业务正文（每次访问留痕）</li>
-      </ul>
-    </el-alert>
-
-    <el-card shadow="never">
-      <div class="toolbar">
-        <div class="user-filter">
-          <UserPicker
-            :model-value="filters.userId"
-            :preset="filterPreset"
-            placeholder="按被授权用户筛选"
-            @update:model-value="onFilterUser"
-            @change="(u: UserOption[]) => (pickedUsers = toPresets(u))"
-          />
-        </div>
-        <el-switch v-model="filters.activeOnly" active-text="仅显示有效授权" @change="search" />
-        <el-button link type="primary" @click="reset">重置</el-button>
-      </div>
-
-      <el-table v-loading="loading" :data="records" row-key="id" class="grants-table eas-row-table">
-        <el-table-column prop="userName" label="用户" min-width="90" />
-        <el-table-column label="权限点" min-width="190">
-          <template #default="{ row }">
-            {{ GRANT_PERMISSION_LABEL[row.permissionCode as GrantPermission] ?? row.permissionCode }}
-          </template>
-        </el-table-column>
-        <el-table-column label="范围" min-width="140">
-          <template #default="{ row }">
-            {{ (SCOPE_TYPE_LABEL[row.scopeType as ScopeType] ?? row.scopeType) + (row.scopeType === 'DEPT' ? `：${row.deptName ?? `#${row.deptId}`}` : '') }}
-          </template>
-        </el-table-column>
-        <el-table-column label="有效期" min-width="190">
-          <template #default="{ row }">
-            {{ fmtDate(row.validFrom) }} ~ {{ row.validUntil ? fmtGrantUntil(row.validUntil) : '长期' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="reason" label="原因" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="grantedByName" label="授权人" min-width="90" />
-        <el-table-column label="授权时间" width="150">
-          <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="状态" min-width="150">
-          <template #default="{ row }">
-            <el-tag class="admin-status" :type="GRANT_STATE[grantState(row as GrantView)].type" disable-transitions>
-              {{ GRANT_STATE[grantState(row as GrantView)].label }}
-            </el-tag>
-            <div v-if="row.revokedAt" class="muted small">
-              {{ row.revokedByName ?? '—' }} {{ fmtDateTime(row.revokedAt) }}
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="80">
-          <template #default="{ row }">
-            <el-button
-              v-if="canRevoke(row as GrantView)"
-              link
-              type="danger"
-              :disabled="acting"
-              @click="revoke(row as GrantView)"
-            >
-              回收
-            </el-button>
-            <span v-else class="muted">—</span>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty :filtered="hasFilters" @reset="reset" />
+    <el-table v-loading="loading" :data="records" row-key="id" class="grants-table eas-row-table">
+      <el-table-column prop="userName" label="用户" min-width="90" />
+      <el-table-column label="权限点" min-width="150">
+        <template #default="{ row }">
+          {{ GRANT_PERMISSION_LABEL[row.permissionCode as GrantPermission] ?? row.permissionCode }}
         </template>
-      </el-table>
+      </el-table-column>
+      <el-table-column label="范围" min-width="130">
+        <template #default="{ row }">
+          {{ (SCOPE_TYPE_LABEL[row.scopeType as ScopeType] ?? row.scopeType) + (row.scopeType === 'DEPT' ? `：${row.deptName ?? `#${row.deptId}`}` : '') }}
+        </template>
+      </el-table-column>
+      <el-table-column label="有效期" min-width="175">
+        <template #default="{ row }">
+          {{ fmtDate(row.validFrom) }} ~ {{ row.validUntil ? fmtGrantUntil(row.validUntil) : '长期' }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="reason" label="原因" min-width="140" show-overflow-tooltip />
+      <el-table-column prop="grantedByName" label="授权人" min-width="90" />
+      <el-table-column label="授权时间" width="150">
+        <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
+      </el-table-column>
+      <el-table-column label="状态" min-width="120">
+        <template #default="{ row }">
+          <el-tag class="admin-status" :type="GRANT_STATE[grantState(row as GrantView)].type" disable-transitions>
+            {{ GRANT_STATE[grantState(row as GrantView)].label }}
+          </el-tag>
+          <div v-if="row.revokedAt" class="muted small">
+            {{ row.revokedByName ?? '—' }} {{ fmtDateTime(row.revokedAt) }}
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="80">
+        <template #default="{ row }">
+          <span v-if="canRevoke(row as GrantView)" class="row-actions">
+            <el-button link type="danger" :disabled="acting" @click="revoke(row as GrantView)">回收</el-button>
+          </span>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty :filtered="hasFilters" @reset="reset" />
+      </template>
+    </el-table>
 
-      <el-pagination
-        class="pager"
-        layout="total, sizes, prev, pager, next"
-        :total="total"
-        :current-page="page"
-        :page-size="size"
-        background
-        @current-change="onPageChange"
-        @size-change="onSizeChange"
-      />
-    </el-card>
+    <el-pagination
+      class="pager"
+      layout="total, sizes, prev, pager, next"
+      :total="total"
+      :current-page="page"
+      :page-size="size"
+      background
+      @current-change="onPageChange"
+      @size-change="onSizeChange"
+    />
 
     <el-dialog v-model="form.visible" title="新建授权" width="min(560px, 94vw)" :close-on-click-modal="false">
       <ServerErrorAlert :error="form.error" />
@@ -419,16 +409,10 @@ async function submit() {
 </template>
 
 <style scoped>
-.meaning-list {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  line-height: 1.7;
-}
 .user-filter {
   width: 240px;
 }
 .grants-table {
-  margin-top: 12px;
   width: 100%;
 }
 .date-row {

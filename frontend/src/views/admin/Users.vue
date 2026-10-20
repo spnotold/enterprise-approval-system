@@ -330,57 +330,40 @@ async function submitGrant() {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">用户管理</h2>
-        <div class="page-subtitle">
-          启用 / 停用账号、调整部门、授予与回收角色、设置角色主办人、重置密码；所有操作需填写原因并写入审计日志。
-        </div>
+        <h2 class="sheet-title">用户管理</h2>
+        <p class="sheet-sub">系统管理员只有管理类权限，不能审批；写操作需填写原因并写入审计日志。</p>
       </div>
-      <el-button :icon="UserFilled" @click="router.push('/admin/registrations')">注册审核</el-button>
+      <div class="head-actions">
+        <el-button :icon="UserFilled" @click="router.push('/admin/registrations')">注册审核</el-button>
+      </div>
+    </header>
+
+    <div class="toolbar list-filters">
+      <el-input
+        v-model="filters.keyword"
+        placeholder="用户名 / 姓名 / 邮箱"
+        clearable
+        :prefix-icon="Search"
+        @keyup.enter="search"
+        @clear="search"
+      />
+      <el-select v-model="filters.status" placeholder="账号状态" clearable @change="search">
+        <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
+      </el-select>
+      <el-select v-model="filters.deptId" placeholder="所属部门" clearable filterable @change="search">
+        <el-option v-for="d in dict.departments" :key="d.id" :value="d.id" :label="d.name" />
+      </el-select>
+      <el-button type="primary" @click="search">查询</el-button>
+      <el-button link type="primary" @click="reset">重置</el-button>
     </div>
 
-    <el-alert type="info" :closable="false" show-icon>
-      <template #title>
-        新注册用户需先在“注册审核”中通过；{{ SYS_ADMIN_NOTE }}，管理账号与审批单据是两件分开授权的事。
-      </template>
-    </el-alert>
+    <p v-if="filters.status === 'PENDING'" class="page-note">
+      待审核用户请在<el-link type="primary" @click="router.push('/admin/registrations')">注册审核</el-link>中通过或拒绝。
+    </p>
 
-    <el-card shadow="never">
-      <div class="toolbar">
-        <el-input
-          v-model="filters.keyword"
-          placeholder="用户名 / 姓名 / 邮箱"
-          clearable
-          :prefix-icon="Search"
-          @keyup.enter="search"
-          @clear="search"
-        />
-        <el-select v-model="filters.status" placeholder="账号状态" clearable @change="search">
-          <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
-        </el-select>
-        <el-select v-model="filters.deptId" placeholder="所属部门" clearable filterable @change="search">
-          <el-option v-for="d in dict.departments" :key="d.id" :value="d.id" :label="d.name" />
-        </el-select>
-        <el-button type="primary" @click="search">查询</el-button>
-        <el-button link type="primary" @click="reset">重置</el-button>
-      </div>
-
-      <el-alert
-        v-if="filters.status === 'PENDING'"
-        type="warning"
-        :closable="false"
-        class="pending-tip"
-        show-icon
-      >
-        <template #title>
-          待审核用户请在
-          <el-link type="primary" @click="router.push('/admin/registrations')">注册审核</el-link>
-          中通过或拒绝。
-        </template>
-      </el-alert>
-
-      <el-table v-loading="loading" :data="records" row-key="id" class="users-table eas-row-table">
+    <el-table v-loading="loading" :data="records" row-key="id" class="users-table eas-row-table">
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="realName" label="姓名" min-width="90" />
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
@@ -426,7 +409,7 @@ async function submitGrant() {
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="最近登录" width="150">
+        <el-table-column label="最近登录" width="150" class="mono">
           <template #default="{ row }">{{ fmtDateTime(row.lastLoginAt) }}</template>
         </el-table-column>
         <el-table-column label="锁定至" width="150">
@@ -435,15 +418,15 @@ async function submitGrant() {
             <span v-else :class="isLocked(row as AdminUser) ? 'text-danger' : 'muted'">{{ fmtDateTime(row.lockedUntil) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="170">
+        <el-table-column label="操作" width="170">
           <template #default="{ row }">
-            <el-button v-if="row.status === 'PENDING'" link type="primary" @click="router.push('/admin/registrations')">
-              去审核
-            </el-button>
+            <span v-if="row.status === 'PENDING'" class="row-actions">
+              <el-button link type="primary" @click="router.push('/admin/registrations')">去审核</el-button>
+            </span>
             <span v-else-if="row.status === 'REJECTED'" class="muted small">注册已拒绝</span>
-            <template v-else>
+            <span v-else class="row-actions">
               <el-button link type="primary" :disabled="acting" @click="openGrant(row as AdminUser)">授予角色</el-button>
-              <el-dropdown trigger="click" class="ml8" @command="(c: string | number | object) => onCommand(row as AdminUser, c)">
+              <el-dropdown trigger="click" @command="(c: string | number | object) => onCommand(row as AdminUser, c)">
                 <el-button link type="primary" :disabled="acting">
                   更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
@@ -459,7 +442,7 @@ async function submitGrant() {
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-            </template>
+            </span>
           </template>
         </el-table-column>
         <template #empty>
@@ -477,7 +460,6 @@ async function submitGrant() {
         @current-change="onPageChange"
         @size-change="onSizeChange"
       />
-    </el-card>
 
     <!-- 调整部门 -->
     <el-dialog v-model="deptDlg.visible" title="调整部门" width="min(480px, 94vw)" :close-on-click-modal="false">
@@ -564,11 +546,7 @@ async function submitGrant() {
 </template>
 
 <style scoped>
-.pending-tip {
-  margin-top: 12px;
-}
 .users-table {
-  margin-top: 12px;
   width: 100%;
 }
 .role-tags {
@@ -578,9 +556,13 @@ async function submitGrant() {
 }
 .role-tag {
   cursor: pointer;
+  gap: 2px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: var(--eas-fs-xs);
 }
 .primary-badge {
-  margin-left: 4px;
+  margin-left: 2px;
   padding: 0 4px;
   border-radius: var(--eas-radius-tag);
   font-size: var(--eas-fs-xs);
@@ -594,9 +576,6 @@ async function submitGrant() {
 }
 .ml4 {
   margin-left: 4px;
-}
-.ml8 {
-  margin-left: 8px;
 }
 .dialog-tip {
   margin-bottom: 16px;

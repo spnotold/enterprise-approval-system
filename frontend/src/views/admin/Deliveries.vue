@@ -29,81 +29,81 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">邮件投递</h2>
-        <div class="page-subtitle">通知邮件的发送记录。邮件只含标题、编号、状态等摘要，不含金额明细和票据；无业务正文读取授权时标题脱敏为「审批通知 #编号」。</div>
+        <h2 class="sheet-title">邮件投递</h2>
+        <p class="sheet-sub">通知邮件的发送记录，只含标题、编号等摘要，不含金额明细和票据。</p>
       </div>
-    </div>
-
-    <el-alert type="info" :closable="false" show-icon>
-      <template #title>失败按 1、2、4、8、16 分钟退避重试，5 次后标记失败；站内通知不受影响。</template>
-    </el-alert>
-
-    <el-card shadow="never">
-      <div class="toolbar">
-        <el-select v-model="filters.status" placeholder="投递状态" clearable @change="search">
-          <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
-        </el-select>
-        <el-button link type="primary" @click="reset">重置</el-button>
+      <div class="head-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
+    </header>
 
-      <el-table v-loading="loading" :data="records" row-key="id" class="delivery-table eas-row-table">
-        <el-table-column label="创建时间" width="160">
-          <template #default="{ row }">{{ fmtDateTime(row.createdAt, true) }}</template>
-        </el-table-column>
-        <el-table-column prop="recipientEmail" label="收件人" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column label="状态" width="130">
-          <template #default="{ row }">
-            <el-tag class="admin-status" :type="STATUS_TAG[row.status as DeliveryStatus] ?? 'info'" disable-transitions>
-              {{ DELIVERY_STATUS_LABEL[row.status as DeliveryStatus] ?? row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="尝试次数" width="90" align="right">
-          <template #default="{ row }"><span class="eas-tnum">{{ row.attempts }}</span></template>
-        </el-table-column>
-        <el-table-column label="下次重试" width="160">
-          <template #default="{ row }">{{ fmtDateTime(row.nextRetryAt, true) }}</template>
-        </el-table-column>
-        <el-table-column label="最后错误" min-width="200">
-          <template #default="{ row }">
-            <el-tooltip v-if="row.lastError" placement="top" :show-after="200">
-              <template #content>
-                <div class="error-tip">{{ row.lastError }}</div>
-              </template>
-              <span class="ellipsis text-danger small">{{ row.lastError }}</span>
-            </el-tooltip>
-            <span v-else class="muted">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="发送时间" width="160">
-          <template #default="{ row }">{{ fmtDateTime(row.sentAt, true) }}</template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty :filtered="hasFilters" @reset="reset" />
+    <p class="page-note">
+      发送失败按 1、2、4、8、16 分钟间隔重试，5 次后标记失败；站内通知不受影响。无正文读取授权时，标题脱敏为“审批通知
+      #编号”。
+    </p>
+
+    <div class="toolbar list-filters">
+      <el-select v-model="filters.status" placeholder="投递状态" clearable @change="search">
+        <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
+      </el-select>
+      <el-button link type="primary" @click="reset">重置</el-button>
+    </div>
+
+    <el-table v-loading="loading" :data="records" row-key="id" class="delivery-table eas-row-table">
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">{{ fmtDateTime(row.createdAt, true) }}</template>
+      </el-table-column>
+      <el-table-column prop="recipientEmail" label="收件人" min-width="180" show-overflow-tooltip />
+      <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+      <el-table-column label="状态" width="130">
+        <template #default="{ row }">
+          <el-tag class="admin-status" :type="STATUS_TAG[row.status as DeliveryStatus] ?? 'info'" disable-transitions>
+            {{ DELIVERY_STATUS_LABEL[row.status as DeliveryStatus] ?? row.status }}
+          </el-tag>
         </template>
-      </el-table>
+      </el-table-column>
+      <el-table-column label="尝试次数" width="90" align="right">
+        <template #default="{ row }"><span class="eas-tnum">{{ row.attempts }}</span></template>
+      </el-table-column>
+      <el-table-column label="下次重试" width="160">
+        <template #default="{ row }">{{ fmtDateTime(row.nextRetryAt, true) }}</template>
+      </el-table-column>
+      <el-table-column label="最后错误" min-width="200">
+        <template #default="{ row }">
+          <el-tooltip v-if="row.lastError" placement="top" :show-after="200">
+            <template #content>
+              <div class="error-tip">{{ row.lastError }}</div>
+            </template>
+            <span class="ellipsis text-danger small">{{ row.lastError }}</span>
+          </el-tooltip>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="发送时间" width="160">
+        <template #default="{ row }">{{ fmtDateTime(row.sentAt, true) }}</template>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty :filtered="hasFilters" @reset="reset" />
+      </template>
+    </el-table>
 
-      <el-pagination
-        class="pager"
-        layout="total, sizes, prev, pager, next"
-        :total="total"
-        :current-page="page"
-        :page-size="size"
-        background
-        @current-change="onPageChange"
-        @size-change="onSizeChange"
-      />
-    </el-card>
+    <el-pagination
+      class="pager"
+      layout="total, sizes, prev, pager, next"
+      :total="total"
+      :current-page="page"
+      :page-size="size"
+      background
+      @current-change="onPageChange"
+      @size-change="onSizeChange"
+    />
   </div>
 </template>
 
 <style scoped>
 .delivery-table {
-  margin-top: 12px;
   width: 100%;
 }
 .ellipsis {

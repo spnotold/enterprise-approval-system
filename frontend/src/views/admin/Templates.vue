@@ -219,23 +219,23 @@ function deptText(row: TemplateAdminItem) {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
-      <h2 class="page-title">流程模板</h2>
-      <div class="toolbar">
+    <header class="sheet-head">
+      <div>
+        <h2 class="sheet-title">流程模板</h2>
+        <p class="sheet-sub">内置模板表单固定，只能调整审批节点；停用后员工不能新建，审批中的申请不受影响。</p>
+      </div>
+      <div class="head-actions">
         <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">新建自定义模板</el-button>
       </div>
-    </div>
+    </header>
 
-    <div class="toolbar">
+    <div class="toolbar list-filters">
       <el-input v-model="keyword" :prefix-icon="Search" placeholder="名称或编码" clearable />
       <el-select v-model="category" placeholder="全部类别" clearable>
         <el-option value="BUILTIN" label="内置模板" />
         <el-option value="CUSTOM" label="自定义模板" />
       </el-select>
-      <span class="muted small">
-        内置模板（采购、差旅、报销）表单固定，只能调整审批节点；停用后员工不能新建，审批中的申请不受影响。
-      </span>
     </div>
 
     <el-skeleton v-if="loading && !loaded" :rows="6" animated />
@@ -246,8 +246,8 @@ function deptText(row: TemplateAdminItem) {
           <div v-if="row.description" class="muted small desc">{{ row.description }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="编码" min-width="150">
-        <template #default="{ row }"><span class="small">{{ row.code }}</span></template>
+      <el-table-column label="编码" min-width="120">
+        <template #default="{ row }"><span class="small mono">{{ row.code }}</span></template>
       </el-table-column>
       <el-table-column label="类别" width="80" align="center">
         <template #default="{ row }">
@@ -286,10 +286,12 @@ function deptText(row: TemplateAdminItem) {
       <el-table-column label="更新时间" width="150">
         <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="130" fixed="right">
+      <el-table-column label="操作" width="110">
         <template #default="{ row }">
-          <el-button link type="primary" @click="router.push(designPath(row.id))">设计</el-button>
-          <el-button link type="primary" @click="openEdit(row as TemplateAdminItem)">编辑</el-button>
+          <span class="row-actions">
+            <el-button link type="primary" @click="router.push(designPath(row.id))">设计</el-button>
+            <el-button link type="primary" @click="openEdit(row as TemplateAdminItem)">编辑</el-button>
+          </span>
         </template>
       </el-table-column>
       <template #empty>
@@ -304,7 +306,7 @@ function deptText(row: TemplateAdminItem) {
       :close-on-click-modal="false"
       append-to-body
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="88px" @submit.prevent>
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent>
         <el-form-item label="模板编码" prop="code" :error="serverErrors.code">
           <el-input
             v-model="form.code"
@@ -347,20 +349,10 @@ function deptText(row: TemplateAdminItem) {
           </el-select>
           <div class="muted small hint">为空表示全部部门可用。</div>
         </el-form-item>
-        <el-alert
-          v-if="dialog.mode === 'create'"
-          type="info"
-          :closable="false"
-          show-icon
-          title="创建后将生成空的 v1 草稿，进入设计页添加表单字段和审批节点，校验通过后发布。"
-        />
-        <el-alert
-          v-else-if="dialog.builtin"
-          type="info"
-          :closable="false"
-          show-icon
-          title="内置模板的表单固定，审批节点请在“设计”中调整。"
-        />
+        <div v-if="dialog.mode === 'create'" class="muted small hint">
+          创建后将生成空的 v1 草稿，进入设计页添加表单字段和审批节点，校验通过后发布。
+        </div>
+        <div v-else-if="dialog.builtin" class="muted small hint">内置模板的表单固定，审批节点请在“设计”中调整。</div>
       </el-form>
       <template #footer>
         <el-button @click="dialog.visible = false">取消</el-button>
@@ -374,7 +366,7 @@ function deptText(row: TemplateAdminItem) {
 
 <style scoped>
 .name-link {
-  color: var(--el-color-primary);
+  color: var(--eas-primary);
   text-decoration: none;
   font-weight: 500;
 }
