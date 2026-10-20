@@ -41,12 +41,17 @@
   --eas-radius-control: 4px;
   --eas-radius-tag: 2px;
   --eas-shadow-float: 0 8px 24px rgba(34, 48, 58, 0.12);
+  /* 可点卡片悬停时的一层薄纸影，比浮层更轻 */
+  --eas-shadow-lift: 0 6px 18px rgba(34, 48, 58, 0.08);
 
   /* 动效 */
   --eas-ease: cubic-bezier(0.2, 0, 0, 1);
   --eas-dur-fast: 120ms;
   --eas-dur: 200ms;
   --eas-dur-stamp: 240ms;
+
+  /* 文本选中：淡淡的黛蓝，不抢正文 */
+  --eas-selection: rgba(62, 92, 118, 0.16);
 
   /* 图表序列色 */
   --eas-chart-1: #3e5c76;
@@ -134,8 +139,15 @@
   --el-box-shadow-light: var(--eas-shadow-float);
   --el-box-shadow-lighter: var(--eas-shadow-float);
   --el-box-shadow-dark: var(--eas-shadow-float);
+  /* 骨架屏用纸色，避免默认灰蓝在纸面上显脏 */
+  --eas-skeleton-to: #f7f8f5;
+  --el-skeleton-color: var(--eas-paper-deep);
+  --el-skeleton-to-color: var(--eas-skeleton-to);
   --el-transition-duration: 0.2s;
   --el-transition-duration-fast: 0.12s;
+  /* 组件库默认缓动与全站统一，避免按钮 / 弹层出现另一套手感 */
+  --el-transition-function-ease-in-out-bezier: var(--eas-ease);
+  --el-transition-function-fast-bezier: var(--eas-ease);
 }
 
 @media (prefers-reduced-motion: reduce) {

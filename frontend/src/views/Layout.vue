@@ -28,6 +28,13 @@ const drawer = ref(false)
 const groups = computed(() => visibleMenu((p) => auth.can(p)))
 const active = computed(() => activeMenuPath(route.path, groups.value))
 const roleText = computed(() => (auth.me?.roles ?? []).map((r) => ROLE_LABEL[r.code] ?? r.name).join('、'))
+// 两字姓名只取首字，避免头像与旁边的姓名重复；三字及以上取末两字
+const avatarText = computed(() => {
+  const name = auth.me?.realName?.trim() ?? ''
+  if (!name) return ''
+  const chars = Array.from(name)
+  return chars.length <= 2 ? chars[0] : chars.slice(-2).join('')
+})
 
 watch(
   () => route.fullPath,
@@ -65,7 +72,9 @@ function onCommand(cmd: string) {
     <el-aside v-if="!isMobile" :width="collapsed ? '64px' : '216px'" class="aside">
       <div class="brand" :class="{ collapsed }">
         <span class="logo" aria-hidden="true">审</span>
-        <span v-if="!collapsed" class="brand-text">企业审批系统</span>
+        <transition name="brand-fade">
+          <span v-if="!collapsed" class="brand-text">企业审批系统</span>
+        </transition>
       </div>
       <el-scrollbar>
         <el-menu :default-active="active" :collapse="collapsed" router class="menu">
@@ -116,7 +125,7 @@ function onCommand(cmd: string) {
         <NoticeBell />
         <el-dropdown trigger="click" @command="onCommand">
           <span class="user" role="button" tabindex="0" aria-label="用户菜单">
-            <el-avatar :size="28" class="avatar">{{ auth.me?.realName?.slice(-2) }}</el-avatar>
+            <el-avatar :size="28" class="avatar">{{ avatarText }}</el-avatar>
             <span v-if="!isMobile" class="user-name">{{ auth.me?.realName }}</span>
             <el-icon><ArrowDown /></el-icon>
           </span>
@@ -163,16 +172,33 @@ function onCommand(cmd: string) {
   gap: 10px;
   height: 52px;
   flex: none;
+  position: relative;
   box-sizing: border-box;
-  padding: 0 20px;
+  padding: 0 18px;
   font-size: var(--eas-fs-md);
   font-weight: 600;
   white-space: nowrap;
   border-bottom: 1px solid var(--eas-rule);
 }
 .brand.collapsed {
-  justify-content: center;
-  padding: 0;
+  justify-content: flex-start;
+  padding: 0 18px;
+}
+/* 折叠时文字先淡出，宽度再收起；淡出中的文字脱离占位，logo 不会被挤走 */
+.brand-fade-enter-active,
+.brand-fade-leave-active {
+  transition:
+    opacity var(--eas-dur-fast) var(--eas-ease),
+    transform var(--eas-dur-fast) var(--eas-ease);
+}
+.brand-fade-leave-active {
+  position: absolute;
+  left: 56px;
+}
+.brand-fade-enter-from,
+.brand-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-4px);
 }
 .logo {
   display: inline-flex;
@@ -219,6 +245,25 @@ function onCommand(cmd: string) {
   height: 40px;
   line-height: 40px;
   font-size: var(--eas-fs-sm);
+  transition:
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    color var(--eas-dur-fast) var(--eas-ease);
+}
+/* 选中竖线从中间展开，像笔尖落下；只在切换菜单时出现 */
+.menu :deep(.el-menu-item)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--eas-primary);
+  transform: scaleY(0);
+  transform-origin: 50% 50%;
+  transition: transform var(--eas-dur-fast) var(--eas-ease);
+}
+.menu :deep(.el-menu-item.is-active)::before {
+  transform: scaleY(1);
 }
 .menu :deep(.el-menu-item .el-icon) {
   color: var(--eas-ink-2);
@@ -230,15 +275,6 @@ function onCommand(cmd: string) {
 }
 .menu :deep(.el-menu-item.is-active .el-icon) {
   color: var(--eas-primary);
-}
-.menu :deep(.el-menu-item.is-active::before) {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--eas-primary);
 }
 .menu :deep(.el-menu-item:focus-visible) {
   outline-offset: -2px;
@@ -287,6 +323,9 @@ function onCommand(cmd: string) {
 .icon-btn:hover {
   background: var(--eas-paper);
 }
+.icon-btn:active {
+  background: var(--eas-paper-deep);
+}
 .user {
   display: inline-flex;
   align-items: center;
@@ -298,6 +337,9 @@ function onCommand(cmd: string) {
 }
 .user:hover {
   background: var(--eas-paper);
+}
+.user:active {
+  background: var(--eas-paper-deep);
 }
 .avatar {
   background: var(--eas-primary-tint);

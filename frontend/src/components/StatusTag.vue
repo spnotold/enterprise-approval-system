@@ -97,6 +97,9 @@ const nodeParts = computed(() => {
   height: 6px;
   border-radius: 50%;
   background: var(--tone);
+  transition:
+    background-color var(--eas-dur) var(--eas-ease),
+    border-color var(--eas-dur) var(--eas-ease);
 }
 .is-dot.size-large .dot {
   width: 8px;
@@ -117,6 +120,9 @@ const nodeParts = computed(() => {
   border-radius: var(--eas-radius-tag);
   color: var(--tone-text);
   font-weight: 500;
+  transition:
+    color var(--eas-dur) var(--eas-ease),
+    border-color var(--eas-dur) var(--eas-ease);
 }
 .is-box.size-small {
   padding: 0 6px;

@@ -9,6 +9,8 @@ import { api } from '@/lib/api'
 import type { ApplicationSummary, AppStatus, AppType, ListScope } from '@/lib/types'
 import { APP_STATUS_LABEL, APP_TYPE_LABEL, toOptions } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
+import { formatCents } from '@/lib/money'
+import { errorText } from '@/lib/errors'
 import { dateRangeModel, useListQuery } from '@/composables/useListQuery'
 import { useAction } from '@/composables/useAction'
 import { useBreakpoint } from '@/composables/useBreakpoint'
@@ -114,6 +116,11 @@ const EMPTY_TEXT: Record<ListScope, string> = {
   dept: '本部门暂无已提交的申请。',
   granted: '授权范围内暂无已提交的申请。',
 }
+
+/** 金额单元格悬停时显示完整金额，窄列也不至于看不全 */
+function amountTitle(cents: number | null | undefined): string {
+  return cents === null || cents === undefined ? '—' : `¥${formatCents(cents)}`
+}
 </script>
 
 <template>
@@ -166,14 +173,78 @@ const EMPTY_TEXT: Record<ListScope, string> = {
         <el-button v-if="q.hasFilters.value" link type="primary" @click="q.reset()">重置</el-button>
       </div>
 
+      <!-- 窄屏用卡片：数据表列多，固定列会遮住标题；卡片把编号、标题、状态和操作放在同一视线内 -->
+      <div v-if="isMobile && q.error.value && !q.loaded.value" class="mobile-error">
+        <span>{{ errorText(q.error.value, '列表加载失败') }}</span>
+        <el-button link type="primary" :loading="q.loading.value" @click="q.load()">重新加载</el-button>
+      </div>
+      <el-skeleton
+        v-else-if="isMobile && !q.loaded.value && q.loading.value"
+        class="mobile-cards"
+        :rows="6"
+        animated
+      />
+      <div v-else-if="isMobile" v-loading="q.loading.value" class="mobile-cards">
+        <article v-for="row in q.records.value" :key="row.id" class="mobile-card">
+          <router-link :to="target(row as ApplicationSummary)" class="mobile-card-main">
+            <span class="mobile-card-top">
+              <span class="mobile-card-no eas-tnum">{{ row.appNo }}</span>
+              <StatusTag :status="row.status" :current-node="row.currentNode" size="small" :show-node="false" />
+            </span>
+            <span class="mobile-card-title">{{ row.title || '（未填写标题）' }}</span>
+            <span class="mobile-card-meta">
+              <span>{{ row.templateName || APP_TYPE_LABEL[row.type as AppType] }}</span>
+              <span v-if="scope !== 'mine'">{{ row.applicant.realName }}</span>
+              <span v-if="scope !== 'mine' && row.deptName">{{ row.deptName }}</span>
+              <span v-if="row.currentNode && row.status === 'IN_APPROVAL'">
+                {{ row.currentNode.name }}<template v-if="row.currentNode.assigneeName"> {{ row.currentNode.assigneeName }}</template>
+              </span>
+              <span v-if="row.amountCents != null" class="eas-tnum">¥{{ formatCents(row.amountCents) }}</span>
+              <span>{{ fmtDateTime(row.submittedAt ?? row.updatedAt) }}</span>
+            </span>
+          </router-link>
+          <div v-if="scope === 'mine'" class="mobile-card-actions">
+            <template v-if="row.status === 'DRAFT'">
+              <el-button link type="primary" @click="router.push(`/applications/${row.id}/edit`)">编辑</el-button>
+              <el-button link type="danger" :disabled="act.loading.value" @click="remove(row as ApplicationSummary)">删除</el-button>
+            </template>
+            <el-button
+              v-else-if="row.status === 'IN_APPROVAL'"
+              link
+              type="warning"
+              :disabled="act.loading.value"
+              @click="withdraw(row as ApplicationSummary)"
+            >
+              撤回
+            </el-button>
+            <el-button
+              v-else-if="row.status === 'REJECTED' || row.status === 'WITHDRAWN'"
+              link
+              type="primary"
+              :disabled="act.loading.value"
+              @click="copy(row as ApplicationSummary)"
+            >
+              复制并修改
+            </el-button>
+          </div>
+        </article>
+        <ListEmpty
+          v-if="q.loaded.value && !q.records.value.length"
+          :filtered="q.hasFilters.value"
+          :description="q.hasFilters.value ? undefined : EMPTY_TEXT[scope]"
+          @reset="q.reset()"
+        />
+      </div>
+
       <el-table
+        v-else
         v-loading="q.loading.value"
         :data="q.records.value"
         row-key="id"
         class="app-table eas-row-table eas-row-clickable"
         @row-click="onRowClick"
       >
-        <el-table-column label="编号" width="170" :fixed="isMobile ? false : 'left'">
+        <el-table-column label="编号" width="170" fixed="left">
           <template #default="{ row }">
             <router-link :to="target(row as ApplicationSummary)" class="app-link eas-tnum">{{ row.appNo }}</router-link>
           </template>
@@ -188,8 +259,10 @@ const EMPTY_TEXT: Record<ListScope, string> = {
           <template #default="{ row }">{{ row.applicant.realName }}</template>
         </el-table-column>
         <el-table-column v-if="scope !== 'mine' && !isCompact" label="部门" width="110" prop="deptName" />
-        <el-table-column label="金额" width="120" align="right">
-          <template #default="{ row }"><MoneyText :cents="row.amountCents" /></template>
+        <el-table-column label="金额" width="134" align="right">
+          <template #default="{ row }">
+            <MoneyText :cents="row.amountCents" :title="amountTitle(row.amountCents)" />
+          </template>
         </el-table-column>
         <el-table-column label="状态" min-width="200" show-overflow-tooltip>
           <template #default="{ row }"><StatusTag :status="row.status" :current-node="row.currentNode" size="small" /></template>
@@ -200,7 +273,7 @@ const EMPTY_TEXT: Record<ListScope, string> = {
         <el-table-column v-if="scope === 'mine' && !isCompact" label="更新时间" width="150">
           <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" :width="scope === 'mine' ? 190 : 80" :fixed="isMobile ? false : 'right'">
+        <el-table-column label="操作" :width="scope === 'mine' ? 190 : 80" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button link type="primary" @click.stop="router.push(`/applications/${row.id}`)">查看</el-button>
@@ -264,5 +337,62 @@ const EMPTY_TEXT: Record<ListScope, string> = {
 .app-link {
   color: var(--el-color-primary);
   text-decoration: none;
+}
+
+/* 窄屏卡片列表：同一张纸上的分条，不加阴影和圆角 */
+.mobile-cards {
+  margin-top: 12px;
+  border-top: 1px solid var(--eas-rule);
+}
+.mobile-card {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--eas-rule);
+}
+.mobile-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+.mobile-card-main:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
+.mobile-card-main:active {
+  background: var(--eas-paper);
+}
+.mobile-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mobile-card-no {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+.mobile-card-title {
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.mobile-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
+}
+.mobile-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.mobile-card-actions .el-button {
+  min-height: 32px;
+  margin-left: 0;
 }
 </style>

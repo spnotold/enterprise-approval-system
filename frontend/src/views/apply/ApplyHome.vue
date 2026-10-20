@@ -8,9 +8,11 @@ import type { ApplicationSummary, AppType, TemplateOption } from '@/lib/types'
 import { APP_TYPE_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { showError } from '@/lib/errors'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import MoneyText from '@/components/MoneyText.vue'
 
 const router = useRouter()
+const { isMobile } = useBreakpoint()
 const templates = ref<TemplateOption[]>([])
 const drafts = ref<ApplicationSummary[]>([])
 const loading = ref(true)
@@ -92,21 +94,21 @@ onMounted(async () => {
           <el-button link type="primary" @click="router.push('/applications/mine?status=DRAFT')">查看全部草稿</el-button>
         </div>
         <el-table v-loading="draftsLoading" :data="drafts" size="small">
-          <el-table-column label="编号" width="190">
+          <el-table-column label="编号" :width="isMobile ? 150 : 190">
             <template #default="{ row }">
-              <el-link type="primary" class="app-no" @click="router.push(`/applications/${row.id}/edit`)">{{ row.appNo }}</el-link>
+              <router-link :to="`/applications/${row.id}/edit`" class="app-no">{{ row.appNo }}</router-link>
             </template>
           </el-table-column>
-          <el-table-column label="标题" min-width="180">
+          <el-table-column label="标题" :min-width="isMobile ? 120 : 180" show-overflow-tooltip>
             <template #default="{ row }">{{ row.title || '（未填写标题）' }}</template>
           </el-table-column>
-          <el-table-column label="类型" width="120">
+          <el-table-column v-if="!isMobile" label="类型" width="120">
             <template #default="{ row }">{{ row.templateName || APP_TYPE_LABEL[row.type as AppType] }}</template>
           </el-table-column>
-          <el-table-column label="金额" width="130" align="right">
+          <el-table-column v-if="!isMobile" label="金额" width="130" align="right">
             <template #default="{ row }"><MoneyText :cents="row.amountCents" /></template>
           </el-table-column>
-          <el-table-column label="最后保存" width="160">
+          <el-table-column v-if="!isMobile" label="最后保存" width="160">
             <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
           </el-table-column>
           <template #empty><el-empty :image-size="60" description="暂无草稿" /></template>
@@ -155,7 +157,7 @@ onMounted(async () => {
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 12px;
 }
 .tpl {
@@ -173,18 +175,24 @@ onMounted(async () => {
   color: inherit;
   transition:
     border-color var(--eas-dur-fast) var(--eas-ease),
-    transform var(--eas-dur-fast) var(--eas-ease);
+    transform var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
-.tpl:hover {
+.tpl:hover,
+.tpl:focus-visible {
+  position: relative;
+  z-index: 1;
+  transform: translateY(-2px);
   border-color: var(--eas-primary);
+  box-shadow: var(--eas-shadow-lift);
 }
 .tpl:focus-visible {
-  border-color: var(--eas-primary);
   outline: 2px solid var(--eas-primary);
   outline-offset: 2px;
 }
 .tpl:active {
-  transform: translateY(1px);
+  transform: translateY(0);
+  box-shadow: none;
 }
 .tpl-icon {
   flex: none;
@@ -212,6 +220,37 @@ onMounted(async () => {
   text-wrap: pretty;
 }
 .app-no {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--eas-primary);
+  text-decoration: none;
   font-variant-numeric: tabular-nums;
+}
+.app-no:hover {
+  text-decoration: underline;
+}
+.app-no:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tpl,
+  .tpl:hover,
+  .tpl:focus-visible,
+  .tpl:active {
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .panel {
+    padding: 0 16px;
+  }
+  .home-title {
+    font-size: var(--eas-fs-lg);
+  }
 }
 </style>

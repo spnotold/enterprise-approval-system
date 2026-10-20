@@ -233,12 +233,17 @@ function back() {
 
 .form-actions {
   align-items: center;
+  flex-wrap: wrap;
   padding: 12px 24px;
   border: 0;
   border-top: 1px solid var(--eas-rule);
   border-radius: 0 0 var(--eas-radius-panel) var(--eas-radius-panel);
   background: var(--eas-surface);
   box-shadow: none;
+}
+/* Element Plus 会给相邻按钮加 12px 左边距，这里交给 gap 控制节奏 */
+.form-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 /* 吸底时，el-main 的下内边距处会露出下方内容，用页面底色盖住 */
 .form-actions::after {
@@ -264,6 +269,12 @@ function back() {
   }
   .form-actions {
     padding: 12px 16px;
+  }
+  /* 上传提示单独占一行，排在最前，按钮不被挤散 */
+  .actions-note {
+    flex-basis: 100%;
+    order: -1;
+    text-align: right;
   }
 }
 </style>

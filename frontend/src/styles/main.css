@@ -17,6 +17,11 @@ body,
   background: var(--eas-paper);
 }
 
+::selection {
+  background: var(--eas-selection);
+  color: var(--eas-ink);
+}
+
 /* 键盘焦点统一：2px 主色外框，偏移 2px */
 :focus-visible {
   outline: 2px solid var(--eas-primary);
@@ -166,6 +171,12 @@ body,
 }
 .el-table th.el-table__cell > .cell {
   font-weight: 500;
+}
+/* 行底色与左侧竖线随悬停淡入，避免整行闪一下 */
+.el-table__body td.el-table__cell {
+  transition:
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 
 /* 行内操作：默认隐藏，行悬停或键盘聚焦时显示；触屏与窄屏常显 */

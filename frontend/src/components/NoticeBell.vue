@@ -118,6 +118,9 @@ function viewAll() {
 .bell:hover {
   background: var(--eas-paper);
 }
+.bell:active {
+  background: var(--eas-paper-deep);
+}
 .bell-badge :deep(.el-badge__content) {
   min-width: 16px;
   height: 16px;
@@ -165,6 +168,9 @@ function viewAll() {
   border-left: 3px solid transparent;
   border-bottom: 1px solid var(--eas-paper-deep);
   cursor: pointer;
+  transition:
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    border-left-color var(--eas-dur-fast) var(--eas-ease);
 }
 .notice-item:last-child {
   border-bottom: none;
@@ -184,6 +190,7 @@ function viewAll() {
   margin-top: 8px;
   border-radius: 50%;
   background: transparent;
+  transition: background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .notice-item.unread .unread-dot {
   background: var(--eas-primary);

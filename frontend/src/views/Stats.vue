@@ -57,7 +57,15 @@ function cssVar(name: string): string {
 }
 
 const STATUS_ORDER: AppStatus[] = ['DRAFT', 'IN_APPROVAL', 'APPROVED', 'REJECTED', 'WITHDRAWN']
-/** 图表按当前可见序列 / 扇区顺序使用第 2 节配色，不复用状态语义色。 */
+/** 状态分布沿用第 2 节的状态语义色；其余图表按序列使用图表配色。 */
+const STATUS_COLOR: Record<AppStatus, string> = {
+  DRAFT: cssVar('--eas-muted'),
+  IN_APPROVAL: cssVar('--eas-primary'),
+  APPROVED: cssVar('--eas-success'),
+  REJECTED: cssVar('--eas-danger'),
+  // 与草稿同为灰色的已撤回会和草稿在环形图上连成一片，借用图表第 6 色区分
+  WITHDRAWN: cssVar('--eas-chart-6'),
+}
 const CHART_COLORS = Array.from({ length: 6 }, (_, i) => cssVar(`--eas-chart-${i + 1}`))
 const TYPE_ORDER: AppType[] = ['PURCHASE', 'TRAVEL', 'EXPENSE', 'CUSTOM']
 const AXIS_TEXT = cssVar('--eas-ink-2')
@@ -277,6 +285,7 @@ function statusPie(counts: Partial<Record<AppStatus, number>>): ChartOption | nu
   const data = STATUS_ORDER.filter((s) => (counts[s] ?? 0) > 0).map((s) => ({
     name: APP_STATUS_LABEL[s],
     value: counts[s] ?? 0,
+    itemStyle: { color: STATUS_COLOR[s] },
   }))
   if (!data.length) return null
   return {
@@ -356,14 +365,14 @@ const deptTypeBar = computed<ChartOption | null>(() => {
       axisLabel: { color: AXIS_TEXT },
       splitLine: { lineStyle: { color: GRID_LINE } },
     },
-    series: statuses.map((s, i) => ({
+    series: statuses.map((s) => ({
       name: APP_STATUS_LABEL[s],
       type: 'bar' as const,
       stack: 'total',
       barMaxWidth: 48,
-      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[i], borderWidth: 2 } },
+      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: STATUS_COLOR[s], borderWidth: 2 } },
       blur: SERIES_BLUR,
-      itemStyle: { borderColor: SURFACE, borderWidth: 1 },
+      itemStyle: { color: STATUS_COLOR[s], borderColor: SURFACE, borderWidth: 1 },
       data: types.map((t) => countOf(t, s)),
     })),
   }
@@ -924,13 +933,30 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   color: inherit;
   text-decoration: none;
 }
-.kpi-link:hover {
+.kpi-link {
+  transition:
+    border-color var(--eas-dur-fast) var(--eas-ease),
+    transform var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
+}
+.kpi-link:hover,
+.kpi-link:focus-visible {
+  position: relative;
+  z-index: 1;
+  transform: translateY(-2px);
   border-color: var(--eas-primary);
+  box-shadow: var(--eas-shadow-lift);
+}
+.kpi-link:hover {
   background: var(--eas-paper);
 }
 .kpi-link:focus-visible {
   outline: 2px solid var(--eas-primary);
   outline-offset: 2px;
+}
+.kpi-link:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 .kpi.flat {
   padding: 0;
@@ -964,6 +990,16 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   font-weight: normal;
   color: var(--eas-ink-2);
 }
+@media (prefers-reduced-motion: reduce) {
+  .kpi-link,
+  .kpi-link:hover,
+  .kpi-link:focus-visible,
+  .kpi-link:active {
+    transform: none;
+    transition: none;
+  }
+}
+
 @media (max-width: 768px) {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
