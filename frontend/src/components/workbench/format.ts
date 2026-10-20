@@ -23,7 +23,7 @@ export const SHORT_DESC_MAX = 10
 
 const BUILTIN_SHORT: Partial<Record<TemplateOption['bizType'], string>> = {
   PURCHASE: '采购明细与报价',
-  TRAVEL: '行程、预算、同行人员',
+  TRAVEL: '出差行程与预算',
   EXPENSE: '费用明细与票据',
 }
 

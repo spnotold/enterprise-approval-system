@@ -41,7 +41,7 @@ describe('shortDesc', () => {
     expect(shortDesc({ category: 'BUILTIN', bizType: 'PURCHASE', description: '采购明细、至少两家报价比较、采购选择' })).toBe(
       '采购明细与报价',
     )
-    expect(shortDesc({ category: 'BUILTIN', bizType: 'TRAVEL', description: null })).toBe('行程、预算、同行人员')
+    expect(shortDesc({ category: 'BUILTIN', bizType: 'TRAVEL', description: null })).toBe('出差行程与预算')
     expect(shortDesc({ category: 'BUILTIN', bizType: 'EXPENSE', description: null })).toBe('费用明细与票据')
   })
 
