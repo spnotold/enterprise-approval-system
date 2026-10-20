@@ -222,7 +222,7 @@
 
 ### Web：登录页分栏可拖动
 
-不变：分界线两侧 6px 热区、`col-resize`；悬停 / 拖动时 2px `primary` 线 + 4×28px 握把；表单栏 380px 到视口 60%，左栏不小于 360px；宽度存 `localStorage`（`eas.auth.formWidth`），双击恢复 540px；方向键 16px、Home / End；880px 以下只显示表单栏。
+不变：分界线两侧 6px 热区、`col-resize`；悬停 / 拖动时 2px `primary` 线 + 4×28px 握把；表单栏最窄 360px，左栏最窄 200px（不设百分比上限，2026-10-17 放宽）；宽度存 `localStorage`（`eas.auth.formWidth`），双击恢复 540px；方向键 16px、Home / End；880px 以下只显示表单栏。
 
 ## 7. 动效
 
