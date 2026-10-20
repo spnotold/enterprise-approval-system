@@ -177,6 +177,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   flex-direction: column;
   box-sizing: border-box;
   min-width: 0;
+  /* Share the specimen's 540px content width so the brand and paper align. */
+  width: min(652px, 100%);
+  margin-inline: auto;
   padding: 40px 56px;
   pointer-events: none;
 }
@@ -286,6 +289,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
 
 @container auth-aside (inline-size < 640px) {
   .aside-inner {
+    width: min(604px, 100%);
     padding: 32px;
   }
 }

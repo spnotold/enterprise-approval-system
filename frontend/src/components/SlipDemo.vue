@@ -184,9 +184,12 @@ onBeforeUnmount(() => {
 <style scoped>
 .slip-demo {
   width: min(540px, 100%);
+  container: auth-slip / inline-size;
   pointer-events: auto;
 }
 .specimen-sheet {
+  position: relative;
+  box-sizing: border-box;
   overflow: hidden;
   width: 100%;
   opacity: 1;
@@ -208,9 +211,14 @@ onBeforeUnmount(() => {
 }
 .specimen-kind {
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 2px 14px;
   color: var(--eas-ink-2);
   font-size: var(--eas-fs-sm);
+}
+.specimen-kind > span {
+  white-space: nowrap;
+  word-break: keep-all;
 }
 .specimen-number {
   font-variant-numeric: tabular-nums;
@@ -224,6 +232,7 @@ onBeforeUnmount(() => {
 }
 .specimen-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 28px;
   color: var(--eas-ink-2);
 }
@@ -236,6 +245,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-self: end;
+  padding-top: 44px;
   text-align: right;
   white-space: nowrap;
 }
@@ -265,7 +275,7 @@ onBeforeUnmount(() => {
 .signature-cell {
   position: relative;
   min-width: 0;
-  min-height: 84px;
+  min-height: 88px;
   box-sizing: border-box;
   padding: 10px 14px 12px;
   border-right: 1px solid var(--eas-rule-strong);
@@ -284,11 +294,10 @@ onBeforeUnmount(() => {
   outline-offset: -5px;
 }
 .cell-node {
-  overflow: hidden;
+  padding-right: 48px;
   color: var(--eas-ink-3);
   font-size: var(--eas-fs-xs);
   line-height: 1.3;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .current .cell-node {
@@ -299,12 +308,14 @@ onBeforeUnmount(() => {
   font-size: var(--eas-fs-nav);
   font-weight: 600;
   line-height: 1.2;
+  white-space: nowrap;
 }
 .cell-time {
   color: var(--eas-ink-3);
   font-size: var(--eas-fs-xs);
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
+  white-space: nowrap;
 }
 .cell-state {
   margin-top: 6px;
@@ -332,8 +343,8 @@ onBeforeUnmount(() => {
   user-select: none;
 }
 .cell-stamp {
-  top: 34px;
-  right: 14px;
+  top: 7px;
+  right: 10px;
   padding: 2px 6px;
   border-radius: var(--eas-radius-tag);
   font-size: var(--eas-fs-note);
@@ -389,62 +400,85 @@ onBeforeUnmount(() => {
   font-size: var(--eas-fs-xs);
 }
 
-@container auth-aside (inline-size < 640px) {
+/* Query the paper's available width after the aside's own gutters. */
+@container auth-slip (inline-size < 520px) {
   .specimen-head {
-    gap: 6px 12px;
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
     padding: 18px 16px 15px;
   }
   .specimen-kind {
-    gap: 8px;
+    gap: 2px 8px;
     font-size: var(--eas-fs-xs);
   }
   .specimen-title {
-    font-size: 18px;
+    font-size: var(--eas-fs-lg);
   }
   .specimen-meta {
     gap: 14px;
     font-size: var(--eas-fs-xs);
   }
   .specimen-amount strong {
-    font-size: 18px;
+    font-size: var(--eas-fs-lg);
+  }
+  .specimen-amount {
+    padding-top: 0;
+    text-align: left;
   }
   .signature-part {
-    padding: 14px 16px 16px;
+    /* Keep the final seal's space through every animation step. */
+    padding: 14px 16px 68px;
   }
   .signature-cell {
-    padding-right: 10px;
-    padding-left: 10px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .cell-node {
+    padding-right: 35px;
   }
   .cell-stamp {
     right: 8px;
+    padding: 2px;
+    font-size: var(--eas-fs-xs);
+    letter-spacing: 0;
+    text-indent: 0;
+  }
+  .passed-stamp {
+    top: auto;
+    right: 16px;
+    bottom: 20px;
+    font-size: var(--eas-fs-md);
   }
 }
 
-@container auth-aside (inline-size < 430px) {
+/* Below this width three cells would each have less than 112px. */
+@container auth-slip (inline-size < 372px) {
+  .specimen-head {
+    padding: 14px 12px;
+  }
   .specimen-title {
     font-size: var(--eas-fs-md);
   }
-  .specimen-amount {
-    display: none;
+  .signature-part {
+    padding: 12px 12px 64px;
   }
-  .passed-stamp {
-    top: 14px;
-    right: 14px;
-    font-size: var(--eas-fs-md);
+  .signature-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: 1fr;
   }
   .signature-cell {
-    min-height: 78px;
-    padding: 9px 7px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--eas-rule-strong);
   }
-  .cell-person {
+  .signature-cell:last-child {
+    border-bottom: 0;
+  }
+  .passed-stamp {
+    right: 12px;
+    bottom: 18px;
+    padding: 6px 9px;
     font-size: var(--eas-fs-sm);
-  }
-  .cell-stamp {
-    top: 37px;
-    right: 5px;
-    padding-right: 3px;
-    padding-left: 3px;
-    font-size: var(--eas-fs-xs);
   }
 }
 </style>
