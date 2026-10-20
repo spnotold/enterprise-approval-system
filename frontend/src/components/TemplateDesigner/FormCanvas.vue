@@ -216,10 +216,10 @@ function onCanvasDrop(e: DragEvent) {
   gap: 8px;
 }
 .field-card {
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--eas-rule);
   border-radius: var(--eas-radius-panel);
   padding: 10px 12px;
-  background: var(--el-bg-color);
+  background: var(--eas-sheet);
   cursor: pointer;
   transition:
     border-color var(--eas-dur-fast) var(--eas-ease),
@@ -239,14 +239,14 @@ function onCanvasDrop(e: DragEvent) {
   outline-offset: 2px;
 }
 .field-card.is-selected {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+  border-color: var(--eas-primary);
+  box-shadow: 0 0 0 1px var(--eas-primary) inset;
 }
 .field-card.has-issue {
-  border-color: var(--el-color-danger);
+  border-color: var(--eas-danger);
 }
 .field-card.has-issue.is-selected {
-  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+  box-shadow: 0 0 0 1px var(--eas-danger) inset;
 }
 .card-head {
   display: flex;
@@ -260,7 +260,7 @@ function onCanvasDrop(e: DragEvent) {
   word-break: break-all;
 }
 .req {
-  color: var(--el-color-danger);
+  color: var(--eas-danger);
   margin-right: 2px;
 }
 .key {
@@ -271,7 +271,7 @@ function onCanvasDrop(e: DragEvent) {
   transform: none;
 }
 .warn-icon {
-  color: var(--el-color-warning);
+  color: var(--eas-warning);
 }
 .card-actions {
   display: inline-flex;

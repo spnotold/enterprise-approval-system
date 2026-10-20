@@ -238,12 +238,12 @@ const text = computed(() => conditionText(condition.value, props.vars))
 }
 .cond-rule {
   padding: 8px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--eas-rule);
   border-radius: var(--eas-radius-panel);
-  background: var(--el-fill-color-lighter);
+  background: var(--eas-desk);
 }
 .cond-rule.cell-error {
-  border-color: var(--el-color-danger);
+  border-color: var(--eas-danger);
 }
 .cond-row {
   display: grid;
@@ -272,7 +272,7 @@ const text = computed(() => conditionText(condition.value, props.vars))
 }
 .cond-text {
   font-size: var(--eas-fs-sm);
-  color: var(--el-text-color-regular);
+  color: var(--eas-ink-2);
   word-break: break-all;
 }
 @media (max-width: 640px) {

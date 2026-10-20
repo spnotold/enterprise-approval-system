@@ -500,12 +500,12 @@ defineExpose({ locate })
 .col {
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--eas-rule);
   border-radius: var(--eas-radius-panel);
-  background: var(--el-bg-color);
+  background: var(--eas-sheet);
 }
 .col-main {
-  background: var(--el-fill-color-lighter);
+  background: var(--eas-desk);
 }
 .col-side {
   position: sticky;
@@ -532,7 +532,7 @@ defineExpose({ locate })
 @keyframes tpl-locate-flash {
   0%,
   60% {
-    box-shadow: 0 0 0 3px var(--el-color-danger-light-5);
+    box-shadow: 0 0 0 3px var(--eas-danger);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
@@ -541,5 +541,10 @@ defineExpose({ locate })
 .tpl-locate-flash {
   border-radius: var(--eas-radius-panel);
   animation: tpl-locate-flash 1.6s var(--eas-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tpl-locate-flash {
+    animation: none;
+  }
 }
 </style>

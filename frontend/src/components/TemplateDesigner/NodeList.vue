@@ -157,10 +157,10 @@ function onNodeDrop(e: DragEvent, index: number) {
 .node-card {
   display: flex;
   gap: 10px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--eas-rule);
   border-radius: var(--eas-radius-panel);
   padding: 10px 12px;
-  background: var(--el-bg-color);
+  background: var(--eas-sheet);
   cursor: pointer;
   outline: none;
   transition:
@@ -180,22 +180,22 @@ function onNodeDrop(e: DragEvent, index: number) {
   outline-offset: 2px;
 }
 .node-card.is-selected {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+  border-color: var(--eas-primary);
+  box-shadow: 0 0 0 1px var(--eas-primary) inset;
 }
 .node-card.has-issue {
-  border-color: var(--el-color-danger);
+  border-color: var(--eas-danger);
 }
 .node-card.has-issue.is-selected {
-  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+  box-shadow: 0 0 0 1px var(--eas-danger) inset;
 }
 .seq {
   flex: none;
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  background: var(--eas-primary-tint);
+  color: var(--eas-primary);
   font-size: 12px;
   font-weight: 600;
   display: flex;
@@ -230,7 +230,7 @@ function onNodeDrop(e: DragEvent, index: number) {
   transform: none;
 }
 .warn-icon {
-  color: var(--el-color-warning);
+  color: var(--eas-warning);
 }
 .card-actions {
   display: inline-flex;

@@ -54,25 +54,18 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">角色与权限</h2>
-        <div class="page-subtitle">
-          角色决定功能权限；能批哪张单只看具体待办的被分配人，与角色无关。角色授予与回收请在用户管理中操作。
-        </div>
+        <h2 class="sheet-title">角色与权限</h2>
+        <p class="sheet-sub">角色决定功能权限；角色授予与回收请在用户管理中操作。</p>
       </div>
-      <div class="toolbar">
+      <div class="head-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button :icon="User" @click="router.push('/admin/users')">用户管理</el-button>
       </div>
-    </div>
+    </header>
 
-    <el-alert type="warning" :closable="false" show-icon>
-      <template #title>
-        系统管理员（SYS_ADMIN）只有管理类权限（用户、部门、授权、模板、配置、审计、转办），不能审批；
-        默认也不能查看业务正文，需另行授予 BIZ_CONTENT_READ，且每次访问留痕。
-      </template>
-    </el-alert>
+    <p class="page-note">系统管理员只有管理类权限，不能审批；查看业务正文需另行授予 BIZ_CONTENT_READ，每次访问留痕。</p>
 
     <div v-loading="loading" class="roles-wrap">
       <el-empty v-if="loaded && roles.length === 0" description="暂无角色数据" :image-size="80" />
@@ -92,9 +85,6 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
           <div class="role-body">
             <p v-if="r.description" class="role-desc">{{ r.description }}</p>
             <p v-if="ROLE_NOTE[r.code]" class="muted small role-desc">{{ ROLE_NOTE[r.code] }}</p>
-            <el-alert v-if="r.code === 'SYS_ADMIN'" type="warning" :closable="false" class="role-alert">
-              <template #title>系统管理员只有管理类权限，不能审批。</template>
-            </el-alert>
 
             <div class="section-label">权限点（{{ r.permissions.length }}）</div>
             <div class="perm-tags">
@@ -155,9 +145,6 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 }
 .role-desc {
   margin: 0;
-}
-.role-alert {
-  margin: 4px 0;
 }
 .section-label {
   margin-top: 4px;
