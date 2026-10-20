@@ -12,10 +12,10 @@ defineProps<{ label: string; full?: boolean }>()
 <style scoped>
 .slip-field {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  column-gap: 12px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  column-gap: 0;
   padding: 9px 0;
-  border-bottom: 1px solid var(--eas-rule);
+
   line-height: 1.6;
 }
 .slip-field.full {
