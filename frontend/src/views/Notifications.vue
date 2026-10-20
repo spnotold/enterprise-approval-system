@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 通知中心：全部 / 未读分页列表；点击先标记已读再跳转；支持单条与全部标为已读
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -45,13 +45,22 @@ const TYPE_TAG: Partial<Record<NotificationType, 'primary' | 'success' | 'warnin
 const busyId = ref<number | null>(null)
 const markingAll = ref(false)
 const hasUnread = computed(() => notice.unread > 0 || records.value.some((n) => !n.read))
+const tabContainer = ref<HTMLElement | null>(null)
+const mainButtons = new Map<number, HTMLButtonElement>()
+
+function setMainButton(id: number, el: Element | ComponentPublicInstance | null) {
+  if (el instanceof HTMLButtonElement) mainButtons.set(id, el)
+  else mainButtons.delete(id)
+}
 
 async function markOne(n: NotificationItem) {
   if (n.read || busyId.value !== null) return
   busyId.value = n.id
+  let marked = false
   try {
     await notice.markRead(n.id)
     n.read = true
+    marked = true
     // 未读列表中已读的条目不再属于当前筛选
     if (filters.unreadOnly) await list.load()
   } catch (e) {
@@ -59,6 +68,12 @@ async function markOne(n: NotificationItem) {
   } finally {
     busyId.value = null
   }
+  if (!marked) return
+  // 操作按钮消失后，将焦点留在通知行；若该行已移除，则回到当前页签。
+  await nextTick()
+  const main = mainButtons.get(n.id)
+  if (main?.isConnected) main.focus({ preventScroll: true })
+  else tabContainer.value?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true })
 }
 
 async function open(n: NotificationItem) {
@@ -144,14 +159,16 @@ watch(
     </div>
 
     <el-card shadow="never" class="list-card">
-      <el-tabs v-model="tab" class="tabs">
-        <el-tab-pane name="all" label="全部" />
-        <el-tab-pane name="unread">
-          <template #label>
-            未读<el-badge v-if="notice.unread > 0" :value="notice.unread" :max="99" class="tab-badge" />
-          </template>
-        </el-tab-pane>
-      </el-tabs>
+      <div ref="tabContainer">
+        <el-tabs v-model="tab" class="tabs">
+          <el-tab-pane name="all" label="全部" />
+          <el-tab-pane name="unread">
+            <template #label>
+              未读<el-badge v-if="notice.unread > 0" :value="notice.unread" :max="99" class="tab-badge" />
+            </template>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
 
       <el-result v-if="error" icon="warning" :title="errorText(error, '通知加载失败')">
         <template #extra><el-button type="primary" :loading="loading" @click="list.load()">重新加载</el-button></template>
@@ -173,7 +190,7 @@ watch(
             @mousedown.middle.prevent
           >
             <span class="notice-marker"><i v-if="!n.read" class="unread-dot" role="img" aria-label="未读" /></span>
-            <button type="button" class="notice-main" @click.stop="activate(n, $event)">
+            <button :ref="(el) => setMainButton(n.id, el)" type="button" class="notice-main" @click.stop="activate(n, $event)">
               <span class="notice-head">
                 <el-tag size="small" :type="TYPE_TAG[n.type] ?? 'info'" disable-transitions>
                   {{ NOTIFICATION_TYPE_LABEL[n.type] ?? n.type }}
@@ -314,10 +331,10 @@ watch(
   font-variant-numeric: tabular-nums;
 }
 .notice-actions {
-  flex-shrink: 0;
+  flex: 0 0 104px;
   padding-top: 14px;
   min-height: 32px;
-  min-width: 64px;
+  min-width: 104px;
   text-align: right;
 }
 .notice-actions .el-button {
@@ -350,6 +367,7 @@ watch(
     gap: 0 12px;
   }
   .notice-actions {
+    flex-basis: 100%;
     width: 100%;
     padding: 0 0 12px 18px;
     box-sizing: border-box;

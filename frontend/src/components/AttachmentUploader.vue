@@ -70,12 +70,20 @@ const accept = computed(() => {
   return [...exts, ...allowed.value].join(',')
 })
 const remaining = computed(() => props.maxCount - model.value.length - pending.value.length)
-const canUpload = computed(() => !props.readonly && !props.disabled && remaining.value > 0)
+const uploadBlockReason = computed(() => {
+  if (props.readonly) return '当前附件为只读，无法上传文件'
+  if (props.disabled) return '当前已禁用上传，请稍后再试'
+  if (remaining.value <= 0) return `最多上传 ${props.maxCount} 个文件，已达到数量上限`
+  if (!allowed.value.length) return '当前未配置可上传的文件类型'
+  return null
+})
+const canUpload = computed(() => !uploadBlockReason.value)
 const hint = computed(
   () => props.tip ?? `可将文件拖到此处。支持 ${allowedText.value}，单个不超过 ${props.maxSizeMb} MB，最多 ${props.maxCount} 个`,
 )
 const dragging = ref(false)
 let dragDepth = 0
+let dragWarningShown = false
 
 function setActive(delta: number) {
   activeCount += delta
@@ -108,16 +116,19 @@ function onSelect(e: Event) {
 }
 
 // 选择文件与拖入文件共用：预检类型 / 大小 / 数量后加入上传队列
-function addFiles(files: File[]) {
+function addFiles(files: File[], fromDrop = false) {
   let slots = remaining.value
   for (const f of files) {
     const err = precheck(f)
     if (err) {
-      ElMessage.error(err)
+      if (fromDrop) warnDrag(err)
+      else ElMessage.error(err)
       continue
     }
     if (slots <= 0) {
-      ElMessage.warning(`最多上传 ${props.maxCount} 个文件`)
+      const message = `最多上传 ${props.maxCount} 个文件`
+      if (fromDrop) warnDrag(message)
+      else ElMessage.warning(message)
       break
     }
     slots -= 1
@@ -134,32 +145,64 @@ function hasFiles(e: DragEvent): boolean {
   return Array.from(e.dataTransfer?.types ?? []).includes('Files')
 }
 
+// dragenter / dragover / drop 以及多个不合规文件共用一次提示额度。
+function warnDrag(message: string) {
+  if (dragWarningShown) return
+  dragWarningShown = true
+  ElMessage.warning(message)
+}
+
 function onDragEnter(e: DragEvent) {
+  // 只读附件区没有上传入口，但仍要拦住浏览器默认的「拖入即打开文件」
+  if (props.readonly) {
+    if (hasFiles(e)) {
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'
+    }
+    return
+  }
   if (!hasFiles(e)) return
   e.preventDefault()
+  if (dragDepth === 0) dragWarningShown = false
   dragDepth += 1
   if (canUpload.value) dragging.value = true
 }
 
 function onDragOver(e: DragEvent) {
+  if (props.readonly) {
+    if (hasFiles(e)) {
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'
+    }
+    return
+  }
   if (!hasFiles(e)) return
   e.preventDefault()
   if (e.dataTransfer) e.dataTransfer.dropEffect = canUpload.value ? 'copy' : 'none'
 }
 
 function onDragLeave(e: DragEvent) {
-  if (!hasFiles(e)) return
+  if (props.readonly || !hasFiles(e)) return
   dragDepth = Math.max(0, dragDepth - 1)
-  if (dragDepth === 0) dragging.value = false
+  if (dragDepth === 0) {
+    dragging.value = false
+    dragWarningShown = false
+  }
 }
 
 function onDrop(e: DragEvent) {
+  if (props.readonly) {
+    if (hasFiles(e)) e.preventDefault()
+    return
+  }
   if (!hasFiles(e)) return
   e.preventDefault()
   dragDepth = 0
   dragging.value = false
-  if (!canUpload.value) return
-  addFiles(Array.from(e.dataTransfer?.files ?? []))
+  // 真正放下时才提示原因；拖拽经过不打断用户
+  if (uploadBlockReason.value) warnDrag(uploadBlockReason.value)
+  else addFiles(Array.from(e.dataTransfer?.files ?? []), true)
+  dragWarningShown = false
 }
 
 // 逐个上传：单次请求只带一个文件
@@ -374,5 +417,10 @@ onBeforeUnmount(() => {
 }
 .file-actions .el-button + .el-button {
   margin-left: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .uploader-bar {
+    transition: none;
+  }
 }
 </style>

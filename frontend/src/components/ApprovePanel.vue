@@ -2,6 +2,7 @@
 // 同意 / 驳回面板：同意意见可选；驳回理由必填 5-500 字。按钮与结果提示用同一个动词（同意 → 已同意）。
 // 幂等键在弹窗打开时生成，同一弹窗内的重试复用同一个键。
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { api } from '@/lib/api'
 import type { ActionResult } from '@/lib/types'
 import { newIdemKey } from '@/lib/idem'
@@ -33,10 +34,18 @@ const mode = ref<Mode>('APPROVE')
 const comment = ref('')
 const idemKey = ref('')
 const touched = ref(false)
+const confirmingClose = ref(false)
 const { loading, run } = useAction()
 
 let mounted = true
-onBeforeUnmount(() => { mounted = false })
+onBeforeUnmount(() => {
+  mounted = false
+  // 面板被自动刷新卸载时，别把确认框留在页面上
+  if (confirmingClose.value) {
+    confirmingClose.value = false
+    ElMessageBox.close()
+  }
+})
 const MIN_REJECT = 5
 const MAX_LEN = 500
 const length = computed(() => [...comment.value.trim()].length)
@@ -55,8 +64,34 @@ function open(m: Mode) {
   visible.value = true
 }
 
+// 用户关闭时保护已填写的意见；提交结果直接更新 visible，不经过此确认。
+async function beforeClose(done: () => void) {
+  if (loading.value || confirmingClose.value) return
+  if (!comment.value.trim()) {
+    done()
+    return
+  }
+  confirmingClose.value = true
+  try {
+    await ElMessageBox.confirm('关闭后已填写的意见将丢失', '确认关闭', {
+      type: 'warning',
+      confirmButtonText: '关闭',
+      cancelButtonText: '继续填写',
+    })
+    if (mounted && visible.value && !loading.value) done()
+  } catch {
+    // 取消关闭，保留意见与原弹窗。
+  } finally {
+    confirmingClose.value = false
+  }
+}
+
+function cancel() {
+  void beforeClose(() => { visible.value = false })
+}
+
 async function confirm() {
-  if (props.disabled || loading.value) return
+  if (props.disabled || loading.value || confirmingClose.value) return
   touched.value = true
   if (error.value) return
   const text = comment.value.trim()
@@ -105,6 +140,7 @@ async function confirm() {
       :close-on-click-modal="!loading"
       :close-on-press-escape="!loading"
       :show-close="!loading"
+      :before-close="beforeClose"
     >
       <el-alert
         v-if="refreshError"
@@ -149,8 +185,8 @@ async function confirm() {
       </el-form>
       <template #footer>
         <el-button v-if="refreshError" :loading="refreshing" :disabled="refreshing || loading" @click="emit('refresh')">重新加载</el-button>
-        <el-button :disabled="loading" @click="visible = false">取消</el-button>
-        <el-button :type="mode === 'APPROVE' ? 'primary' : 'danger'" :loading="loading" :disabled="disabled" @click="confirm">
+        <el-button :disabled="loading || confirmingClose" @click="cancel">取消</el-button>
+        <el-button :type="mode === 'APPROVE' ? 'primary' : 'danger'" :loading="loading" :disabled="disabled || confirmingClose" @click="confirm">
           {{ mode === 'APPROVE' ? '同意' : '驳回' }}
         </el-button>
       </template>

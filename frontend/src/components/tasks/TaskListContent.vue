@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import type { AppType, TaskItem } from '@/lib/types'
 import { APP_TYPE_LABEL, TASK_STATUS_LABEL, toOptions } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
+import { formatCents } from '@/lib/money'
 import { errorText } from '@/lib/errors'
 import { useListQuery } from '@/composables/useListQuery'
 import { useBreakpoint } from '@/composables/useBreakpoint'
@@ -70,6 +71,11 @@ function switchKind() {
   const { page: _page, ...query } = route.query
   void router.push({ path: pending.value ? '/tasks/done' : '/tasks/pending', query })
 }
+
+/** 金额单元格悬停时显示完整金额，窄列也不至于看不全 */
+function amountTitle(cents: number | null | undefined): string {
+  return cents === null || cents === undefined ? '—' : `¥${formatCents(cents)}`
+}
 </script>
 
 <template>
@@ -100,6 +106,43 @@ function switchKind() {
       <el-result v-else-if="error" icon="warning" :title="errorText(error, '列表加载失败')">
         <template #extra><el-button type="primary" :loading="loading" @click="list.load()">重新加载</el-button></template>
       </el-result>
+      <!-- 窄屏用卡片：待办列多，固定操作列会盖住标题 -->
+      <div v-else-if="isMobile" v-loading="loading" class="mobile-cards list-body">
+        <article v-for="row in records" :key="row.taskId" class="mobile-card">
+          <router-link :to="target(row as TaskItem)" class="mobile-card-main">
+            <span class="mobile-card-top">
+              <span class="mobile-card-no eas-tnum">{{ row.appNo }}</span>
+              <span class="mobile-card-flags">
+                <el-tag v-if="pending && row.overdue" type="danger" size="small">已超时</el-tag>
+                <StatusTag :status="row.appStatus" size="small" :show-node="false" />
+              </span>
+            </span>
+            <span class="mobile-card-title">{{ row.title || '—' }}</span>
+            <span class="mobile-card-meta">
+              <span>{{ APP_TYPE_LABEL[row.type as AppType] }}</span>
+              <span v-if="row.type === 'CUSTOM'">{{ row.templateName }}</span>
+              <span>{{ row.applicant.realName }}</span>
+              <span v-if="row.deptName">{{ row.deptName }}</span>
+              <span v-if="row.amountCents != null" class="eas-tnum">¥{{ formatCents(row.amountCents) }}</span>
+              <span>{{ row.nodeName }}</span>
+              <span>{{ fmtDateTime(pending ? row.createdAt : row.actedAt) }}</span>
+            </span>
+            <span v-if="!pending" class="mobile-card-task">
+              <span class="dot-status" :class="`st-${String(row.status).toLowerCase()}`">
+                <i class="dot" />{{ TASK_STATUS_LABEL[row.status as keyof typeof TASK_STATUS_LABEL] ?? row.status }}
+              </span>
+              <span v-if="row.comment" class="mobile-card-comment" :class="{ 'text-danger': row.status === 'REJECTED' }">{{ row.comment }}</span>
+            </span>
+            <span class="mobile-card-go">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</span>
+          </router-link>
+        </article>
+        <ListEmpty
+          v-if="loaded && records.length === 0"
+          :filtered="hasFilters"
+          :description="hasFilters ? undefined : pending ? '暂无待办' : '暂无已办记录'"
+          @reset="list.reset()"
+        />
+      </div>
       <el-table
         v-else
         v-loading="loading"
@@ -116,7 +159,9 @@ function switchKind() {
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.title || '—' }}</template></el-table-column>
         <el-table-column label="申请人 / 部门" min-width="110"><template #default="{ row }"><div>{{ row.applicant.realName }}</div><div class="muted small">{{ row.deptName || '—' }}</div></template></el-table-column>
-        <el-table-column label="金额" width="130" align="right"><template #default="{ row }"><MoneyText :cents="row.amountCents" /></template></el-table-column>
+        <el-table-column label="金额" width="140" align="right">
+          <template #default="{ row }"><MoneyText :cents="row.amountCents" :title="amountTitle(row.amountCents)" /></template>
+        </el-table-column>
         <el-table-column prop="nodeName" label="审批节点" min-width="120" show-overflow-tooltip />
         <el-table-column v-if="!pending" label="任务状态" width="100">
           <template #default="{ row }">
@@ -128,7 +173,7 @@ function switchKind() {
         <el-table-column v-if="pending && !isCompact" label="分配时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template></el-table-column>
         <el-table-column v-else-if="!pending && !isCompact" label="处理时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.actedAt) }}</template></el-table-column>
         <el-table-column v-if="!pending" label="处理意见" min-width="200" show-overflow-tooltip><template #default="{ row }"><span :class="{ 'text-danger': row.status === 'REJECTED' }">{{ row.comment || '—' }}</span></template></el-table-column>
-        <el-table-column label="操作" width="105" :fixed="isMobile ? false : 'right'">
+        <el-table-column label="操作" width="105" fixed="right">
           <template #default="{ row }">
             <div class="row-actions"><el-button link type="primary" :disabled="loading" @click.stop="open(row as TaskItem)">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</el-button></div>
           </template>
@@ -160,4 +205,72 @@ function switchKind() {
 .st-rejected { --dot: var(--eas-danger); }
 .st-canceled { --dot: var(--eas-muted); }
 .st-transferred { --dot: var(--eas-warning); }
+
+/* 窄屏卡片列表：与申请列表同一套纸面分条 */
+.mobile-cards {
+  border-top: 1px solid var(--eas-rule);
+}
+.mobile-card {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--eas-rule);
+}
+.mobile-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+.mobile-card-main:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
+.mobile-card-main:active {
+  background: var(--eas-paper);
+}
+.mobile-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mobile-card-no {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+.mobile-card-flags {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mobile-card-title {
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.mobile-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
+}
+.mobile-card-task {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+  font-size: var(--eas-fs-xs);
+}
+.mobile-card-comment {
+  color: var(--eas-ink-2);
+  overflow-wrap: anywhere;
+}
+.mobile-card-go {
+  align-self: flex-end;
+  margin-top: 2px;
+  color: var(--eas-primary);
+  font-size: var(--eas-fs-sm);
+}
 </style>

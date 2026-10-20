@@ -1,9 +1,13 @@
 import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import {
+  BROWNIAN_CURSOR_HEAT,
   RIPPLE_DURATION,
+  RIPPLE_MAX_DISPLACEMENT,
+  brownianStep,
   calcDotInfluence,
   calcDotOffset,
   calcDotRadius,
+  calcTrailOffset,
   easeCursor,
   interpolateRgba,
   isSettled,
@@ -12,6 +16,9 @@ import {
   rippleEmphasis,
   rippleOffset,
   rippleRadius,
+  resizeBrownianField,
+  stepBrownianDot,
+  type BrownianField,
   type Rgba,
 } from './paperMath'
 
@@ -24,6 +31,8 @@ export interface PaperFieldOptions {
   maxDotRadius?: number
   lightRadius?: number
   maxLightAlpha?: number
+  /** 点阵是否做布朗运动（减弱动效 / 触屏下自动关闭） */
+  ambient?: boolean
   container?:
     | Ref<HTMLElement | null | undefined>
     | HTMLElement
@@ -266,6 +275,10 @@ export function usePaperField(
   const maxLightAlpha = options.maxLightAlpha ?? 0.35
   // 涟漪脏矩形余量：覆盖擦除圆半径与位移后点半径
   const rippleDotPadding = Math.max(maxDotRadius, dotRadius + 1.5) + 1
+  // 点阵的布朗运动：只在精细指针 + 非减弱动效时开启
+  const ambientEnabled = options.ambient !== false
+  const AMBIENT_FRAME_MS = 33
+  const TRAIL_MAX = 2.4
 
   const isDegraded = ref(false)
 
@@ -291,6 +304,16 @@ export function usePaperField(
   let activeRipples: RippleItem[] = []
   const rippleFrames: RippleFrame[] = []
   const dynamicDots: DynamicDot[] = []
+  // 光标拖尾：记录最近一次移动方向，快速拖动时点阵被轻轻带走
+  let trailX = 0
+  let trailY = 0
+  let prevPointerX = 0
+  let prevPointerY = 0
+  let lastPointerMoveAt = 0
+  let lastAmbientRender = 0
+  // 每个点各自的布朗位移与速度，随网格尺寸重建
+  let brownian: BrownianField | null = null
+  let lastBrownianAt = 0
 
   // 尺寸缓存
   let width = 0
@@ -382,7 +405,206 @@ export function usePaperField(
     offCtx.restore()
   }
 
+  /**
+   * 布朗模式：每个点在网格原位附近各自无规则地抖动，光标附近升温抖得更凶，再叠加吸附 / 拖尾 / 涟漪。
+   * 基础点用一次 path 批量绘制，只有受影响的少数点逐点绘制，避免每帧上千次状态切换。
+   */
+  function renderAmbientFrame(now: number) {
+    const canvas = canvasRef.value
+    const field = brownian
+    if (!canvas || !field || width <= 0 || height <= 0) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const tStart = performance.now()
+    const colors = resolvePaperColors(getBasePropValue())
+
+    ctx.save()
+    ctx.scale(dpr, dpr)
+    ctx.fillStyle = colors.baseColor
+    ctx.fillRect(0, 0, width, height)
+
+    const curStrength = cursorStrength
+    const hasCursor = curStrength > 0.001
+    const trailSpeed = Math.hypot(trailX, trailY)
+    const hasTrail = hasCursor && trailSpeed > 0.05
+
+    // 收集本帧活跃的涟漪状态
+    let rippleCount = 0
+    for (const ripple of activeRipples) {
+      const elapsed = now - ripple.t0
+      if (elapsed < 0 || elapsed >= RIPPLE_DURATION) continue
+      let frame = rippleFrames[rippleCount]
+      if (!frame) {
+        frame = { x: 0, y: 0, elapsed: 0, radius: 0, amplitude: 0 }
+        rippleFrames[rippleCount] = frame
+      }
+      frame.x = ripple.x
+      frame.y = ripple.y
+      frame.elapsed = elapsed
+      frame.radius = rippleRadius(elapsed)
+      frame.amplitude = rippleAmplitude(elapsed)
+      rippleCount++
+    }
+
+    // rAF 时间戳可能略早于上一次 performance.now()，负值按 0 处理
+    const step = brownianStep(lastBrownianAt > 0 ? (now - lastBrownianAt) / 1000 : 0)
+    lastBrownianAt = Math.max(lastBrownianAt, now)
+
+    // 基础点阵：先批量画不受影响的点，受影响点留给逐点绘制
+    let dotCount = 0
+    ctx.fillStyle = `rgba(${colors.baseDotColor.r}, ${colors.baseDotColor.g}, ${colors.baseDotColor.b}, ${colors.baseDotColor.a})`
+    ctx.beginPath()
+    for (let col = 0; col < field.cols; col++) {
+      const x0 = col * spacing
+      for (let row = 0; row < field.rows; row++) {
+        const y0 = row * spacing
+        const i = col * field.rows + row
+        let temperature = 1
+        if (hasCursor) {
+          const homeDist = Math.hypot(x0 - curX, y0 - curY)
+          if (homeDist < radius) {
+            temperature += BROWNIAN_CURSOR_HEAT * calcDotInfluence(homeDist, radius) * curStrength
+          }
+        }
+        stepBrownianDot(field, i, step, temperature)
+        const ax = x0 + field.x[i]
+        const ay = y0 + field.y[i]
+        let near = false
+        let cursorDist = 0
+        let cursorInfluence = 0
+
+        if (hasCursor) {
+          cursorDist = Math.hypot(ax - curX, ay - curY)
+          if (cursorDist < radius) {
+            cursorInfluence = calcDotInfluence(cursorDist, radius) * curStrength
+            if (cursorInfluence > 0.001) near = true
+          }
+        }
+        if (!near) {
+          for (let i = 0; i < rippleCount; i++) {
+            const frame = rippleFrames[i]
+            if (Math.hypot(ax - frame.x, ay - frame.y) <= frame.radius + Math.max(frame.amplitude, RIPPLE_MAX_DISPLACEMENT) + rippleDotPadding) {
+              near = true
+              break
+            }
+          }
+        }
+        if (!near) {
+          ctx.moveTo(ax + dotRadius, ay)
+          ctx.arc(ax, ay, dotRadius, 0, Math.PI * 2)
+          continue
+        }
+
+        let dot = dynamicDots[dotCount]
+        if (!dot) {
+          dot = { x0: 0, y0: 0, x: 0, y: 0, emphasis: 0, rippleTint: false }
+          dynamicDots[dotCount] = dot
+        }
+        dot.x0 = ax
+        dot.y0 = ay
+        dot.x = ax
+        dot.y = ay
+        dot.emphasis = 0
+        dot.rippleTint = false
+        dotCount++
+      }
+    }
+    ctx.fill()
+
+    // 光标附近的白色径向光
+    if (hasCursor) {
+      const glowR = lightRadius
+      const gradient = ctx.createRadialGradient(curX, curY, 0, curX, curY, glowR)
+      const lightAlpha = maxLightAlpha * curStrength
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${lightAlpha.toFixed(3)})`)
+      gradient.addColorStop(0.5, `rgba(255, 255, 255, ${(lightAlpha * 0.4).toFixed(3)})`)
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+      ctx.fillStyle = gradient
+      ctx.fillRect(curX - glowR, curY - glowR, glowR * 2, glowR * 2)
+    }
+
+    // 受影响点：吸附 + 拖尾 + 涟漪
+    const rippleDotColor: Rgba = { ...colors.primaryRgb, a: RIPPLE_MAX_DOT_ALPHA }
+    for (let i = 0; i < dotCount; i++) {
+      const dot = dynamicDots[i]
+      let cursorDist = 0
+      let cursorInfluence = 0
+      if (hasCursor) {
+        cursorDist = Math.hypot(dot.x0 - curX, dot.y0 - curY)
+        if (cursorDist < radius) {
+          cursorInfluence = calcDotInfluence(cursorDist, radius) * curStrength
+        }
+      }
+
+      let rippleDx = 0
+      let rippleDy = 0
+      let rippleStrength = 0
+      for (let j = 0; j < rippleCount; j++) {
+        const frame = rippleFrames[j]
+        const dx = dot.x0 - frame.x
+        const dy = dot.y0 - frame.y
+        const dist = Math.hypot(dx, dy)
+        if (dist > frame.radius) continue
+        const offset = rippleOffset(dist, frame.radius, frame.elapsed)
+        const emphasis = rippleEmphasis(offset)
+        if (emphasis > rippleStrength) rippleStrength = emphasis
+        if (dist > 0) {
+          rippleDx += (dx / dist) * offset
+          rippleDy += (dy / dist) * offset
+        }
+      }
+
+      let x = dot.x0
+      let y = dot.y0
+      if (cursorInfluence > 0) {
+        const attracted = calcDotOffset(dot.x0, dot.y0, curX, curY, cursorDist, maxOffset, cursorInfluence)
+        x = attracted.x
+        y = attracted.y
+        if (hasTrail) {
+          const trail = calcTrailOffset(trailX, trailY, cursorInfluence, TRAIL_MAX)
+          x += trail.x
+          y += trail.y
+        }
+      }
+      dot.x = x + rippleDx
+      dot.y = y + rippleDy
+      dot.emphasis = Math.max(cursorInfluence, rippleStrength)
+      dot.rippleTint = rippleStrength > cursorInfluence
+
+      const tint = dot.rippleTint ? rippleDotColor : colors.primaryDotColor
+      const col = interpolateRgba(colors.baseDotColor, tint, dot.emphasis)
+      const r = calcDotRadius(dotRadius, maxDotRadius, dot.emphasis)
+      ctx.fillStyle = `rgba(${col.r}, ${col.g}, ${col.b}, ${col.a})`
+      ctx.beginPath()
+      ctx.arc(dot.x, dot.y, r, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    ctx.restore()
+
+    if (typeof window !== 'undefined') {
+      const renderDuration = performance.now() - tStart
+      const g = window as unknown as {
+        __paperFieldPerf?: {
+          durations: number[]
+          activeRaf: boolean
+        }
+      }
+      if (g.__paperFieldPerf) {
+        g.__paperFieldPerf.durations.push(renderDuration)
+        if (g.__paperFieldPerf.durations.length > 120) {
+          g.__paperFieldPerf.durations.shift()
+        }
+      }
+    }
+  }
+
   function renderFrame(now: number) {
+    if (ambientEnabled && !isDegraded.value) {
+      renderAmbientFrame(now)
+      return
+    }
     const canvas = canvasRef.value
     if (!canvas || !offscreenCanvas || width <= 0 || height <= 0) return
     const ctx = canvas.getContext('2d')
@@ -432,7 +654,7 @@ export function usePaperField(
       if (hasCursor) extendDirty(curX, curY, radius)
       for (let i = 0; i < rippleCount; i++) {
         const frame = rippleFrames[i]
-        extendDirty(frame.x, frame.y, frame.radius + frame.amplitude + rippleDotPadding)
+        extendDirty(frame.x, frame.y, frame.radius + Math.max(frame.amplitude, RIPPLE_MAX_DISPLACEMENT) + rippleDotPadding)
       }
 
       const minX = Math.max(0, Math.floor(dirtyMinX / spacing) * spacing)
@@ -581,10 +803,36 @@ export function usePaperField(
       curY = targetY
     }
 
+    // 2b. 指针停下后拖尾缓慢消失
+    if (now - lastPointerMoveAt > 60) {
+      trailX *= 0.9
+      trailY *= 0.9
+      if (Math.abs(trailX) < 0.02) trailX = 0
+      if (Math.abs(trailY) < 0.02) trailY = 0
+    }
+
     // 3. 涟漪清理（每个涟漪 1000ms 后移除）
     activeRipples = pruneRipples(activeRipples, now)
 
     // 4. 绘制本帧
+    if (ambientEnabled && !isDegraded.value) {
+      const active = isPointerInside || activeRipples.length > 0
+      // 静止时把布朗运动降到约 30fps，交互时恢复逐帧，兼顾细腻与功耗
+      if (!active && now - lastAmbientRender < AMBIENT_FRAME_MS) {
+        rafId = requestAnimationFrame(tick)
+        return
+      }
+      lastAmbientRender = now
+      renderFrame(now)
+      if (typeof document !== 'undefined' && document.hidden) {
+        rafId = null
+        stopLoop()
+        return
+      }
+      rafId = requestAnimationFrame(tick)
+      return
+    }
+
     renderFrame(now)
 
     // 5. 判断是否可以停止 rAF
@@ -610,6 +858,17 @@ export function usePaperField(
     targetX = e.clientX - rect.left
     targetY = e.clientY - rect.top
 
+    const now = performance.now()
+    if (lastPointerMoveAt > 0) {
+      const dx = Math.max(-14, Math.min(14, targetX - prevPointerX))
+      const dy = Math.max(-14, Math.min(14, targetY - prevPointerY))
+      trailX = trailX * 0.62 + dx * 0.38
+      trailY = trailY * 0.62 + dy * 0.38
+    }
+    prevPointerX = targetX
+    prevPointerY = targetY
+    lastPointerMoveAt = now
+
     if (!isPointerInside) {
       isPointerInside = true
       fadeStartTime = null
@@ -626,6 +885,7 @@ export function usePaperField(
     isPointerInside = false
     fadeStartTime = performance.now()
     fadeStartStrength = cursorStrength
+    lastPointerMoveAt = 0
     startLoop()
   }
 
@@ -652,7 +912,7 @@ export function usePaperField(
     if (document.hidden) {
       stopLoop()
     } else {
-      if (!isDegraded.value && (isPointerInside || activeRipples.length > 0)) {
+      if (!isDegraded.value && (ambientEnabled || isPointerInside || activeRipples.length > 0)) {
         startLoop()
       }
     }
@@ -670,6 +930,7 @@ export function usePaperField(
         renderFrame(performance.now())
       } else {
         attachPointerListeners()
+        if (ambientEnabled) startLoop()
       }
     }
   }
@@ -757,6 +1018,10 @@ export function usePaperField(
 
     canvas.width = Math.round(width * dpr)
     canvas.height = Math.round(height * dpr)
+    if (ambientEnabled) {
+      // 与渲染循环 x0 <= width 的取点一致
+      brownian = resizeBrownianField(brownian, Math.floor(width / spacing) + 1, Math.floor(height / spacing) + 1)
+    }
 
     rebuildOffscreen()
     renderFrame(performance.now())
@@ -787,6 +1052,7 @@ export function usePaperField(
 
       if (!isDegraded.value) {
         attachPointerListeners()
+        if (ambientEnabled) startLoop()
       }
     }
   }

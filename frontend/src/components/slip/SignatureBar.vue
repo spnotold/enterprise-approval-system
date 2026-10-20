@@ -89,15 +89,31 @@ const popoverFor = (cell: Cell) =>
 const shortTime = (iso: string | null) => (iso ? fmtDateTime(iso).slice(5) : '')
 
 const scroller = ref<HTMLElement | null>(null)
+const currentCellKey = computed(() => cells.value.find((cell) => cell.state === 'active' || cell.state === 'rejected')?.key)
 // 格子多、横向溢出时，把当前格滚进可视区（只滚签批栏本身，不带动页面）
-onMounted(() => {
-  void nextTick(() => {
-    const box = scroller.value
-    const current = box?.querySelector<HTMLElement>('.cell.active, .cell.rejected')
-    if (!box || !current || box.scrollWidth <= box.clientWidth) return
-    const offset = current.offsetLeft - box.offsetLeft
-    if (offset + current.offsetWidth > box.clientWidth) box.scrollLeft = offset - 24
-  })
+async function scrollCurrentIntoView(behavior: 'auto' | 'smooth' = 'smooth') {
+  // 在 nextTick 前记下目标，避免瞬时落章消费 freshTaskId 后丢失定位。
+  const key = cells.value.find((cell) => cell.rows.some((row) => row.task.id === props.freshTaskId))?.key ?? currentCellKey.value
+  await nextTick()
+  const box = scroller.value
+  const current = box && Array.from(box.querySelectorAll<HTMLElement>('.cell')).find((cell) => cell.dataset.key === key)
+  if (!box || !current || box.scrollWidth <= box.clientWidth) return
+  const bounds = box.getBoundingClientRect()
+  const rect = current.getBoundingClientRect()
+  const left = bounds.left + box.clientLeft
+  const right = left + box.clientWidth
+  let delta = 0
+  if (rect.left < left) delta = rect.left - left - 24
+  else if (rect.right > right) delta = rect.right - right + 24
+  if (!delta) return
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  box.scrollTo({ left: box.scrollLeft + delta, behavior: reduce ? 'auto' : behavior })
+}
+onMounted(() => { void scrollCurrentIntoView('auto') })
+watch([currentCellKey, () => props.freshTaskId], ([key, fresh], [oldKey, oldFresh]) => {
+  // 落章结束（freshTaskId 变回 null）且当前格没变时，不再补一次滚动
+  if (fresh == null && oldFresh != null && key === oldKey) return
+  void scrollCurrentIntoView()
 })
 
 function cellLabel(cell: Cell): string {
@@ -126,6 +142,7 @@ function cellLabel(cell: Cell): string {
           <button
             type="button"
             class="cell"
+            :data-key="cell.key"
             :class="[cell.state, { linked: hover.key.value === cell.key }]"
             :aria-label="cellLabel(cell)"
             @mouseenter="hover.enter(cell.key, 'bar', 'pointer')"
@@ -324,6 +341,11 @@ function cellLabel(cell: Cell): string {
 @media (max-width: 768px) {
   .cell {
     width: 160px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell {
+    transition: none;
   }
 }
 </style>
