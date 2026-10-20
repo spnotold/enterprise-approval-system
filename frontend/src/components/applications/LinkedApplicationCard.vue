@@ -32,17 +32,18 @@ withDefaults(defineProps<{ application: LinkableApplication; navigable?: boolean
 </template>
 
 <style scoped>
-.linked-card { padding: 12px 14px; border: 1px solid var(--eas-rule); border-radius: var(--eas-radius-panel); background: var(--eas-surface); font-size: var(--eas-fs-sm); line-height: 1.6; }
-.linked-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.linked-card { min-width: 0; padding: 12px 16px; border: 1px solid var(--eas-rule); border-radius: var(--eas-radius-control); background: var(--eas-sheet); font-size: var(--eas-fs-sm); line-height: 1.6; }
+.linked-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
 .linked-type { color: var(--eas-ink-2); font-size: var(--eas-fs-xs); }
 .linked-amount { margin-left: auto; }
-.linked-title { margin-top: 4px; color: var(--eas-ink); }
-.linked-fields { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 8px 0 0; }
-.linked-fields dt { color: var(--eas-ink-2); }
+.linked-title { margin-top: 4px; color: var(--eas-ink); overflow-wrap: anywhere; }
+.linked-fields { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--eas-rule); }
+.linked-fields + .linked-fields { margin-top: 0; border-top: 0; padding-top: 2px; }
+.linked-fields dt { color: var(--eas-ink-2); white-space: nowrap; }
 .linked-fields dd { margin: 0; overflow-wrap: anywhere; }
 .linked-foot { margin-top: 8px; color: var(--eas-ink-3); font-size: var(--eas-fs-xs); }
 .num { font-variant-numeric: tabular-nums; }
-.app-link { color: var(--eas-primary); text-decoration: none; font-variant-numeric: tabular-nums; font-weight: 600; }
-.app-link:hover { text-decoration: underline; }
+.app-link { display: inline-flex; align-items: center; min-height: 32px; box-sizing: border-box; padding: 4px 0; color: var(--eas-primary); text-decoration: none; font-variant-numeric: tabular-nums; font-weight: 600; transition: color var(--eas-dur-fast) var(--eas-ease); }
+.app-link:hover { color: var(--eas-primary-hover); text-decoration: underline; }
 .app-link:focus-visible { outline: 2px solid var(--eas-primary); outline-offset: 2px; border-radius: var(--eas-radius-tag); }
 </style>

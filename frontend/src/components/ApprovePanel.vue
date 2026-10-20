@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 同意 / 驳回面板：同意意见可选；驳回理由必填 5-500 字。按钮与结果提示用同一个动词（同意 → 已同意）。
+// 同意 / 驳回面板：同意意见可选；驳回理由必填 5-500 字。按钮与结果提示用同一个动词（同意对应已同意）。
 // 幂等键在弹窗打开时生成，同一弹窗内的重试复用同一个键。
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
@@ -197,16 +197,31 @@ async function confirm() {
 <style scoped>
 .approve-panel {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 .approve-panel .el-button + .el-button {
   margin-left: 0;
 }
-/* 驳回：次要描边按钮，悬停才露出赭色 */
+.approve-panel .el-button {
+  min-width: 72px;
+  border-radius: var(--eas-radius-control);
+}
+.approve-panel .el-button:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
+/* 驳回：次要描边按钮（rule-strong 边），悬停才露出赭色 */
+.reject-button:not(.is-disabled) {
+  border-color: var(--eas-rule-strong);
+  color: var(--eas-ink);
+  background: var(--eas-sheet);
+  transition: border-color var(--eas-dur-fast) var(--eas-ease), color var(--eas-dur-fast) var(--eas-ease), background-color var(--eas-dur-fast) var(--eas-ease);
+}
 .reject-button:not(.is-disabled):hover,
 .reject-button:not(.is-disabled):focus-visible {
   border-color: var(--eas-danger);
   color: var(--eas-danger);
   background: var(--eas-danger-tint);
-}
-</style>
+}</style>
