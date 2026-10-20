@@ -3,7 +3,6 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { ButtonInstance, FormInstance, FormRules } from 'element-plus'
-import { Lock, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/lib/api'
 import { toApiError } from '@/lib/http'
@@ -70,6 +69,7 @@ const inlineError = ref<{ text: string; type: 'error' | 'warning' } | null>(null
 const submitBtnRef = ref<ButtonInstance>()
 // 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
 const demoMode = ref(false)
+const demoExpanded = ref(false)
 
 onMounted(async () => {
   try {
@@ -136,7 +136,6 @@ function fillDemo(a: DemoAccount) {
       <el-form-item label="用户名或邮箱" prop="account">
         <el-input
           v-model="form.account"
-          :prefix-icon="User"
           placeholder="请输入用户名或邮箱"
           autocomplete="username"
           maxlength="100"
@@ -146,7 +145,6 @@ function fillDemo(a: DemoAccount) {
       <el-form-item label="密码" prop="password">
         <el-input
           v-model="form.password"
-          :prefix-icon="Lock"
           type="password"
           placeholder="请输入密码"
           autocomplete="current-password"
@@ -173,13 +171,21 @@ function fillDemo(a: DemoAccount) {
       还没有账号？<router-link to="/register" class="link">注册新账号</router-link>
     </div>
 
-    <!-- 演示账号：直接平铺，不折叠，10 个账号两列放完 -->
     <section v-if="demoMode" class="demo">
-      <div class="demo-head">
-        <span class="demo-title">演示账号</span>
-        <span class="demo-hint">点一个账号自动填入，密码都是 {{ DEMO_PASSWORD }}</span>
-      </div>
-      <ul class="demo-list">
+      <button
+        type="button"
+        class="demo-toggle"
+        :aria-expanded="demoExpanded"
+        aria-controls="demo-account-list"
+        @click="demoExpanded = !demoExpanded"
+      >
+        <span class="demo-summary">
+          <strong>演示账号</strong>
+          <span>密码均为 {{ DEMO_PASSWORD }}，点一行即可填入</span>
+        </span>
+        <span class="demo-action">{{ demoExpanded ? '收起' : '展开' }}</span>
+      </button>
+      <ul v-if="demoExpanded" id="demo-account-list" class="demo-list">
         <li v-for="a in DEMO_ACCOUNTS" :key="a.username">
           <button type="button" class="demo-item" :title="a.desc" @click="fillDemo(a)">
             <span class="demo-line">
@@ -196,16 +202,32 @@ function fillDemo(a: DemoAccount) {
 
 <style scoped>
 .auth-title {
-  margin: 0 0 24px;
-  font-size: var(--eas-fs-lg);
+  margin: 0 0 28px;
+  font-family: var(--eas-font-serif);
+  font-size: 28px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--eas-lh-title);
+}
+.auth-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+.auth-form :deep(.el-form-item__label) {
+  height: auto;
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--eas-ink);
+  line-height: 1.5;
+}
+.auth-form :deep(.el-input__wrapper) {
+  min-height: 40px;
 }
 .form-alert {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .submit {
   width: 100%;
+  height: 42px;
+  font-size: var(--eas-fs-nav);
 }
 .switch-line {
   margin-top: 16px;
@@ -219,41 +241,74 @@ function fillDemo(a: DemoAccount) {
 .link:hover {
   text-decoration: underline;
 }
+.link:focus-visible {
+  border-radius: var(--eas-radius-tag);
+}
 
-/* 演示账号：分隔线 + 小标题行 + 两列平铺按钮，无内部滚动 */
 .demo {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 28px;
+  padding-top: 16px;
   border-top: 1px solid var(--eas-rule);
 }
-.demo-head {
+.demo-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--eas-ink-2);
+  font: inherit;
+  font-size: var(--eas-fs-note);
+  text-align: left;
+  cursor: pointer;
+}
+.demo-summary {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-  margin-bottom: 12px;
+  gap: 4px 8px;
+  min-width: 0;
 }
-.demo-title {
-  font-size: var(--eas-fs-sm);
+.demo-summary strong {
+  color: var(--eas-ink);
   font-weight: 600;
 }
-/* 说明与「演示账号」分开放，避免被读成账号名 */
-.demo-hint {
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-2);
+.demo-action {
+  flex: none;
+  color: var(--eas-primary);
 }
 .demo-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  overflow: hidden;
   list-style: none;
-  margin: 0;
+  margin: 12px 0 0;
   padding: 0;
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-control);
 }
-/* 表单栏窄于 400px：网格改单列 */
+.demo-list li {
+  min-width: 0;
+  border-bottom: 1px solid var(--eas-rule);
+}
+.demo-list li:nth-child(odd) {
+  border-right: 1px solid var(--eas-rule);
+}
+.demo-list li:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
 @container auth-main (max-width: 399px) {
   .demo-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .demo-list li:nth-child(odd) {
+    border-right: 0;
+  }
+  .demo-list li:nth-last-child(2) {
+    border-bottom: 1px solid var(--eas-rule);
   }
 }
 .demo-item {
@@ -262,30 +317,28 @@ function fillDemo(a: DemoAccount) {
   gap: 2px;
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 10px;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-control);
-  background: var(--eas-surface);
+  min-height: 52px;
+  padding: 7px 10px;
+  border: 0;
+  background: var(--eas-sheet);
   text-align: left;
   cursor: pointer;
   font: inherit;
   color: var(--eas-ink);
   line-height: 1.5;
   transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
     background-color var(--eas-dur-fast) var(--eas-ease),
     transform var(--eas-dur-fast) var(--eas-ease);
 }
 .demo-item:hover {
-  border-color: var(--eas-primary);
-  background: var(--eas-paper);
+  background: var(--eas-row-hover);
 }
 .demo-item:active {
   transform: translateY(1px);
 }
 .demo-item:focus-visible {
   outline: 2px solid var(--eas-primary);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 .demo-line {
   display: flex;

@@ -213,7 +213,7 @@ async function onSubmit() {
 
 <template>
   <AuthShell>
-    <h1 class="auth-title">注册账号</h1>
+    <h1 class="auth-title">注册</h1>
     <p class="auth-sub">提交后由管理员审核，审核通过即可登录</p>
 
     <el-form
@@ -221,6 +221,7 @@ async function onSubmit() {
       :model="form"
       :rules="rules"
       label-position="top"
+      size="large"
       class="auth-form"
       @submit.prevent="onSubmit"
     >
@@ -338,8 +339,8 @@ async function onSubmit() {
         class="form-alert"
       />
 
-      <el-button type="primary" size="large" native-type="submit" :loading="submitting" class="submit">
-        注 册
+      <el-button type="primary" native-type="submit" :loading="submitting" class="submit">
+        注册
       </el-button>
     </el-form>
 
@@ -352,13 +353,28 @@ async function onSubmit() {
 <style scoped>
 .auth-title {
   margin: 0;
-  font-size: var(--eas-fs-lg);
+  font-family: var(--eas-font-serif);
+  font-size: 28px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--eas-lh-title);
 }
 .auth-sub {
-  margin: 4px 0 24px;
+  margin: 6px 0 24px;
   color: var(--eas-ink-2);
+}
+.auth-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+.auth-form :deep(.el-form-item__label) {
+  height: auto;
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--eas-ink);
+  line-height: 1.5;
+}
+.auth-form :deep(.el-input__wrapper),
+.auth-form :deep(.el-select__wrapper) {
+  min-height: 40px;
 }
 .full {
   width: 100%;
@@ -398,10 +414,12 @@ async function onSubmit() {
   transition: background var(--eas-dur) var(--eas-ease);
 }
 .form-alert {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .submit {
   width: 100%;
+  height: 42px;
+  font-size: var(--eas-fs-nav);
 }
 .switch-line {
   margin-top: 16px;
@@ -414,5 +432,8 @@ async function onSubmit() {
 }
 .link:hover {
   text-decoration: underline;
+}
+.link:focus-visible {
+  border-radius: var(--eas-radius-tag);
 }
 </style>
