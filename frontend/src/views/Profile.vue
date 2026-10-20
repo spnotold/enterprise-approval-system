@@ -8,7 +8,6 @@ import { isDialogCancel, showError } from '@/lib/errors'
 import { GRANT_PERMISSION_LABEL, PERMISSION_LABEL, ROLE_LABEL, SCOPE_TYPE_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { useFieldErrors } from '@/composables/useFieldErrors'
-import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useAuthStore } from '@/stores/auth'
 import { useDictStore } from '@/stores/dict'
 import type { GrantBrief } from '@/lib/types'
@@ -19,7 +18,6 @@ const PASSWORD_MSG = '密码 8-64 位，至少包含字母和数字'
 
 const auth = useAuthStore()
 const dict = useDictStore()
-const { isMobile } = useBreakpoint()
 
 const me = computed(() => auth.me)
 const refreshing = ref(false)
@@ -152,63 +150,69 @@ async function changePassword() {
 </script>
 
 <template>
-  <div class="page profile">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">个人信息</h2>
-        <div class="page-subtitle">账号、角色与权限由管理员维护；如需调整请联系系统管理员</div>
-      </div>
+  <div class="page">
+    <h2 class="page-title">个人信息</h2>
+
+    <div v-if="!me" class="sheet skeleton-sheet">
+      <el-skeleton :rows="8" animated />
     </div>
+    <div v-else class="profile-grid">
+      <div class="stack">
+        <section v-loading="refreshing" class="sheet">
+          <div class="sheet-head"><h2>基本信息</h2></div>
+          <dl class="field-list">
+            <div class="field"><dt>用户名</dt><dd>{{ me.username }}</dd></div>
+            <div class="field"><dt>姓名</dt><dd>{{ me.realName }}</dd></div>
+            <div class="field"><dt>邮箱</dt><dd>{{ me.email }}</dd></div>
+            <div class="field"><dt>所属部门</dt><dd>{{ me.deptName ?? '未分配' }}</dd></div>
+            <div class="field field-full">
+              <dt>角色</dt>
+              <dd>
+                <div class="tags">
+                  <el-tag v-for="r in roles" :key="r.code" effect="plain" disable-transitions>
+                    {{ r.name }}<span v-if="r.primary" class="primary-mark">（主办人）</span>
+                  </el-tag>
+                  <span v-if="!roles.length" class="muted">无</span>
+                </div>
+              </dd>
+            </div>
+            <div v-if="headDepts.length" class="field field-full">
+              <dt>负责部门</dt>
+              <dd>
+                <div class="tags">
+                  <el-tag v-for="(d, i) in headDepts" :key="i" type="success" effect="plain" disable-transitions>
+                    {{ d }}
+                  </el-tag>
+                </div>
+              </dd>
+            </div>
+            <div class="field field-full">
+              <dt>功能权限</dt>
+              <dd>
+                <div class="tags">
+                  <el-tag v-for="p in permissions" :key="p.code" type="info" disable-transitions>{{ p.name }}</el-tag>
+                  <span v-if="!permissions.length" class="muted">无</span>
+                </div>
+              </dd>
+            </div>
+          </dl>
+        </section>
 
-    <el-skeleton v-if="!me" :rows="8" animated />
-    <el-row v-else :gutter="16" class="profile-row">
-      <el-col :xs="24" :lg="14" class="col-stack">
-        <el-card v-loading="refreshing" shadow="never">
-          <template #header><span class="card-title">基本信息</span></template>
-          <el-descriptions :column="isMobile ? 1 : 2" border>
-            <el-descriptions-item label="用户名">{{ me.username }}</el-descriptions-item>
-            <el-descriptions-item label="姓名">{{ me.realName }}</el-descriptions-item>
-            <el-descriptions-item label="邮箱">{{ me.email }}</el-descriptions-item>
-            <el-descriptions-item label="所属部门">{{ me.deptName ?? '未分配' }}</el-descriptions-item>
-            <el-descriptions-item label="角色" :span="isMobile ? 1 : 2">
-              <div class="tags">
-                <el-tag v-for="r in roles" :key="r.code" effect="plain" disable-transitions>
-                  {{ r.name }}<span v-if="r.primary" class="primary-mark">（主办人）</span>
-                </el-tag>
-                <span v-if="!roles.length" class="muted">无</span>
-              </div>
-            </el-descriptions-item>
-            <el-descriptions-item v-if="headDepts.length" label="负责部门" :span="isMobile ? 1 : 2">
-              <div class="tags">
-                <el-tag v-for="(d, i) in headDepts" :key="i" type="success" effect="plain" disable-transitions>
-                  {{ d }}
-                </el-tag>
-              </div>
-            </el-descriptions-item>
-            <el-descriptions-item label="功能权限" :span="isMobile ? 1 : 2">
-              <div class="tags">
-                <el-tag v-for="p in permissions" :key="p.code" type="info" disable-transitions>{{ p.name }}</el-tag>
-                <span v-if="!permissions.length" class="muted">无</span>
-              </div>
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-
-        <el-card shadow="never">
-          <template #header><span class="card-title">数据授权</span></template>
-          <el-empty v-if="!grantRows.length" :image-size="60" description="暂无数据授权" />
+        <section class="sheet">
+          <div class="sheet-head"><h2>数据授权</h2></div>
+          <p v-if="!grantRows.length" class="empty-line">暂无数据授权</p>
           <el-table v-else :data="grantRows" row-key="key" class="full">
             <el-table-column prop="label" label="权限" min-width="180" />
             <el-table-column prop="scope" label="范围" min-width="140" />
             <el-table-column prop="validUntil" label="有效期至" min-width="150" />
           </el-table>
-        </el-card>
-      </el-col>
+        </section>
+      </div>
 
-      <el-col :xs="24" :lg="10" class="col-stack">
-        <el-card shadow="never">
-          <template #header><span class="card-title">通知设置</span></template>
-          <div class="pref-row">
+      <div class="stack">
+        <section class="sheet">
+          <div class="sheet-head"><h2>通知设置</h2></div>
+          <div class="sheet-section pref-row">
             <div>
               <div>邮件提醒</div>
               <div class="muted small">新待办、审批结果等重要通知同时发送到 {{ me.email }}；站内通知不受影响</div>
@@ -223,80 +227,109 @@ async function changePassword() {
               @change="onEmailNotify"
             />
           </div>
-        </el-card>
+        </section>
 
-        <el-card shadow="never">
-          <template #header><span class="card-title">修改密码</span></template>
-          <el-form
-            ref="pwdRef"
-            :model="pwd"
-            :rules="pwdRules"
-            label-position="top"
-            class="pwd-form"
-            @submit.prevent="changePassword"
-          >
-            <el-form-item label="当前密码" prop="oldPassword" :error="pfe.get('oldPassword')">
-              <el-input
-                v-model="pwd.oldPassword"
-                type="password"
-                autocomplete="current-password"
-                maxlength="64"
-                show-password
-                @input="touch('oldPassword')"
+        <section class="sheet">
+          <div class="sheet-head"><h2>修改密码</h2></div>
+          <div class="sheet-section">
+            <el-form
+              ref="pwdRef"
+              :model="pwd"
+              :rules="pwdRules"
+              label-position="top"
+              class="pwd-form"
+              @submit.prevent="changePassword"
+            >
+              <el-form-item label="当前密码" prop="oldPassword" :error="pfe.get('oldPassword')">
+                <el-input
+                  v-model="pwd.oldPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  maxlength="64"
+                  show-password
+                  @input="touch('oldPassword')"
+                />
+              </el-form-item>
+              <el-form-item label="新密码" prop="newPassword" :error="pfe.get('newPassword')">
+                <el-input
+                  v-model="pwd.newPassword"
+                  type="password"
+                  autocomplete="new-password"
+                  maxlength="64"
+                  show-password
+                  :placeholder="PASSWORD_MSG"
+                  @input="touch('newPassword')"
+                />
+              </el-form-item>
+              <el-form-item label="确认新密码" prop="confirm">
+                <el-input
+                  v-model="pwd.confirm"
+                  type="password"
+                  autocomplete="new-password"
+                  maxlength="64"
+                  show-password
+                />
+              </el-form-item>
+              <el-alert
+                v-if="pwdError"
+                :title="pwdError"
+                type="error"
+                show-icon
+                :closable="false"
+                class="form-alert"
               />
-            </el-form-item>
-            <el-form-item label="新密码" prop="newPassword" :error="pfe.get('newPassword')">
-              <el-input
-                v-model="pwd.newPassword"
-                type="password"
-                autocomplete="new-password"
-                maxlength="64"
-                show-password
-                :placeholder="PASSWORD_MSG"
-                @input="touch('newPassword')"
-              />
-            </el-form-item>
-            <el-form-item label="确认新密码" prop="confirm">
-              <el-input
-                v-model="pwd.confirm"
-                type="password"
-                autocomplete="new-password"
-                maxlength="64"
-                show-password
-              />
-            </el-form-item>
-            <el-alert
-              v-if="pwdError"
-              :title="pwdError"
-              type="error"
-              show-icon
-              :closable="false"
-              class="form-alert"
-            />
-            <el-button type="primary" native-type="submit" :loading="changing">修改密码</el-button>
-            <div class="muted small hint">修改成功后将退出登录，其他设备上的登录也会失效。</div>
-          </el-form>
-        </el-card>
-      </el-col>
-    </el-row>
+              <el-button type="primary" native-type="submit" :loading="changing">修改密码</el-button>
+              <div class="muted small hint">修改成功后将退出登录，其他设备上的登录也会失效。</div>
+            </el-form>
+          </div>
+        </section>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.profile-row {
-  row-gap: 16px;
+.skeleton-sheet {
+  padding: var(--eas-sheet-pad);
 }
-.col-stack {
+.profile-grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: var(--eas-gap);
+  align-items: start;
+}
+.stack {
   display: flex;
   flex-direction: column;
+  gap: var(--eas-gap);
+  min-width: 0;
+}
+/* 两列字段：字段名 96px ink-2，值 ink；长内容独占一行 */
+.field-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 32px;
+  margin: 0;
+  padding: 20px var(--eas-sheet-pad) 24px;
+}
+.field {
+  display: flex;
   gap: 16px;
+  min-width: 0;
 }
-.profile {
-  max-width: 1200px;
+.field dt {
+  flex: none;
+  width: 96px;
+  color: var(--eas-ink-2);
 }
-.card-title {
-  font-size: var(--eas-fs-md);
-  font-weight: 600;
+.field dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--eas-ink);
+  overflow-wrap: anywhere;
+}
+.field-full {
+  grid-column: 1 / -1;
 }
 .tags {
   display: flex;
@@ -308,6 +341,11 @@ async function changePassword() {
 }
 .full {
   width: 100%;
+}
+.empty-line {
+  margin: 0;
+  padding: 4px var(--eas-sheet-pad) 24px;
+  color: var(--eas-ink-2);
 }
 .pref-row {
   display: flex;
@@ -323,5 +361,15 @@ async function changePassword() {
 }
 .hint {
   margin-top: 8px;
+}
+@media (max-width: 1000px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 767px) {
+  .field-list {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
