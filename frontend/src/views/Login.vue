@@ -69,7 +69,6 @@ const inlineError = ref<{ text: string; type: 'error' | 'warning' } | null>(null
 const submitBtnRef = ref<ButtonInstance>()
 // 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
 const demoMode = ref(false)
-const demoExpanded = ref(false)
 
 onMounted(async () => {
   try {
@@ -171,21 +170,13 @@ function fillDemo(a: DemoAccount) {
       还没有账号？<router-link to="/register" class="link">注册新账号</router-link>
     </div>
 
+    <!-- 演示账号：直接平铺，不折叠，10 个账号两列放完 -->
     <section v-if="demoMode" class="demo">
-      <button
-        type="button"
-        class="demo-toggle"
-        :aria-expanded="demoExpanded"
-        aria-controls="demo-account-list"
-        @click="demoExpanded = !demoExpanded"
-      >
-        <span class="demo-summary">
-          <strong>演示账号</strong>
-          <span>密码均为 {{ DEMO_PASSWORD }}，点一行即可填入</span>
-        </span>
-        <span class="demo-action">{{ demoExpanded ? '收起' : '展开' }}</span>
-      </button>
-      <ul v-if="demoExpanded" id="demo-account-list" class="demo-list">
+      <div class="demo-head">
+        <span class="demo-title">演示账号</span>
+        <span class="demo-hint">点一个账号自动填入，密码都是 {{ DEMO_PASSWORD }}</span>
+      </div>
+      <ul class="demo-list">
         <li v-for="a in DEMO_ACCOUNTS" :key="a.username">
           <button type="button" class="demo-item" :title="a.desc" @click="fillDemo(a)">
             <span class="demo-line">
@@ -250,35 +241,19 @@ function fillDemo(a: DemoAccount) {
   padding-top: 16px;
   border-top: 1px solid var(--eas-rule);
 }
-.demo-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  width: 100%;
-  min-height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--eas-ink-2);
-  font: inherit;
-  font-size: var(--eas-fs-note);
-  text-align: left;
-  cursor: pointer;
-}
-.demo-summary {
+.demo-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
-  min-width: 0;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-size: var(--eas-fs-note);
 }
-.demo-summary strong {
+.demo-title {
   color: var(--eas-ink);
   font-weight: 600;
 }
-.demo-action {
-  flex: none;
-  color: var(--eas-primary);
+.demo-hint {
+  color: var(--eas-ink-2);
 }
 .demo-list {
   display: grid;
