@@ -22,6 +22,7 @@ import SlipSection from '@/components/slip/SlipSection.vue'
 import SlipFields from '@/components/slip/SlipFields.vue'
 import SlipField from '@/components/slip/SlipField.vue'
 import { provideSlipHover } from '@/components/slip/hover'
+import { detailBackLabel, detailStatusSentence } from '@/components/slip/detailPresentation'
 
 const props = defineProps<{ id: number }>()
 const router = useRouter()
@@ -62,6 +63,21 @@ const canHandle = computed(() => !!(
   detail.value.applicant.id !== auth.me?.id && auth.can('TASK_HANDLE') && !auth.hasRole('SYS_ADMIN') &&
   (allowed('APPROVE') || allowed('REJECT'))
 ))
+const backLabel = ref(detailBackLabel(window.history.state?.back))
+watch(() => router.currentRoute.value.fullPath, () => {
+  backLabel.value = detailBackLabel(window.history.state?.back)
+}, { flush: 'post' })
+const statusSentence = computed(() => detail.value ? detailStatusSentence(detail.value, ownerAction('COPY')) : '')
+const actionBar = ref<HTMLElement | null>(null)
+const actionBarHeight = ref(64)
+watch(actionBar, (element, _old, onCleanup) => {
+  if (!element) return
+  const measure = () => { actionBarHeight.value = element.getBoundingClientRect().height }
+  measure()
+  const observer = new ResizeObserver(measure)
+  observer.observe(element)
+  onCleanup(() => observer.disconnect())
+}, { flush: 'post' })
 const hasActions = computed(() => canHandle.value || (['EDIT', 'DELETE', 'COPY', 'WITHDRAW', 'URGE', 'SUBMIT'] as AppAction[]).some(ownerAction))
 
 // 签批栏与流转记录（及审批日志）的悬停联动
@@ -262,15 +278,15 @@ async function urge() {
 </script>
 
 <template>
-  <div class="page application-detail">
+  <div class="page application-detail" :style="{ '--detail-action-height': `${actionBarHeight}px` }">
     <div class="detail-toolbar">
-      <el-button :disabled="acting !== null" @click="back">返回</el-button>
+      <el-button :disabled="acting !== null" @click="back">{{ backLabel }}</el-button>
       <span class="flex-1" />
       <el-button :icon="Refresh" :loading="loading" :disabled="loading || acting !== null || submitting" @click="load">刷新</el-button>
     </div>
     <el-skeleton v-if="loading && !detail" :rows="12" animated />
     <el-result v-else-if="loadError && !detail" icon="warning" :title="loadError.code === 40401 || loadError.httpStatus === 404 ? '无权查看或已不存在' : errorText(loadError)">
-      <template #extra><el-button @click="back">返回</el-button><el-button type="primary" @click="load">重新加载</el-button></template>
+      <template #extra><el-button @click="back">{{ backLabel }}</el-button><el-button type="primary" @click="load">重新加载</el-button></template>
     </el-result>
     <template v-else-if="detail">
       <!-- surface：背景格纸据此把提示条、操作栏识别为内容，点击其中空白不荡开背景环 -->
@@ -278,16 +294,19 @@ async function urge() {
       <el-alert v-if="!full" class="surface" title="关联申请只读摘要" description="此查看方式仅展示关联摘要及流程结果，附件和审批意见不可见。" type="info" :closable="false" show-icon />
       <el-alert v-else-if="!detail.canReadAttachments" class="surface" title="可查看业务内容；当前无权预览或下载附件。" type="info" :closable="false" show-icon />
 
-      <article class="slip" :aria-label="`${detail.appNo} 申请单`">
+      <article class="sheet sheet--wide slip" :aria-label="`${detail.appNo} 申请单`">
         <SlipHeader :detail="detail" />
-        <SignatureBar
-          v-if="visibleFlow && visibleFlow.nodes.length"
-          :flow="visibleFlow"
-          :show-comments="full"
-          :fresh-task-id="freshTaskId"
-          @stamped="onStamped"
-          @locate="locateNode"
-        />
+        <SlipSection v-if="visibleFlow && visibleFlow.nodes.length" title="签批" class="signature-section">
+          <SignatureBar
+            v-if="visibleFlow && visibleFlow.nodes.length"
+            :flow="visibleFlow"
+            :now="now"
+            :show-comments="full"
+            :fresh-task-id="freshTaskId"
+            @stamped="onStamped"
+            @locate="locateNode"
+          />
+        </SlipSection>
         <SlipSection v-if="!full" title="关联摘要">
           <LinkedApplicationCard v-if="detail.linked" :application="detail.linked" :navigable="false" />
           <el-empty v-else description="未返回关联摘要" :image-size="60" />
@@ -296,6 +315,21 @@ async function urge() {
         <SlipSection v-if="full && (detail.source || detail.followUps.length)" title="来源与后续申请">
           <div v-if="detail.source" class="application-link"><span class="muted">来源单</span><router-link :to="`/applications/${detail.source.id}`">{{ detail.source.appNo }}</router-link><StatusTag :status="detail.source.status" size="small" /></div>
           <div v-for="followUp in detail.followUps" :key="followUp.id" class="application-link"><span class="muted">后续单</span><router-link :to="`/applications/${followUp.id}`">{{ followUp.appNo }}</router-link><StatusTag :status="followUp.status" size="small" /></div>
+        </SlipSection>
+        <SlipSection :title="full ? '流转记录' : '审批流程结果'">
+          <FlowTimeline :flow="visibleFlow" />
+        </SlipSection>
+        <SlipSection v-if="full" title="审批日志">
+          <div class="log-scroll" role="region" aria-label="审批日志" tabindex="0"><el-table class="log-table" :data="logs" row-key="id" size="small" :row-class-name="logRowClass">
+            <el-table-column label="时间" width="175"><template #default="{ row }"><span class="num">{{ fmtDateTime(row.createdAt, true) }}</span></template></el-table-column>
+            <el-table-column label="操作" width="80"><template #default="{ row }"><span :class="{ 'text-danger': row.action === 'REJECT' }">{{ row.action === 'APPROVE' ? '同意' : LOG_ACTION_LABEL[row.action as keyof typeof LOG_ACTION_LABEL] }}</span></template></el-table-column>
+            <el-table-column prop="operatorName" label="操作人" min-width="100" />
+            <el-table-column prop="nodeName" label="节点" min-width="120"><template #default="{ row }">{{ row.nodeName ?? '—' }}</template></el-table-column>
+            <el-table-column label="意见 / 原因" min-width="220"><template #default="{ row }"><span class="pre-wrap" :class="{ 'text-danger': row.action === 'REJECT' }">{{ row.comment || '—' }}</span></template></el-table-column>
+            <el-table-column label="状态变化" min-width="180"><template #default="{ row }"><template v-if="row.fromStatus && row.fromStatus === row.toStatus">{{ APP_STATUS_LABEL[row.toStatus as keyof typeof APP_STATUS_LABEL] }}（进入下一节点）</template><template v-else>{{ row.fromStatus ? APP_STATUS_LABEL[row.fromStatus as keyof typeof APP_STATUS_LABEL] : '—' }}，变为 {{ row.toStatus ? APP_STATUS_LABEL[row.toStatus as keyof typeof APP_STATUS_LABEL] : '—' }}</template></template></el-table-column>
+            <el-table-column label="申请 / 模板版本" width="140"><template #default="{ row }">v{{ row.appVersion }} / {{ row.templateVersionNo == null ? '—' : `v${row.templateVersionNo}` }}</template></el-table-column>
+            <template #empty><el-empty description="暂无审批日志" :image-size="60" /></template>
+          </el-table></div>
         </SlipSection>
         <SlipSection title="单据信息">
           <SlipFields>
@@ -309,79 +343,67 @@ async function urge() {
         </SlipSection>
       </article>
 
-      <section class="panel">
-        <h3 class="panel-title">{{ full ? '流转记录' : '审批流程结果' }}</h3>
-        <FlowTimeline :flow="visibleFlow" />
-      </section>
-      <section v-if="full" class="panel">
-        <h3 class="panel-title">审批日志</h3>
-        <el-table class="log-table" :data="logs" row-key="id" size="small" :row-class-name="logRowClass">
-          <el-table-column label="时间" width="175"><template #default="{ row }"><span class="num">{{ fmtDateTime(row.createdAt, true) }}</span></template></el-table-column>
-          <el-table-column label="操作" width="80"><template #default="{ row }"><span :class="{ 'text-danger': row.action === 'REJECT' }">{{ row.action === 'APPROVE' ? '同意' : LOG_ACTION_LABEL[row.action as keyof typeof LOG_ACTION_LABEL] }}</span></template></el-table-column>
-          <el-table-column prop="operatorName" label="操作人" min-width="100" />
-          <el-table-column prop="nodeName" label="节点" min-width="120"><template #default="{ row }">{{ row.nodeName ?? '—' }}</template></el-table-column>
-          <el-table-column label="意见 / 原因" min-width="220"><template #default="{ row }"><span class="pre-wrap" :class="{ 'text-danger': row.action === 'REJECT' }">{{ row.comment || '—' }}</span></template></el-table-column>
-          <el-table-column label="状态变化" min-width="180"><template #default="{ row }"><template v-if="row.fromStatus && row.fromStatus === row.toStatus">{{ APP_STATUS_LABEL[row.toStatus as keyof typeof APP_STATUS_LABEL] }}（进入下一节点）</template><template v-else>{{ row.fromStatus ? APP_STATUS_LABEL[row.fromStatus as keyof typeof APP_STATUS_LABEL] : '—' }} → {{ row.toStatus ? APP_STATUS_LABEL[row.toStatus as keyof typeof APP_STATUS_LABEL] : '—' }}</template></template></el-table-column>
-          <el-table-column label="申请 / 模板版本" width="140"><template #default="{ row }">v{{ row.appVersion }} / {{ row.templateVersionNo == null ? '—' : `v${row.templateVersionNo}` }}</template></el-table-column>
-          <template #empty><el-empty description="暂无审批日志" :image-size="60" /></template>
-        </el-table>
-      </section>
-      <div v-if="full && hasActions" class="form-actions detail-actions surface">
-        <span v-if="nextUrgeAt && ownerAction('URGE')" class="muted small">下次可催办：{{ fmtDateTime(nextUrgeAt) }}</span><span class="flex-1" />
-        <el-button v-if="ownerAction('EDIT')" :disabled="busy" @click="router.push(`/applications/${detail.id}/edit`)">编辑草稿</el-button>
-        <el-button v-if="ownerAction('DELETE')" type="danger" plain :loading="acting === 'DELETE'" :disabled="busy" @click="ownerOperation('DELETE')">删除草稿</el-button>
-        <el-button v-if="ownerAction('COPY')" type="primary" :loading="acting === 'COPY'" :disabled="busy" @click="ownerOperation('COPY')">复制并修改</el-button>
-        <el-button v-if="ownerAction('WITHDRAW')" type="danger" plain :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
-        <el-button v-if="ownerAction('URGE')" :loading="acting === 'URGE'" :disabled="busy || !!nextUrgeAt" @click="urge">催办</el-button>
-        <el-button v-if="ownerAction('SUBMIT')" type="primary" :loading="acting === 'SUBMIT'" :disabled="busy" @click="ownerOperation('SUBMIT')">提交申请</el-button>
-        <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @submit="onSubmit" @refresh="load" />
+      <div v-if="full" ref="actionBar" class="detail-actions surface">
+        <div class="detail-actions-inner">
+          <div class="action-state"><span>{{ statusSentence }}</span><span v-if="nextUrgeAt && ownerAction('URGE')" class="urge-note">下次可催办：{{ fmtDateTime(nextUrgeAt) }}</span></div>
+          <div v-if="hasActions" class="action-buttons">
+            <el-button v-if="ownerAction('EDIT')" :disabled="busy" @click="router.push(`/applications/${detail.id}/edit`)">编辑草稿</el-button>
+            <el-button v-if="ownerAction('DELETE')" type="danger" plain :loading="acting === 'DELETE'" :disabled="busy" @click="ownerOperation('DELETE')">删除草稿</el-button>
+            <el-button v-if="ownerAction('COPY')" type="primary" :loading="acting === 'COPY'" :disabled="busy" @click="ownerOperation('COPY')">复制并修改</el-button>
+            <el-button v-if="ownerAction('WITHDRAW')" type="danger" plain :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
+            <el-button v-if="ownerAction('URGE')" :loading="acting === 'URGE'" :disabled="busy || !!nextUrgeAt" @click="urge">催办</el-button>
+            <el-button v-if="ownerAction('SUBMIT')" type="primary" :loading="acting === 'SUBMIT'" :disabled="busy" @click="ownerOperation('SUBMIT')">提交申请</el-button>
+            <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @submit="onSubmit" @refresh="load" />
+          </div>
+        </div>
       </div>
     </template>
   </div>
 </template>
 
 <style scoped>
-.application-detail { max-width: 1200px; }
-.detail-toolbar { display: flex; align-items: center; gap: 8px; }
-.slip, .panel {
-  font-size: var(--eas-fs-sm);
-  line-height: 1.6;
-  padding: 24px 28px;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  background: var(--eas-surface);
-}
-.slip { display: flex; flex-direction: column; gap: 20px; }
-.panel-title { margin: 0 0 12px; color: var(--eas-ink); font-size: var(--eas-fs-md); font-weight: 600; }
-.application-link { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 0; }
-.application-link a { color: var(--eas-primary); text-decoration: none; font-variant-numeric: tabular-nums; }
+.application-detail { width: 100%; max-width: 1040px; min-width: 0; margin: 0 auto; gap: 16px; padding-bottom: calc(var(--detail-action-height, 64px) + 16px); }
+.detail-toolbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.slip { min-width: 0; font-size: var(--eas-fs-14); line-height: 1.65; }
+.application-link { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 0; overflow-wrap: anywhere; }
+.application-link a { display: inline-flex; align-items: center; min-height: 32px; color: var(--eas-primary); text-decoration: none; font-variant-numeric: tabular-nums; }
 .application-link a:hover { text-decoration: underline; }
 .version { margin-left: 8px; }
 .num { font-variant-numeric: tabular-nums; }
-.log-table :deep(.row-linked > td.el-table__cell) { background: var(--eas-paper); }
+.log-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.log-table { width: 100%; }
+.log-table :deep(.row-linked > td.el-table__cell) { background: var(--eas-row-hover); }
 .log-table :deep(.row-linked > td.el-table__cell:first-child) { box-shadow: inset 3px 0 0 var(--eas-primary); }
 .detail-actions {
-  flex-wrap: wrap;
+  position: fixed;
+  z-index: 10;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-height: 64px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--eas-rule);
+  background: var(--eas-sheet);
+}
+.detail-actions-inner {
+  display: flex;
   align-items: center;
-  padding: 12px 28px;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  box-shadow: none;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+  width: calc(100% - 80px);
+  max-width: 1040px;
+  min-height: 63px;
+  margin: 0 auto;
 }
-/* 吸底时 el-main 的下内边距会露出滚过的内容，用页面底色盖住 */
-.detail-actions::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: -1px;
-  right: -1px;
-  height: 20px;
-  background: var(--eas-paper);
-  pointer-events: none;
-}
+.action-state { display: flex; flex-direction: column; min-width: 0; color: var(--eas-ink-2); font-size: var(--eas-fs-note); overflow-wrap: anywhere; }
+.urge-note { font-size: var(--eas-fs-12); }
+.action-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; flex-shrink: 0; gap: 8px; }
 .detail-actions .el-button { margin-left: 0; }
 @media (max-width: 768px) {
-  .slip, .panel { padding: 16px; }
-  .detail-actions { padding: 12px 16px; }
+  .slip { --eas-sheet-inset: 16px; }
+  .detail-actions-inner { width: calc(100% - 32px); padding: 10px 0; flex-wrap: wrap; gap: 8px; }
+  .action-state { flex-basis: 100%; }
+  .action-buttons { flex-shrink: 1; width: 100%; }
 }
 </style>
