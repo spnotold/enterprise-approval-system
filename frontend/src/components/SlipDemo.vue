@@ -1,18 +1,17 @@
 <script setup lang="ts">
-// 登录 / 注册页左半边的流转演示：三格签批示意自动循环四步，鼠标进来暂停、移到某格立刻切到那一步。
-// 步骤状态、时长、悬停映射都在 slipDemo.ts 里，这里只负责计时、渲染和事件。
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import Stamp from '@/components/slip/Stamp.vue'
+// 登录 / 注册页左侧的样例单据：自动走完三格签批，并在终态落章。
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   SLIP_CELL_STAMP_TEXT,
   SLIP_NOTE,
   SLIP_PASSED_STAMP_TEXT,
   SLIP_STATIC_STEP,
   clampStepIndex,
-  nextStepIndex,
+  frameDuration,
+  nextDemoFrame,
   stepAt,
   stepIndexForCell,
-  stepIndexForStamp,
+  type SlipDemoFrame,
 } from '@/components/slipDemo'
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
@@ -24,33 +23,20 @@ function readReducedMotion(): MediaQueryList | null {
 
 const motionQuery = readReducedMotion()
 const reducedMotion = ref(!!motionQuery?.matches)
-const stepIndex = ref(reducedMotion.value ? SLIP_STATIC_STEP : 1)
-/** 指针在示意图上：暂停计时 */
+const frame = ref<SlipDemoFrame>({
+  stepIndex: reducedMotion.value ? SLIP_STATIC_STEP : 1,
+  phase: 'showing',
+})
 const hovering = ref(false)
-/** 标签页不可见：暂停计时 */
 const pageHidden = ref(typeof document !== 'undefined' && document.visibilityState === 'hidden')
 const stopped = ref(false)
 
-const step = computed(() => stepAt(stepIndex.value))
-
-/** 每格单独记一次「同意」章的出场次数，重新变成已同意时重新盖章 */
-const stampTurn = ref<Record<string, number>>({})
-const wasApproved = new Map<string, boolean>()
-watch(
-  () => step.value,
-  (now) => {
-    const next = { ...stampTurn.value }
-    for (const cell of now.cells) {
-      const approved = cell.state === 'approved'
-      if (approved && !wasApproved.get(cell.key)) next[cell.key] = (next[cell.key] ?? 0) + 1
-      wasApproved.set(cell.key, approved)
-    }
-    stampTurn.value = next
-  },
-  { immediate: true },
-)
+const step = computed(() => stepAt(frame.value.stepIndex))
+const resetting = computed(() => frame.value.phase === 'resetting')
 
 let timer: ReturnType<typeof setTimeout> | null = null
+let deadline = 0
+let remaining = frameDuration(frame.value)
 
 function clearTimer() {
   if (timer === null) return
@@ -62,28 +48,41 @@ function playing() {
   return !stopped.value && !reducedMotion.value && !hovering.value && !pageHidden.value
 }
 
-/** 从当前步开始重新计时 */
+/** 暂停时保留当前阶段剩余时间，hover 与页面隐藏可相互叠加。 */
+function pause() {
+  if (timer !== null) remaining = Math.max(0, deadline - Date.now())
+  clearTimer()
+}
+
 function schedule() {
   clearTimer()
   if (!playing()) return
+  const delay = Math.max(0, remaining)
+  deadline = Date.now() + delay
   timer = setTimeout(() => {
-    stepIndex.value = nextStepIndex(stepIndex.value)
+    timer = null
+    frame.value = nextDemoFrame(frame.value)
+    remaining = frameDuration(frame.value)
     schedule()
-  }, step.value.duration)
+  }, delay)
 }
 
 function gotoStep(index: number) {
-  stepIndex.value = clampStepIndex(index)
+  frame.value = { stepIndex: clampStepIndex(index), phase: 'showing' }
+  remaining = frameDuration(frame.value)
 }
 
 function onStageEnter() {
   hovering.value = true
-  clearTimer()
+  pause()
 }
 
-/** 移开后从当前步重新开始计时 */
 function onStageLeave() {
   hovering.value = false
+  if (reducedMotion.value) {
+    gotoStep(SLIP_STATIC_STEP)
+    return
+  }
   schedule()
 }
 
@@ -91,29 +90,22 @@ function onCellEnter(index: number) {
   gotoStep(stepIndexForCell(index))
 }
 
-function onPassedStampEnter() {
-  gotoStep(stepIndexForStamp())
-}
-
 function onMotionChange(event: MediaQueryListEvent) {
-  const reduced = event.matches
-  if (reduced === reducedMotion.value) return
-  reducedMotion.value = reduced
-  if (reduced) {
+  if (event.matches === reducedMotion.value) return
+  reducedMotion.value = event.matches
+  if (event.matches) {
+    pause()
     gotoStep(SLIP_STATIC_STEP)
-    clearTimer()
     return
   }
+  remaining = frameDuration(frame.value)
   schedule()
 }
 
 function onVisibilityChange() {
   pageHidden.value = document.visibilityState === 'hidden'
-  if (pageHidden.value) {
-    clearTimer()
-    return
-  }
-  schedule()
+  if (pageHidden.value) pause()
+  else schedule()
 }
 
 onMounted(() => {
@@ -132,121 +124,327 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="slip-demo">
-    <div class="slip-stage" aria-hidden="true" @mouseenter="onStageEnter" @mouseleave="onStageLeave">
-      <ol class="slip">
-        <li
-          v-for="cell in step.cells"
-          :key="cell.key"
-          class="cell"
-          :class="cell.state"
-          @mouseenter="onCellEnter(cell.index)"
-        >
-          <span class="cell-name">{{ cell.name }}</span>
-          <span class="cell-state">{{ cell.label }}</span>
-          <Stamp
-            v-if="cell.state === 'approved'"
-            :key="`${cell.key}-${stampTurn[cell.key] ?? 0}`"
-            class="cell-stamp"
-            tone="success"
-            :text="SLIP_CELL_STAMP_TEXT"
-            animate
-          />
-        </li>
-      </ol>
-      <Stamp
-        v-if="step.showPassedStamp"
-        :key="`passed-${stepIndex}`"
-        class="slip-stamp"
-        tone="success"
-        :text="SLIP_PASSED_STAMP_TEXT"
-        animate
-        @mouseenter="onPassedStampEnter"
-      />
+    <div
+      class="specimen-sheet sheet"
+      :class="{ 'is-resetting': resetting }"
+      aria-hidden="true"
+      @mouseenter="onStageEnter"
+      @mouseleave="onStageLeave"
+    >
+      <div class="specimen-head">
+        <div class="specimen-copy">
+          <div class="specimen-kind">
+            <span>采购申请</span>
+            <span class="specimen-number">CG20261016000017</span>
+          </div>
+          <div class="specimen-title">研发部采购测试服务器扩容</div>
+          <div class="specimen-meta">
+            <span>申请人<b>王工</b></span>
+            <span>研发部</span>
+          </div>
+        </div>
+        <div class="specimen-amount">
+          <span class="amount-label">金额</span>
+          <strong>¥12,800.00</strong>
+        </div>
+        <span
+          v-if="step.showPassedStamp"
+          class="passed-stamp stamp-enter"
+        >{{ SLIP_PASSED_STAMP_TEXT }}</span>
+      </div>
+
+      <div class="signature-part">
+        <div class="signature-row">
+          <div
+            v-for="cell in step.cells"
+            :key="cell.key"
+            class="signature-cell"
+            :class="cell.state"
+            @mouseenter="onCellEnter(cell.index)"
+          >
+            <div class="cell-node">{{ cell.name }}</div>
+            <div v-if="cell.state === 'waiting'" class="cell-state">{{ cell.label }}</div>
+            <template v-else>
+              <div class="cell-person">{{ cell.assignee }}</div>
+              <div v-if="cell.state === 'current'" class="cell-state">{{ cell.label }}</div>
+              <div v-else class="cell-time">{{ cell.approvedAt }}</div>
+              <span
+                v-if="cell.state === 'approved'"
+                class="cell-stamp stamp-enter"
+              >{{ SLIP_CELL_STAMP_TEXT }}</span>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
-    <p class="slip-note">{{ SLIP_NOTE }}</p>
+    <p class="slip-caption">{{ SLIP_NOTE }}</p>
   </div>
 </template>
 
 <style scoped>
-/* 格子在横排、竖排下保持同一尺寸（宽 140px），只改变排列方向 */
 .slip-demo {
-  --slip-cell-w: 140px;
-  margin-top: 32px;
+  width: min(540px, 100%);
+  pointer-events: auto;
 }
-.slip-stage {
-  position: relative;
-  width: max-content;
+.specimen-sheet {
+  overflow: hidden;
+  width: 100%;
+  opacity: 1;
+  transition: opacity var(--eas-dur) var(--eas-ease);
+}
+.specimen-sheet.is-resetting {
+  opacity: 0;
 }
 
-/* 签批格示意：已办实线落章、当前虚线、未到留空 */
-.slip {
-  display: grid;
-  grid-template-columns: repeat(3, var(--slip-cell-w));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.cell {
+.specimen-head {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  padding: 22px 24px 18px;
+}
+.specimen-copy {
+  min-width: 0;
+}
+.specimen-kind {
+  display: flex;
+  gap: 14px;
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-sm);
+}
+.specimen-number {
+  font-variant-numeric: tabular-nums;
+}
+.specimen-title {
+  margin: 2px 0 8px;
+  font-family: var(--eas-font-serif);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.specimen-meta {
+  display: flex;
+  gap: 28px;
+  color: var(--eas-ink-2);
+}
+.specimen-meta b {
+  margin-left: 6px;
+  color: var(--eas-ink);
+  font-weight: 400;
+}
+.specimen-amount {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  background: var(--eas-surface);
+  align-self: end;
+  text-align: right;
+  white-space: nowrap;
+}
+.amount-label {
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-xs);
+}
+.specimen-amount strong {
+  font-family: var(--eas-font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.signature-part {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--eas-rule);
+}
+.signature-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
   border: 1px solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-tag);
+  border-radius: var(--eas-radius-control);
+}
+.signature-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 84px;
+  box-sizing: border-box;
+  padding: 10px 14px 12px;
+  border-right: 1px solid var(--eas-rule-strong);
+  background: var(--eas-sheet);
   transition:
-    border-color var(--eas-dur) var(--eas-ease),
-    background-color var(--eas-dur) var(--eas-ease);
+    background-color var(--eas-dur) var(--eas-ease),
+    color var(--eas-dur) var(--eas-ease);
 }
-.cell.current {
+.signature-cell:last-child {
+  border-right: 0;
+}
+.signature-cell.current {
+  z-index: 1;
   background: var(--eas-primary-tint);
-  border: 1px dashed var(--eas-primary);
+  outline: 1.5px dashed var(--eas-primary);
+  outline-offset: -5px;
 }
-.cell-name {
-  font-size: var(--eas-fs-sm);
-  font-weight: 500;
+.cell-node {
+  overflow: hidden;
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-xs);
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.current .cell-node {
+  color: var(--eas-ink-2);
+}
+.cell-person {
+  margin-top: 6px;
+  font-size: var(--eas-fs-nav);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cell-time {
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
 }
 .cell-state {
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-2);
+  margin-top: 6px;
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-note);
+  line-height: 1.3;
 }
-.cell.current .cell-state {
+.current .cell-state {
   color: var(--eas-primary);
 }
-.cell.waiting .cell-state {
-  color: var(--eas-ink-3);
-}
-/* 章盖在格子右下角（与较短的状态文字同一行，不挤名字），不占文档流，格子高度不随步骤变化 */
-.cell-stamp {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-}
 
-/* 行尾的「已通过」章：宋体、倾斜，落在最后一格下方右侧，与说明文字同一行 */
-.slip-stamp {
+.cell-stamp,
+.passed-stamp {
   position: absolute;
-  right: 0;
-  bottom: -38px;
-  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1.5px solid var(--eas-success);
+  color: var(--eas-success);
   font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+.cell-stamp {
+  top: 34px;
+  right: 14px;
+  padding: 2px 6px;
+  border-radius: var(--eas-radius-tag);
+  font-size: var(--eas-fs-note);
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  transform: rotate(-6deg);
+}
+.passed-stamp {
+  top: 16px;
+  right: 22px;
+  padding: 7px 12px;
+  border-width: 2px;
+  border-radius: var(--eas-radius-panel);
+  box-shadow:
+    inset 0 0 0 2px var(--eas-sheet),
+    inset 0 0 0 3px var(--eas-success);
+  font-size: var(--eas-fs-lg);
   letter-spacing: 0.2em;
   text-indent: 0.2em;
+  opacity: 0.9;
+  transform: rotate(-8deg);
+}
+.cell-stamp.stamp-enter {
+  animation: cell-stamp-in var(--eas-dur-stamp) var(--eas-ease) both;
+}
+.passed-stamp.stamp-enter {
+  animation: passed-stamp-in var(--eas-dur-stamp) var(--eas-ease) both;
+}
+@keyframes cell-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-6deg) scale(1.15);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-6deg) scale(1);
+  }
+}
+@keyframes passed-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.15);
+  }
+  to {
+    opacity: 0.9;
+    transform: rotate(-8deg) scale(1);
+  }
 }
 
-.slip-note {
-  margin: 14px 0 0;
+.slip-caption {
+  margin: 12px 0 0;
   color: var(--eas-ink-2);
   font-size: var(--eas-fs-xs);
 }
 
-/* 左栏窄于 600px 时竖排：同样尺寸的格子排成一列（容器是 AuthShell 里的 .auth-aside，跨组件匹配祖先容器） */
-@container auth-aside (inline-size < 600px) {
-  .slip {
-    grid-template-columns: var(--slip-cell-w);
+@container auth-aside (inline-size < 640px) {
+  .specimen-head {
+    gap: 6px 12px;
+    padding: 18px 16px 15px;
+  }
+  .specimen-kind {
+    gap: 8px;
+    font-size: var(--eas-fs-xs);
+  }
+  .specimen-title {
+    font-size: 18px;
+  }
+  .specimen-meta {
+    gap: 14px;
+    font-size: var(--eas-fs-xs);
+  }
+  .specimen-amount strong {
+    font-size: 18px;
+  }
+  .signature-part {
+    padding: 14px 16px 16px;
+  }
+  .signature-cell {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .cell-stamp {
+    right: 8px;
+  }
+}
+
+@container auth-aside (inline-size < 430px) {
+  .specimen-title {
+    font-size: var(--eas-fs-md);
+  }
+  .specimen-amount {
+    display: none;
+  }
+  .passed-stamp {
+    top: 14px;
+    right: 14px;
+    font-size: var(--eas-fs-md);
+  }
+  .signature-cell {
+    min-height: 78px;
+    padding: 9px 7px 10px;
+  }
+  .cell-person {
+    font-size: var(--eas-fs-sm);
+  }
+  .cell-stamp {
+    top: 37px;
+    right: 5px;
+    padding-right: 3px;
+    padding-left: 3px;
+    font-size: var(--eas-fs-xs);
   }
 }
 </style>
