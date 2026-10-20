@@ -1,47 +1,25 @@
 import { describe, it, expect } from 'vitest'
+import { taskDotClass, taskDotTone } from './dotStatus'
 
-/**
- * Task status dot CSS class derivation.
- * The template uses `st-${String(status).toLowerCase()}` to map task status
- * values to CSS classes that set the --dot custom property.
- */
-function dotStatusClass(status: string): string {
-  return `st-${String(status).toLowerCase()}`
-}
+describe('taskDotTone', () => {
+  it.each([
+    ['PENDING', 'primary'],
+    ['APPROVED', 'success'],
+    ['REJECTED', 'danger'],
+    ['CANCELED', 'muted'],
+    ['TRANSFERRED', 'warning'],
+  ])('maps task status %s to the %s tone', (status, tone) => {
+    expect(taskDotTone(status)).toBe(tone)
+  })
 
-/** Expected mapping of task status to design-spec colour token (docs/ui_design.md §2). */
-const EXPECTED_DOT_TOKEN: Record<string, string> = {
-  PENDING: '--eas-primary',
-  APPROVED: '--eas-success',
-  REJECTED: '--eas-danger',
-  CANCELED: '--eas-muted',
-  TRANSFERRED: '--eas-warning',
-}
+  it('falls back to muted for an unknown status', () => {
+    expect(taskDotTone('UNKNOWN')).toBe('muted')
+  })
+})
 
-/** CSS classes that set --dot (matches TaskListContent.vue <style scoped>). */
-const CLASS_TO_TOKEN: Record<string, string> = {
-  'st-pending': '--eas-primary',
-  'st-approved': '--eas-success',
-  'st-rejected': '--eas-danger',
-  'st-canceled': '--eas-muted',
-  'st-transferred': '--eas-warning',
-}
-
-describe('dotStatusClass', () => {
-  it.each(Object.entries(EXPECTED_DOT_TOKEN))(
-    'maps status %s to CSS class with correct colour token',
-    (status, expectedToken) => {
-      const cls = dotStatusClass(status)
-      expect(cls).toBe(`st-${status.toLowerCase()}`)
-      expect(CLASS_TO_TOKEN[cls]).toBe(expectedToken)
-    },
-  )
-
-  it('produces a class for unknown status that falls back to --dot default (--eas-muted)', () => {
-    const cls = dotStatusClass('UNKNOWN')
-    // Unknown statuses won't match any CSS rule, so --dot stays unset
-    // and the .dot element uses var(--dot, var(--eas-muted)) → muted.
-    expect(cls).toBe('st-unknown')
-    expect(CLASS_TO_TOKEN[cls]).toBeUndefined()
+describe('taskDotClass', () => {
+  it('builds the global status-dot class pair', () => {
+    expect(taskDotClass('APPROVED')).toBe('status-dot status-dot--success')
+    expect(taskDotClass('UNKNOWN')).toBe('status-dot status-dot--muted')
   })
 })
