@@ -206,23 +206,25 @@ export function isBackgroundClick(e: PointerEvent, backgroundContainer?: HTMLEle
 
 export function resolvePaperColors(baseProp = 'paper') {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    const defaultRule = { r: 196, g: 201, b: 195 }
-    const defaultPrimary = { r: 62, g: 92, b: 118 }
+    const defaultDot = { r: 191, g: 198, b: 191 }
+    const defaultPrimary = { r: 47, g: 78, b: 107 }
     return {
-      baseColor: '#f2f3f0',
-      baseDotColor: { ...defaultRule, a: 0.6 },
+      baseColor: '#e6e9e5',
+      sheetRgb: { r: 255, g: 255, b: 255 },
+      baseDotColor: { ...defaultDot, a: 1 },
       primaryRgb: defaultPrimary,
       primaryDotColor: { ...defaultPrimary, a: 0.55 },
     }
   }
 
   const rootStyle = getComputedStyle(document.documentElement)
-  const ruleStrongHex = rootStyle.getPropertyValue('--eas-rule-strong').trim() || '#c4c9c3'
-  const primaryHex = rootStyle.getPropertyValue('--eas-primary').trim() || '#3e5c76'
+  const dotHex = rootStyle.getPropertyValue('--eas-desk-dot').trim() || '#bfc6bf'
+  const sheetHex = rootStyle.getPropertyValue('--eas-sheet').trim() || '#ffffff'
+  const primaryHex = rootStyle.getPropertyValue('--eas-primary').trim() || '#2f4e6b'
 
-  let baseColor = rootStyle.getPropertyValue('--eas-paper').trim() || '#f2f3f0'
+  let baseColor = rootStyle.getPropertyValue('--eas-desk').trim() || '#e6e9e5'
   if (baseProp === 'deep' || baseProp === 'paper-deep' || baseProp.includes('deep')) {
-    baseColor = rootStyle.getPropertyValue('--eas-paper-deep').trim() || '#e8eae5'
+    baseColor = rootStyle.getPropertyValue('--eas-paper-deep').trim() || '#d9ded9'
   } else if (baseProp.startsWith('--')) {
     baseColor = rootStyle.getPropertyValue(baseProp).trim() || baseColor
   } else if (baseProp.startsWith('var(')) {
@@ -232,12 +234,14 @@ export function resolvePaperColors(baseProp = 'paper') {
     baseColor = baseProp
   }
 
-  const ruleRgb = parseHexColor(ruleStrongHex)
+  const dotRgb = parseHexColor(dotHex)
+  const sheetRgb = parseHexColor(sheetHex)
   const primaryRgb = parseHexColor(primaryHex)
 
   return {
     baseColor,
-    baseDotColor: { ...ruleRgb, a: 0.6 } as Rgba,
+    sheetRgb,
+    baseDotColor: { ...dotRgb, a: 1 } as Rgba,
     primaryRgb,
     primaryDotColor: { ...primaryRgb, a: 0.55 } as Rgba,
   }
@@ -516,10 +520,12 @@ export function usePaperField(
     if (hasCursor) {
       const glowR = lightRadius
       const gradient = ctx.createRadialGradient(curX, curY, 0, curX, curY, glowR)
+      const { r, g, b } = colors.sheetRgb
+      const glowRgb = `${r}, ${g}, ${b}`
       const lightAlpha = maxLightAlpha * curStrength
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${lightAlpha.toFixed(3)})`)
-      gradient.addColorStop(0.5, `rgba(255, 255, 255, ${(lightAlpha * 0.4).toFixed(3)})`)
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+      gradient.addColorStop(0, `rgba(${glowRgb}, ${lightAlpha.toFixed(3)})`)
+      gradient.addColorStop(0.5, `rgba(${glowRgb}, ${(lightAlpha * 0.4).toFixed(3)})`)
+      gradient.addColorStop(1, `rgba(${glowRgb}, 0)`)
       ctx.fillStyle = gradient
       ctx.fillRect(curX - glowR, curY - glowR, glowR * 2, glowR * 2)
     }
@@ -734,10 +740,12 @@ export function usePaperField(
       if (hasCursor) {
         const glowR = lightRadius
         const gradient = ctx.createRadialGradient(curX, curY, 0, curX, curY, glowR)
+        const { r, g, b } = colors.sheetRgb
+        const glowRgb = `${r}, ${g}, ${b}`
         const lightAlpha = maxLightAlpha * curStrength
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${lightAlpha.toFixed(3)})`)
-        gradient.addColorStop(0.5, `rgba(255, 255, 255, ${(lightAlpha * 0.4).toFixed(3)})`)
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+        gradient.addColorStop(0, `rgba(${glowRgb}, ${lightAlpha.toFixed(3)})`)
+        gradient.addColorStop(0.5, `rgba(${glowRgb}, ${(lightAlpha * 0.4).toFixed(3)})`)
+        gradient.addColorStop(1, `rgba(${glowRgb}, 0)`)
 
         ctx.fillStyle = gradient
         ctx.fillRect(curX - glowR, curY - glowR, glowR * 2, glowR * 2)

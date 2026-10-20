@@ -1,49 +1,20 @@
-/* 待办与申请列表共享的行交互，设计依据 docs/ui_design.md 第 6 节。 */
-/* 行悬停 / 行内聚焦：行底 --eas-paper */
-.eas-row-table {
-  --el-table-row-hover-bg-color: var(--eas-paper);
-}
-.eas-row-table .el-table__body tr:hover > td.el-table__cell,
-.eas-row-table .el-table__body tr.hover-row > td.el-table__cell,
-.eas-row-table .el-table__body tr:focus-within > td.el-table__cell {
-  background-color: var(--eas-paper);
-}
-
-/* 行首左侧 3px --eas-primary 竖线（画在第一列单元格上） */
-.eas-row-table .el-table__body tr:is(:hover, :focus-within) > td.el-table__cell:first-child {
-  box-shadow: inset 3px 0 0 var(--eas-primary);
-}
+/* 待办与申请列表共享的行交互，设计依据 docs/ui_design.md 5.3。 */
+/* 行悬停底色、首列 3px primary 竖线、行内操作的显隐（悬停 / 聚焦显示，触屏与窄屏常显）已在 main.css 对所有 el-table 生效；
+   这里只留列表专用的部分。 */
 
 /* 整行可点的表格 */
 .eas-row-clickable .el-table__body .el-table__row {
   cursor: pointer;
 }
 
-/* 行尾操作：默认透明，行悬停 / 行内聚焦时显示；触屏与 768px 以下常显 */
+/* 行尾操作的排布 */
 .eas-row-table .row-actions {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  opacity: 0;
-  transition: opacity var(--eas-dur-fast, 120ms) var(--eas-ease, ease);
 }
 .eas-row-table .row-actions .el-button + .el-button {
   margin-left: 0;
-}
-.eas-row-table .el-table__row:hover .row-actions,
-.eas-row-table .el-table__row:focus-within .row-actions,
-.eas-row-table .row-actions:focus-within {
-  opacity: 1;
-}
-@media (hover: none), (max-width: 768px) {
-  .eas-row-table .row-actions {
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .eas-row-table .row-actions {
-    transition: none;
-  }
 }
 
 /* 数字 / 编号：正文字体 + 等宽数字 */
@@ -78,7 +49,7 @@
   width: 260px;
   min-width: 230px;
   flex: 0 1 260px;
-  height: 32px;
+  height: var(--el-component-size);
   box-sizing: border-box;
 }
 .list-filters > .el-button {
@@ -99,11 +70,11 @@
   }
 }
 
-/* 固定列用分隔线标明边界，不叠加阴影。 */
+/* 兼容仍带 fixed 属性的页面；移除阴影和竖线，页面迁移时再去掉 fixed。 */
 .eas-row-table .el-table-fixed-column--left.is-last-column::before,
 .eas-row-table .el-table-fixed-column--right.is-first-column::before {
   box-shadow: none;
 }
 .eas-row-table .el-table-fixed-column--right.is-first-column {
-  border-left: 1px solid var(--eas-rule);
+  border-left: 0;
 }
