@@ -349,11 +349,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
-      <div class="title-wrap">
+    <header class="sheet-head">
+      <div class="head-main">
         <el-button link :icon="Back" @click="router.push('/admin/templates')">模板列表</el-button>
-        <el-divider direction="vertical" />
-        <h2 class="page-title">{{ detail?.name ?? '流程设计' }}</h2>
+        <h2 class="sheet-title">{{ detail?.name ?? '流程设计' }}</h2>
         <template v-if="detail">
           <el-tag size="small" effect="plain" :type="detail.category === 'BUILTIN' ? 'warning' : 'primary'">
             {{ detail.category === 'BUILTIN' ? '内置' : '自定义' }}
@@ -362,7 +361,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
           <span class="muted small">{{ detail.code }}</span>
         </template>
       </div>
-      <div v-if="detail" class="toolbar">
+      <div v-if="detail" class="head-actions">
         <template v-if="edit">
           <span v-if="dirty" class="text-warning small">有未保存的修改</span>
           <el-button type="danger" plain :icon="Delete" :loading="discarding" :disabled="busy" @click="discard">
@@ -385,7 +384,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
           编辑（生成草稿）
         </el-button>
       </div>
-    </div>
+    </header>
 
     <el-skeleton v-if="loading && !detail" :rows="8" animated />
 
@@ -405,22 +404,12 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
         <span>已使用 {{ detail.usageCount }} 次</span>
       </div>
 
-      <el-alert
-        v-if="!edit && detail.published"
-        type="info"
-        show-icon
-        :closable="false"
-        :title="`当前显示已发布版本 v${detail.published.versionNo}（只读）`"
-        description="已发布版本不可修改。点击“编辑（生成草稿）”复制当前发布版本生成草稿，修改后校验并发布为新版本；已提交的申请不受影响。"
-      />
-      <el-alert
-        v-else-if="edit"
-        type="warning"
-        show-icon
-        :closable="false"
-        :title="`正在编辑 v${detail.draft?.versionNo ?? ''} 草稿`"
-        description="保存草稿不影响员工使用；发布后新申请使用新版本，原发布版本归档，已提交的申请仍按提交时的快照审批。"
-      />
+      <p v-if="!edit && detail.published" class="page-note">
+        当前显示已发布版本 v{{ detail.published.versionNo }}（只读）。生成草稿可修改，校验通过后发布为新版本；已提交的申请不受影响。
+      </p>
+      <div v-else-if="edit" class="page-note page-note--warn">
+        正在编辑 v{{ detail.draft?.versionNo ?? '' }} 草稿。保存草稿不影响员工使用；发布后新申请使用新版本，原发布版本归档，已提交的申请仍按提交时的快照审批。
+      </div>
 
       <div v-if="issueState !== 'none'" ref="issuePanel">
         <el-alert
@@ -488,7 +477,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
         </el-empty>
       </div>
 
-      <el-card shadow="never">
+      <el-card shadow="never" class="versions-card">
         <template #header>
           <span class="section-head">版本历史</span>
           <span class="muted small">每个模板同一时刻至多一个草稿；已发布、已归档版本不可修改</span>
@@ -551,21 +540,24 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 </template>
 
 <style scoped>
-.title-wrap {
+.head-main {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px 12px;
   min-width: 0;
 }
 .meta {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 20px;
-  margin-top: -8px;
+  margin: 12px 0 0;
 }
 .designer-wrap {
   min-height: 200px;
+}
+.versions-card {
+  margin-top: 16px;
 }
 .issue-card :deep(.el-card__header) {
   padding: 10px 16px;
@@ -598,7 +590,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 }
 .issue-item:hover,
 .issue-item:focus-visible {
-  background: var(--el-color-danger-light-9);
+  background: var(--eas-danger-tint);
 }
 .issue-item:focus-visible {
   outline: 2px solid var(--eas-primary);

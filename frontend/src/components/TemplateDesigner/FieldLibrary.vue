@@ -73,10 +73,10 @@ function onDragStart(e: DragEvent, type: FieldType) {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: var(--eas-radius-panel);
-  background: var(--el-bg-color);
-  color: var(--el-text-color-regular);
+  border: 1px dashed var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+  background: var(--eas-sheet);
+  color: var(--eas-ink);
   font-size: var(--eas-fs-sm);
   cursor: pointer;
   text-align: left;
@@ -85,8 +85,12 @@ function onDragStart(e: DragEvent, type: FieldType) {
     color var(--eas-dur-fast) var(--eas-ease);
 }
 .lib-item:hover:not(:disabled) {
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary);
+  border-color: var(--eas-primary);
+  color: var(--eas-primary);
+}
+.lib-item:focus-visible {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
 }
 .lib-item:disabled {
   cursor: not-allowed;
