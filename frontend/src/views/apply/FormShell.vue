@@ -65,16 +65,17 @@ function back() {
     <div class="sheet">
       <header class="sheet-head">
         <div class="sheet-main">
-          <div class="sheet-meta">
-            <span class="sheet-no">{{ appNo || '新建草稿' }}</span>
-            <span v-if="dirty" class="sheet-state is-dirty">有未保存的修改</span>
-            <span v-else-if="appNo" class="sheet-state is-saved">已保存</span>
-          </div>
           <h2 class="sheet-title">{{ title }}</h2>
           <p v-if="description" class="sheet-desc">{{ description }}</p>
-          <p class="sheet-hint">草稿保存时只检查格式，提交时检查必填项和业务规则。</p>
         </div>
-        <div class="sheet-extra"><slot name="header-extra" /></div>
+        <div class="sheet-extra">
+          <div v-if="appNo" class="sheet-meta">
+            <span class="draft-mark">草稿</span><span class="sheet-no">{{ appNo }}</span>
+          </div>
+          <span v-if="dirty" class="sheet-state is-dirty">有未保存的修改</span>
+          <span v-else-if="appNo" class="sheet-state is-saved">已保存</span>
+          <slot name="header-extra" />
+        </div>
       </header>
 
       <el-skeleton v-if="loading" class="sheet-pad" :rows="10" animated />
@@ -85,7 +86,7 @@ function back() {
       </el-result>
       <template v-else>
         <div class="sheet-body">
-          <el-alert v-if="errors.length" type="error" :closable="false" show-icon title="请修正以下问题后再试">
+          <el-alert v-if="errors.length" type="error" :closable="false" show-icon title="请修正以下问题后再试" class="error-summary">
             <ul class="error-list">
               <li v-for="(e, i) in errors" :key="i">
                 <span v-if="e.path" class="error-path">{{ describe(e.path) }}：</span>{{ e.message }}
@@ -112,169 +113,85 @@ function back() {
 </template>
 
 <style scoped>
-.form-shell {
-  max-width: 1200px;
-}
-
-/* 整张表单是一张单据：单据头与各分节在同一张纸上 */
-.sheet {
-  background: var(--eas-surface);
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-}
+.form-shell { min-width: 0; }
+.sheet { min-width: 0; }
 .sheet-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px 24px;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--eas-rule);
+  gap: 16px 24px;
+  padding: 28px 24px 24px;
 }
-.sheet-main {
-  min-width: 0;
-  flex: 1 1 360px;
-}
-.sheet-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  font-size: var(--eas-fs-xs);
-  line-height: 1.6;
-  color: var(--eas-ink-2);
-  font-variant-numeric: tabular-nums;
-}
-.sheet-state.is-dirty {
-  color: var(--eas-warning-text);
-}
-.sheet-state.is-saved {
-  color: var(--eas-success);
-}
+.sheet-main { min-width: 0; flex: 1 1 280px; }
 .sheet-title {
-  margin: 4px 0 0;
+  margin: 0;
   font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-lg);
+  font-size: var(--eas-fs-26);
   font-weight: 600;
-  line-height: 1.4;
-  color: var(--eas-ink);
+  line-height: var(--eas-lh-title);
+  overflow-wrap: anywhere;
 }
-.sheet-desc {
-  margin: 4px 0 0;
-  font-size: var(--eas-fs-sm);
-  line-height: 1.6;
-  color: var(--eas-ink-2);
-}
-.sheet-hint {
-  margin: 4px 0 0;
-  font-size: var(--eas-fs-xs);
-  line-height: 1.6;
-  color: var(--eas-ink-3);
-}
-.sheet-extra:empty {
-  display: none;
-}
-.sheet-pad {
+.sheet-desc { margin: 8px 0 0; color: var(--eas-ink-2); font-size: var(--eas-fs-14); }
+.sheet-extra { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; }
+.sheet-extra:empty { display: none; }
+.sheet-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: var(--eas-fs-12); color: var(--eas-ink-2); }
+.sheet-no { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.draft-mark { padding: 1px 7px; border: 1px solid var(--eas-muted); border-radius: var(--eas-radius-tag); }
+.sheet-state { font-size: var(--eas-fs-12); }
+.is-dirty { color: var(--eas-warning-text); }
+.is-saved { color: var(--eas-ink-3); }
+.sheet-pad { padding: 24px; box-sizing: border-box; }
+.sheet-body { min-width: 0; }
+.error-summary, .sheet-body > :deep(.el-alert) { margin: 20px 24px; width: auto; }
+.error-list { margin: 4px 0 0; padding-left: 18px; }
+.error-path { font-weight: 600; }
+.sheet-body :deep(.form-section) {
+  min-width: 0;
   padding: 24px;
-}
-
-.sheet-body {
-  padding: 4px 24px 8px;
-}
-.sheet-body > .el-alert {
-  margin: 16px 0 4px;
-}
-.error-list {
-  margin: 4px 0 0;
-  padding-left: 18px;
-}
-.error-path {
-  font-weight: 600;
-}
-
-/* 插槽里的 el-card 统一压平成分节：小标题 + 顶部分隔线，不再一组一张卡片 */
-.sheet-body :deep(.el-card) {
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  --el-card-padding: 0;
-}
-.sheet-body :deep(.el-card + .el-card),
-.sheet-body :deep(.el-alert + .el-card) {
   border-top: 1px solid var(--eas-rule);
 }
-.sheet-body :deep(.el-card__header) {
-  padding: 20px 0 12px;
-  border-bottom: 0;
-}
-.sheet-body :deep(.el-card__body) {
-  padding: 0 0 20px;
-  /* Element Plus 默认 overflow:auto，会把贴左边按钮的焦点外框裁掉；宽表格自带横向滚动 */
-  overflow: visible;
-}
-.sheet-body :deep(.el-card__body:first-child) {
-  padding-top: 16px;
-}
-.sheet-body :deep(.el-card__header .section-title),
-.sheet-body :deep(.el-card__header .el-card-title) {
-  margin: 0;
-  font-size: var(--eas-fs-md);
-  font-weight: 600;
+.sheet-body :deep(.form-section:first-child) { border-top: 0; }
+.sheet-body :deep(.section-title) { margin: 0 0 18px; font-size: var(--eas-fs-16); font-weight: 600; }
+.sheet-body :deep(.el-form-item) { margin-bottom: 22px; min-width: 0; }
+.sheet-body :deep(.el-form-item:last-child) { margin-bottom: 0; }
+.sheet-body :deep(.el-form-item__label) {
+  padding: 0;
+  margin-bottom: 8px;
+  color: var(--eas-ink-2);
   line-height: 1.5;
-  color: var(--eas-ink);
 }
-/* 表单内部嵌套的卡片（如关联申请）保持各自样式 */
-.sheet-body :deep(.el-card .el-card) {
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-}
-
+.sheet-body :deep(.el-form-item.is-required .el-form-item__label::before) { color: var(--eas-danger); }
+.sheet-body :deep(.el-form-item__content) { min-width: 0; }
+.sheet-body :deep(.el-form-item__error) { position: static; width: 100%; padding-top: 4px; }
+.sheet-body :deep(.form-renderer .el-form-item) { margin-bottom: 0; }
+.sheet-body :deep(.el-form-item__content > .el-input),
+.sheet-body :deep(.el-form-item__content > .el-select),
+.sheet-body :deep(.el-form-item__content > .el-date-editor),
+.sheet-body :deep(.el-form-item__content > .uploader) { width: 100%; min-width: 0; }
+.sheet-body :deep(.el-row) { row-gap: 22px; margin-bottom: 22px; }
+.sheet-body :deep(.el-col) { min-width: 0; }
+.sheet-body :deep(.el-col .el-form-item) { margin-bottom: 0; }
+.sheet-body :deep(.el-button--small),
+.sheet-body :deep(.el-button.is-link) { min-height: 32px; }
+.sheet-body :deep(.el-radio-group) { flex-wrap: wrap; gap: 4px 20px; }
+.sheet-body :deep(.el-radio) { margin-right: 0; white-space: normal; height: auto; min-height: 32px; }
+.sheet-body :deep(.el-radio__label) { white-space: normal; }
 .form-actions {
-  align-items: center;
   flex-wrap: wrap;
   padding: 12px 24px;
-  border: 0;
-  border-top: 1px solid var(--eas-rule);
   border-radius: 0 0 var(--eas-radius-panel) var(--eas-radius-panel);
-  background: var(--eas-surface);
-  box-shadow: none;
 }
-/* Element Plus 会给相邻按钮加 12px 左边距，这里交给 gap 控制节奏 */
-.form-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
-}
-/* 吸底时，el-main 的下内边距处会露出下方内容，用页面底色盖住 */
-.form-actions::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: -1px;
-  right: -1px;
-  height: 20px;
-  background: var(--eas-paper);
-  pointer-events: none;
-}
-.actions-note {
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-3);
-}
-
-@media (max-width: 768px) {
-  .sheet-head,
-  .sheet-body {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-  .form-actions {
-    padding: 12px 16px;
-  }
-  /* 上传提示单独占一行，排在最前，按钮不被挤散 */
-  .actions-note {
-    flex-basis: 100%;
-    order: -1;
-    text-align: right;
-  }
+.form-actions :deep(.el-button + .el-button) { margin-left: 0; }
+.actions-note { font-size: var(--eas-fs-12); color: var(--eas-ink-3); }
+@media (max-width: 767px) {
+  .sheet-head { padding: 24px 16px 20px; }
+  .sheet-main { flex-basis: 100%; }
+  .sheet-extra { align-items: flex-start; }
+  .sheet-body :deep(.form-section) { padding: 20px 16px; }
+  .error-summary, .sheet-body > :deep(.el-alert) { margin: 16px; }
+  .form-actions { padding: 12px 16px; gap: 8px; }
+  .form-actions :deep(.el-button) { padding-left: 10px; padding-right: 10px; }
+  .actions-note { flex-basis: 100%; order: -1; }
 }
 </style>

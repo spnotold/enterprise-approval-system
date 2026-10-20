@@ -231,7 +231,7 @@ const selectedRelated = computed(() =>
 <template>
   <FormShell
     title="报销申请"
-    description="关联差旅 / 采购单，上传票据报销"
+    description="填写费用明细并提供票据"
     :app-no="draft.appNo.value"
     :loading="draft.loading.value"
     :load-error="draft.loadError.value"
@@ -249,7 +249,7 @@ const selectedRelated = computed(() =>
   >
     <template #header-extra>
       <div class="total-box">
-        <div class="muted small">报销合计（以服务端重算为准）</div>
+        <div class="muted small">报销合计</div>
         <MoneyText :cents="total" strong class="total" />
         <div v-if="noInvoiceRows.length" class="small text-warning">
           含 {{ noInvoiceRows.length }} 条无票支出（合计 ¥{{ formatCents(sumCents(noInvoiceRows.map((r) => r.amountCents))) }}）
@@ -257,9 +257,9 @@ const selectedRelated = computed(() =>
       </div>
     </template>
 
-    <el-form label-width="120px" class="expense-form" @submit.prevent>
-      <el-card shadow="never">
-        <template #header><span class="section-title">报销信息</span></template>
+    <el-form label-position="top" class="expense-form" @submit.prevent>
+      <section class="form-section">
+        <h3 class="section-title">报销信息</h3>
         <el-form-item label="标题" required :error="err('title')">
           <el-input v-model="model.title" maxlength="100" show-word-limit placeholder="如：11 月北京出差报销" />
         </el-form-item>
@@ -317,10 +317,10 @@ const selectedRelated = computed(() =>
             placeholder="不关联差旅 / 采购申请时，请说明报销背景"
           />
         </el-form-item>
-      </el-card>
+      </section>
 
-      <el-card shadow="never">
-        <template #header><span class="section-title">费用明细</span></template>
+      <section class="form-section">
+        <h3 class="section-title">费用明细</h3>
         <div v-if="err('items')" class="field-error field-error-msg">{{ err('items') }}</div>
         <el-alert
           v-if="duplicates.length"
@@ -331,7 +331,7 @@ const selectedRelated = computed(() =>
           style="margin-bottom: 8px"
         />
         <ExpenseItemTable v-model="model.items" :error="err" :duplicates="duplicates" />
-      </el-card>
+      </section>
     </el-form>
   </FormShell>
 </template>
@@ -346,14 +346,15 @@ const selectedRelated = computed(() =>
   text-align: right;
 }
 .total {
-  font-size: var(--eas-fs-lg);
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-26);
 }
 .related {
   width: 100%;
 }
 .related-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 8px;
   margin-top: 8px;
 }

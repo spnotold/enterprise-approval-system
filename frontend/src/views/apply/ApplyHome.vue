@@ -2,14 +2,13 @@
 // 发起申请：采购、差旅、报销及已启用的自定义模板；下方列出我的草稿
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Document, Goods, Money, Promotion } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
 import type { ApplicationSummary, AppType, TemplateOption } from '@/lib/types'
 import { APP_TYPE_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { showError } from '@/lib/errors'
-import { useBreakpoint } from '@/composables/useBreakpoint'
 import MoneyText from '@/components/MoneyText.vue'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const router = useRouter()
 const { isMobile } = useBreakpoint()
@@ -18,10 +17,10 @@ const drafts = ref<ApplicationSummary[]>([])
 const loading = ref(true)
 const draftsLoading = ref(true)
 
-const BUILTIN_META: Record<Exclude<AppType, 'CUSTOM'>, { path: string; icon: typeof Goods; desc: string }> = {
-  PURCHASE: { path: '/apply/purchase', icon: Goods, desc: '采购明细、多家报价比较、拟选供应商' },
-  TRAVEL: { path: '/apply/travel', icon: Promotion, desc: '行程、起止时间、预算与同行人员' },
-  EXPENSE: { path: '/apply/expense', icon: Money, desc: '关联差旅 / 采购单，上传票据报销' },
+const BUILTIN_META: Record<Exclude<AppType, 'CUSTOM'>, { path: string; desc: string }> = {
+  PURCHASE: { path: '/apply/purchase', desc: '采购明细与报价' },
+  TRAVEL: { path: '/apply/travel', desc: '行程与出差预算' },
+  EXPENSE: { path: '/apply/expense', desc: '费用明细与票据' },
 }
 
 const builtin = computed(() => templates.value.filter((t) => t.category === 'BUILTIN'))
@@ -30,6 +29,11 @@ const custom = computed(() => templates.value.filter((t) => t.category === 'CUST
 function target(t: TemplateOption): string {
   if (t.category === 'BUILTIN' && t.bizType !== 'CUSTOM') return BUILTIN_META[t.bizType].path
   return `/apply/custom/${t.id}`
+}
+
+function description(t: TemplateOption): string {
+  if (t.category === 'BUILTIN' && t.bizType !== 'CUSTOM') return BUILTIN_META[t.bizType].desc
+  return [...(t.description?.split(/[，。；\n]/)[0]?.trim() || '按模板填写申请')].slice(0, 10).join('')
 }
 
 onMounted(async () => {
@@ -51,206 +55,112 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="apply-home">
-    <h2 class="home-title">发起申请</h2>
-
-    <div class="panel">
-      <el-skeleton v-if="loading" :rows="4" animated />
-      <template v-else>
-        <section class="block">
-          <h3 class="block-title">业务申请</h3>
-          <el-empty v-if="builtin.length === 0" :image-size="60" description="暂无可发起的业务申请" />
-          <div class="grid">
-            <button v-for="t in builtin" :key="t.id" type="button" class="tpl" @click="router.push(target(t))">
-              <el-icon :size="24" class="tpl-icon">
-                <component :is="t.bizType !== 'CUSTOM' ? BUILTIN_META[t.bizType].icon : Document" />
-              </el-icon>
-              <span class="tpl-body">
-                <span class="tpl-name">{{ t.name }}</span>
-                <span class="tpl-desc">{{ t.description || (t.bizType !== 'CUSTOM' ? BUILTIN_META[t.bizType].desc : '') }}</span>
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <section class="block">
-          <h3 class="block-title">其他申请</h3>
-          <el-empty v-if="custom.length === 0" :image-size="60" description="暂无适用于本部门的自定义申请" />
-          <div class="grid">
-            <button v-for="t in custom" :key="t.id" type="button" class="tpl" @click="router.push(target(t))">
-              <el-icon :size="24" class="tpl-icon"><Document /></el-icon>
-              <span class="tpl-body">
-                <span class="tpl-name">{{ t.name }}</span>
-                <span class="tpl-desc">{{ t.description || '自定义流程' }}</span>
-              </span>
-            </button>
-          </div>
-        </section>
-      </template>
-
-      <section class="block">
-        <div class="block-head">
-          <h3 class="block-title">我的草稿</h3>
-          <el-button link type="primary" @click="router.push('/applications/mine?status=DRAFT')">查看全部草稿</el-button>
+  <div class="apply-home sheet">
+    <el-skeleton v-if="loading" class="sheet-section" :rows="4" animated />
+    <template v-else>
+      <section v-for="group in [{ title: '业务申请', items: builtin }, { title: '其他申请', items: custom }]" :key="group.title" class="sheet-section">
+        <h3 class="block-title">{{ group.title }}</h3>
+        <p v-if="!group.items.length" class="empty-line">暂无可发起的{{ group.title }}</p>
+        <div v-else class="grid">
+          <router-link v-for="t in group.items" :key="t.id" :to="target(t)" class="tpl">
+            <span class="tpl-name">{{ t.name }}</span>
+            <span class="tpl-lines" aria-hidden="true"><i /><i /><i /></span>
+            <span class="tpl-desc">{{ description(t) }}</span>
+          </router-link>
         </div>
-        <el-table v-loading="draftsLoading" :data="drafts" size="small">
-          <el-table-column label="编号" :width="isMobile ? 150 : 190">
-            <template #default="{ row }">
-              <router-link :to="`/applications/${row.id}/edit`" class="app-no">{{ row.appNo }}</router-link>
-            </template>
-          </el-table-column>
-          <el-table-column label="标题" :min-width="isMobile ? 120 : 180" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.title || '（未填写标题）' }}</template>
-          </el-table-column>
-          <el-table-column v-if="!isMobile" label="类型" width="120">
-            <template #default="{ row }">{{ row.templateName || APP_TYPE_LABEL[row.type as AppType] }}</template>
-          </el-table-column>
-          <el-table-column v-if="!isMobile" label="金额" width="130" align="right">
-            <template #default="{ row }"><MoneyText :cents="row.amountCents" /></template>
-          </el-table-column>
-          <el-table-column v-if="!isMobile" label="最后保存" width="160">
-            <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
-          </el-table-column>
-          <template #empty><el-empty :image-size="60" description="暂无草稿" /></template>
-        </el-table>
       </section>
-    </div>
+    </template>
+
+    <section class="drafts">
+      <div class="block-head">
+        <h3 class="block-title">我的草稿</h3>
+        <el-button link type="primary" @click="router.push('/applications/mine?status=DRAFT')">查看全部草稿</el-button>
+      </div>
+      <el-table v-loading="draftsLoading" :data="drafts">
+        <el-table-column label="申请" min-width="240">
+          <template #default="{ row }">
+            <router-link :to="`/applications/${row.id}/edit`" class="draft-link two-line">
+              <span class="cell-main">{{ row.title || '未填写标题' }}</span>
+              <span class="cell-sub">{{ row.templateName || APP_TYPE_LABEL[row.type as AppType] }}{{ '\u3000' }}{{ row.appNo }}</span>
+              <span v-if="isMobile" class="draft-mobile-meta cell-sub">
+                <span>最后保存 {{ fmtDateTime(row.updatedAt) }}</span>
+                <MoneyText v-if="row.amountCents != null" :cents="row.amountCents" />
+                <span v-else>无金额</span>
+              </span>
+            </router-link>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="!isMobile" label="金额" width="150" align="right">
+          <template #default="{ row }">
+            <span v-if="row.amountCents == null" class="cell-none">无</span>
+            <MoneyText v-else :cents="row.amountCents" />
+          </template>
+        </el-table-column>
+        <el-table-column v-if="!isMobile" label="最后保存" width="180">
+          <template #default="{ row }"><span class="saved-time">{{ fmtDateTime(row.updatedAt) }}</span></template>
+        </el-table-column>
+        <template #empty><span class="empty-line">暂无草稿</span></template>
+      </el-table>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.apply-home {
-  max-width: 1200px;
-}
-.home-title {
-  margin: 0 0 16px;
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-xl);
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--eas-ink);
-}
-.panel {
-  padding: 0 24px;
-  background: var(--eas-surface);
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-}
-.block {
-  padding: 20px 0 24px;
-}
-.block + .block {
-  border-top: 1px solid var(--eas-rule);
-}
+.apply-home { min-width: 0; }
 .block-title {
-  margin: 0 0 12px;
-  font-size: var(--eas-fs-md);
+  margin: 0 0 16px;
+  font-size: var(--eas-fs-16);
   font-weight: 600;
   line-height: 1.5;
-  color: var(--eas-ink);
 }
 .block-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 22px 24px 0;
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+  gap: 16px;
 }
 .tpl {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-height: 64px;
-  padding: 14px 16px;
-  text-align: left;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  background: var(--eas-surface);
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
-    transform var(--eas-dur-fast) var(--eas-ease),
-    box-shadow var(--eas-dur-fast) var(--eas-ease);
-}
-.tpl:hover,
-.tpl:focus-visible {
-  position: relative;
-  z-index: 1;
-  transform: translateY(-2px);
-  border-color: var(--eas-primary);
-  box-shadow: var(--eas-shadow-lift);
-}
-.tpl:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
-}
-.tpl:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-.tpl-icon {
-  flex: none;
-  margin-top: 2px;
-  color: var(--eas-ink-2);
-}
-.tpl-body {
-  min-width: 0;
-  display: flex;
   flex-direction: column;
-  gap: 2px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-control);
+  background: var(--eas-sheet);
+  color: var(--eas-ink);
+  text-decoration: none;
+  transition: border-color var(--eas-dur-fast) var(--eas-ease), transform var(--eas-dur-fast) var(--eas-ease);
 }
+.tpl:hover { border-color: var(--eas-primary); }
+.tpl:focus-visible { outline: 2px solid var(--eas-primary); outline-offset: 2px; }
+.tpl:active { transform: translateY(1px); }
 .tpl-name {
-  font-size: var(--eas-fs-md);
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-16);
   font-weight: 600;
   line-height: 1.5;
-  color: var(--eas-ink);
-}
-.tpl-desc {
-  font-size: var(--eas-fs-sm);
-  line-height: 1.6;
-  color: var(--eas-ink-2);
-  white-space: normal;
   overflow-wrap: anywhere;
-  text-wrap: pretty;
 }
-.app-no {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  color: var(--eas-primary);
-  text-decoration: none;
-  font-variant-numeric: tabular-nums;
-}
-.app-no:hover {
-  text-decoration: underline;
-}
-.app-no:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tpl,
-  .tpl:hover,
-  .tpl:focus-visible,
-  .tpl:active {
-    transform: none;
-    transition: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .panel {
-    padding: 0 16px;
-  }
-  .home-title {
-    font-size: var(--eas-fs-lg);
-  }
+.tpl-lines { display: grid; gap: 8px; margin: 16px 0 12px; }
+.tpl-lines i { height: 1px; background: var(--eas-rule); }
+.tpl-lines i:last-child { width: 60%; }
+.tpl-desc { color: var(--eas-ink-3); font-size: var(--eas-fs-12); line-height: 1.5; }
+.drafts { min-width: 0; border-top: 1px solid var(--eas-rule); padding-bottom: 8px; }
+.draft-link { padding: 2px 0; color: var(--eas-primary); text-decoration: none; }
+.draft-link:hover .cell-main { color: var(--eas-primary); text-decoration: underline; }
+.draft-mobile-meta { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; }
+.saved-time { font-variant-numeric: tabular-nums; }
+.empty-line { margin: 0; color: var(--eas-ink-3); font-size: var(--eas-fs-14); }
+@media (max-width: 767px) {
+  .sheet-section { padding: 20px 16px; }
+  .block-head { padding: 20px 16px 0; }
+  .grid { grid-template-columns: 1fr; }
 }
 </style>

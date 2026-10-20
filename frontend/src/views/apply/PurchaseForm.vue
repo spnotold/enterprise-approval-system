@@ -267,7 +267,7 @@ function beforeToday(d: Date) {
 <template>
   <FormShell
     title="采购申请"
-    description="采购明细、多家报价比较、拟选供应商"
+    description="填写采购需求与供应商报价"
     :app-no="draft.appNo.value"
     :loading="draft.loading.value"
     :load-error="draft.loadError.value"
@@ -283,9 +283,9 @@ function beforeToday(d: Date) {
     @submit="draft.submit"
     @delete="draft.removeDraft"
   >
-    <el-form label-width="120px" class="purchase-form" @submit.prevent>
-      <el-card shadow="never">
-        <template #header><span class="section-title">申请信息</span></template>
+    <el-form label-position="top" class="purchase-form" @submit.prevent>
+      <section class="form-section">
+        <h3 class="section-title">申请信息</h3>
         <el-form-item label="标题" required :error="err('title')">
           <el-input v-model="model.title" maxlength="100" show-word-limit placeholder="如：研发部采购开发用笔记本电脑" />
         </el-form-item>
@@ -293,12 +293,12 @@ function beforeToday(d: Date) {
           <el-input v-model="model.reason" type="textarea" :rows="3" maxlength="1000" show-word-limit />
         </el-form-item>
         <el-row :gutter="16">
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="预算上限" required :error="err('budgetLimitCents')">
-              <AmountInput v-model:cents="model.budgetLimitCents" style="width: 220px" />
+              <AmountInput v-model:cents="model.budgetLimitCents" style="width: 100%" />
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="期望到货日期" required :error="err('expectedArrivalDate')">
               <el-date-picker
                 v-model="model.expectedArrivalDate"
@@ -310,21 +310,19 @@ function beforeToday(d: Date) {
             </el-form-item>
           </el-col>
         </el-row>
-      </el-card>
+      </section>
 
-      <el-card shadow="never">
-        <template #header><span class="section-title">采购明细</span></template>
+      <section class="form-section">
+        <h3 class="section-title">采购明细</h3>
         <div v-if="err('items')" class="field-error field-error-msg">{{ err('items') }}</div>
         <ItemTable v-model="model.items" :error="err" />
-      </el-card>
+      </section>
 
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-head">
-            <span class="section-title">报价比较</span>
-            <el-switch v-model="model.singleSource" active-text="单一来源采购" />
-          </div>
-        </template>
+      <section class="form-section">
+        <div class="card-head">
+          <h3 class="section-title">报价比较</h3>
+          <el-switch v-model="model.singleSource" active-text="单一来源采购" />
+        </div>
         <template v-if="model.singleSource">
           <el-alert
             type="error"
@@ -342,10 +340,10 @@ function beforeToday(d: Date) {
         </template>
         <div v-if="err('quotes')" class="field-error field-error-msg">{{ err('quotes') }}</div>
         <QuoteTable v-model="model.quotes" v-model:selected="model.selectedQuoteIndex" :error="err" />
-      </el-card>
+      </section>
 
-      <el-card shadow="never">
-        <template #header><span class="section-title">采购选择</span></template>
+      <section class="form-section">
+        <h3 class="section-title">采购选择</h3>
         <el-form-item label="拟选供应商" required :error="err('selectedQuoteIndex')">
           <div v-if="selectedQuote" class="selected">
             <strong>{{ selectedQuote.supplierName || '（未填写供应商）' }}</strong>
@@ -369,14 +367,14 @@ function beforeToday(d: Date) {
             placeholder="拟选报价不是最低价，请说明理由（至少 10 字）"
           />
         </el-form-item>
-      </el-card>
+      </section>
 
-      <el-card shadow="never">
-        <template #header><span class="section-title">附件</span></template>
+      <section class="form-section">
+        <h3 class="section-title">附件</h3>
         <el-form-item label="其他附件" :error="err('attachmentIds')">
           <AttachmentUploader v-model="model.attachments" ref-type="PURCHASE_ATTACHMENT" :max-count="20" />
         </el-form-item>
-      </el-card>
+      </section>
     </el-form>
   </FormShell>
 </template>
@@ -391,6 +389,9 @@ function beforeToday(d: Date) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 .card-head .section-title {
   margin: 0;
