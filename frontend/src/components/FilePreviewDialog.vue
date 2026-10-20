@@ -80,8 +80,10 @@ function openNew() {
 <style scoped>
 .preview-body {
   min-height: 240px;
+  border: 1px solid var(--eas-rule);
   border-radius: var(--eas-radius-control);
-  background: var(--eas-paper);
+  background: var(--eas-row-hover);
+  overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;

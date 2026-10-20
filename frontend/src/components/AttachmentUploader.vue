@@ -334,16 +334,21 @@ onBeforeUnmount(() => {
 <style scoped>
 .uploader {
   width: 100%;
+  min-width: 0;
 }
-/* 上传栏即拖放区：虚线框，拖入文件时变主色 */
+.uploader :deep(.el-button) {
+  min-height: 32px;
+}
+/* 上传栏即拖放区：rule-strong 虚线框，拖入文件时虚线变主色、底色 primary-tint */
 .uploader-bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 8px;
-  padding: 6px 8px;
+  gap: 8px 12px;
+  padding: 12px 16px;
   border: 1px dashed var(--eas-rule-strong);
   border-radius: var(--eas-radius-control);
+  background: var(--eas-sheet);
   transition:
     border-color var(--eas-dur-fast) var(--eas-ease),
     background-color var(--eas-dur-fast) var(--eas-ease);
@@ -352,32 +357,39 @@ onBeforeUnmount(() => {
   border-color: var(--eas-primary);
   background: var(--eas-primary-tint);
 }
+.uploader-bar.is-disabled:not(.is-dragging) {
+  background: var(--eas-row-hover);
+}
 .uploader-hint {
+  flex: 1 1 200px;
+  min-width: 0;
   font-size: var(--eas-fs-xs);
   line-height: 1.5;
   color: var(--eas-ink-3);
 }
 /* 拖入时底色是 primary-tint，ink-3 不到 4.5:1 */
-.uploader-bar.is-dragging .uploader-hint {
+.uploader-bar.is-dragging .uploader-hint,
+.uploader-bar.is-disabled .uploader-hint {
   color: var(--eas-ink-2);
 }
+/* 文件行：不加框，只用 1px rule 分隔 */
 .file-list {
   list-style: none;
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   padding: 0;
 }
 .file-item {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: flex-start;
-  padding: 4px 2px;
+  padding: 8px 0;
 }
 .file-item + .file-item {
   border-top: 1px solid var(--eas-rule);
 }
 .file-icon {
   margin-top: 4px;
-  color: var(--eas-ink-2);
+  color: var(--eas-ink-3);
 }
 .file-main {
   flex: 1;
@@ -391,11 +403,20 @@ onBeforeUnmount(() => {
 }
 .file-name,
 .file-name-text {
-  max-width: 260px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: inline-block;
+}
+.file-name-text {
+  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink);
+}
+.file-item.pending :deep(.el-progress) {
+  margin-top: 6px;
 }
 .file-name :deep(span) {
   overflow: hidden;

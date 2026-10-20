@@ -113,6 +113,7 @@ function onChange(v: number | number[] | null) {
 .option-meta {
   margin-left: 8px;
   font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-3);
+  color: var(--eas-ink-2);
+  font-variant-numeric: tabular-nums;
 }
 </style>
