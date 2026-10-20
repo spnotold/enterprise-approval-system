@@ -36,8 +36,8 @@ onMounted(async () => {
 
 <template>
   <div>
-    <el-skeleton v-if="loading" :rows="10" animated />
-    <el-result v-else-if="error" icon="warning" :title="error">
+    <div v-if="loading" class="sheet edit-state"><el-skeleton :rows="10" animated /></div>
+    <el-result v-else-if="error" class="sheet" icon="warning" :title="error">
       <template #extra>
         <el-button @click="$router.push(`/applications/${id}`)">查看详情</el-button>
         <el-button type="primary" @click="$router.push('/applications/mine')">返回我的申请</el-button>
@@ -49,3 +49,7 @@ onMounted(async () => {
     <CustomForm v-else-if="type === 'CUSTOM'" :id="id" :template-id="templateId ?? undefined" />
   </div>
 </template>
+
+<style scoped>
+.edit-state { padding: 24px; }
+</style>

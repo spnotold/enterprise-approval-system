@@ -67,8 +67,15 @@ watch(cents, (c) => {
 </template>
 
 <style scoped>
+.amount-input :deep(.el-input__wrapper:has(input:focus-visible)) {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
 .amount-input :deep(input) {
   text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.amount-input :deep(.el-input__prefix-inner) {
   font-variant-numeric: tabular-nums;
 }
 </style>

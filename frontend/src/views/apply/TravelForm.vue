@@ -216,7 +216,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
 <template>
   <FormShell
     title="差旅申请"
-    description="行程、起止时间、预算与同行人员"
+    description="填写行程与出差预算"
     :app-no="draft.appNo.value"
     :loading="draft.loading.value"
     :load-error="draft.loadError.value"
@@ -232,24 +232,24 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
     @submit="draft.submit"
     @delete="draft.removeDraft"
   >
-    <el-form label-width="110px" class="travel-form" @submit.prevent>
-      <el-card shadow="never">
-        <template #header><span class="section-title">行程信息</span></template>
+    <el-form label-position="top" class="travel-form" @submit.prevent>
+      <section class="form-section">
+        <h3 class="section-title">行程信息</h3>
         <el-form-item label="标题" required :error="err('title')">
           <el-input v-model="model.title" maxlength="100" show-word-limit placeholder="如：赴北京参加技术交流会" />
         </el-form-item>
         <el-row :gutter="16">
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="出发地" required :error="err('origin')">
               <el-input v-model="model.origin" maxlength="100" />
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="目的地" required :error="err('destination')">
               <el-input v-model="model.destination" maxlength="100" />
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="开始时间" required :error="err('startTime')">
               <el-date-picker
                 v-model="model.startTime"
@@ -261,7 +261,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
               />
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="结束时间" required :error="err('endTime')">
               <el-date-picker
                 v-model="model.endTime"
@@ -282,31 +282,32 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
               <el-tag v-if="lateReport" type="warning" size="small" disable-transitions>事后补报</el-tag>
             </template>
             <span v-else-if="reversed" class="text-danger">结束时间不能早于开始时间</span>
-            <span v-else class="muted">选择起止时间后自动计算（按上海时区自然日计，服务端会重新计算）</span>
+            <span v-else class="muted">选择起止时间后自动计算</span>
           </div>
-          <div v-if="lateReport" class="muted small">开始时间早于当前时间（今天 {{ today }}），提交后审批界面将显示“事后补报”。</div>
+          <div class="duration-note">按上海时区自然日计算</div>
+          <div v-if="lateReport" class="muted small">开始时间早于当前时间（今天 {{ today }}），将标记为事后补报。</div>
         </el-form-item>
         <el-row :gutter="16">
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="交通方式" required :error="err('transport')">
               <el-select v-model="model.transport" placeholder="请选择" clearable>
                 <el-option v-for="t in TRANSPORTS" :key="t.value" :value="t.value" :label="t.label" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :md="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="预算" required :error="err('budgetCents')">
-              <AmountInput v-model:cents="model.budgetCents" style="width: 220px" />
+              <AmountInput v-model:cents="model.budgetCents" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="出差事由" required :error="err('purpose')">
           <el-input v-model="model.purpose" type="textarea" :rows="3" maxlength="1000" show-word-limit />
         </el-form-item>
-      </el-card>
+      </section>
 
-      <el-card shadow="never">
-        <template #header><span class="section-title">同行人员</span></template>
+      <section class="form-section">
+        <h3 class="section-title">同行人员</h3>
         <div v-if="err('companions')" class="field-error field-error-msg">{{ err('companions') }}</div>
         <div v-if="model.companions.length === 0" class="muted small">无同行人员</div>
         <div v-for="(c, i) in model.companions" :key="c.key" class="companion">
@@ -333,14 +334,14 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
         <el-button size="small" :icon="Plus" style="margin-top: 8px" :disabled="model.companions.length >= 20" @click="addCompanion">
           添加同行人员
         </el-button>
-      </el-card>
+      </section>
 
-      <el-card shadow="never">
-        <template #header><span class="section-title">附件</span></template>
+      <section class="form-section">
+        <h3 class="section-title">附件</h3>
         <el-form-item label="附件" :error="err('attachmentIds')">
           <AttachmentUploader v-model="model.attachments" ref-type="TRAVEL_ATTACHMENT" :max-count="20" />
         </el-form-item>
-      </el-card>
+      </section>
     </el-form>
   </FormShell>
 </template>
@@ -356,6 +357,11 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
   align-items: center;
   gap: 8px;
 }
+.duration-note {
+  width: 100%;
+  font-size: var(--eas-fs-12);
+  color: var(--eas-ink-3);
+}
 .companion {
   display: flex;
   align-items: flex-start;
@@ -365,7 +371,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
 }
 .companion-input {
   flex: 1;
-  min-width: 220px;
+  min-width: min(220px, 100%);
   max-width: 420px;
 }
 .field-error {
