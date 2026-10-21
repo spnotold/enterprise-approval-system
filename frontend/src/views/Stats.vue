@@ -1052,10 +1052,14 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
 
 /* 窄屏：操作区换到页签上一行右对齐，页签仍与单据相接 */
 @media (max-width: 767px) {
-  .stats-tabs :deep(.index-tabs-row) {
+  /* stats-tabs 落在 IndexTabs 的根节点上，与 .index-tabs-row 是同一个元素，直接改它 */
+  .stats-tabs {
     flex-direction: column;
     align-items: stretch;
     gap: 0;
+  }
+  .stats-tabs :deep(.index-tabs) {
+    width: 100%;
   }
   .stats-tabs :deep(.index-tab-actions) {
     order: -1;
@@ -1063,11 +1067,20 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
     max-width: 100%;
     padding-bottom: 10px;
   }
+  .stats-actions {
+    max-width: 100%;
+  }
   .dept-select {
     width: 140px;
   }
   .stats-actions .range-picker {
-    width: 230px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .stats-tabs :deep(.el-date-editor) {
+    width: 100% !important;
+    min-width: 0;
   }
 }
 

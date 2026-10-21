@@ -308,6 +308,10 @@ function fillDemo(a: DemoAccount) {
 .demo-item:hover {
   background: var(--eas-row-hover);
 }
+/* 悬停底色上账号名提到 ink-2，保持 4.5:1 以上 */
+.demo-item:is(:hover, :focus-visible) .demo-user {
+  color: var(--eas-ink-2);
+}
 .demo-item:active {
   transform: translateY(1px);
 }
