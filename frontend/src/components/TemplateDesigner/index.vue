@@ -368,10 +368,10 @@ defineExpose({ locate })
         />
 
         <div class="cols" :class="{ 'no-lib': formLocked }">
-          <aside v-if="!formLocked" class="col col-lib">
+          <aside v-if="!formLocked" class="col col-lib sheet">
             <FieldLibrary @add="addField" />
           </aside>
-          <section class="col col-main">
+          <section class="col col-main sheet">
             <FormCanvas
               :fields="fields"
               :selected="selectedField"
@@ -388,7 +388,7 @@ defineExpose({ locate })
               @remove="removeField"
             />
           </section>
-          <aside class="col col-side">
+          <aside class="col col-side sheet">
             <FieldProps
               v-if="currentField && selectedField !== null"
               :key="uidOf(currentField)"
@@ -426,7 +426,7 @@ defineExpose({ locate })
         />
 
         <div class="cols flow">
-          <section class="col col-main">
+          <section class="col col-main sheet">
             <NodeList
               :nodes="nodes"
               :selected="selectedNode"
@@ -441,7 +441,7 @@ defineExpose({ locate })
               @add="addNode"
             />
           </section>
-          <aside class="col col-side">
+          <aside class="col col-side sheet">
             <NodeEditor
               v-if="currentNode && selectedNode !== null"
               :key="uidOf(currentNode)"
@@ -500,12 +500,6 @@ defineExpose({ locate })
 .col {
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  background: var(--eas-sheet);
-}
-.col-main {
-  background: var(--eas-desk);
 }
 .col-side {
   position: sticky;

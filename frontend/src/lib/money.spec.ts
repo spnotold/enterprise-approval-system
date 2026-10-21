@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { centsToYuan, formatCents, MAX_ITEM_CENTS, multiplyCents, sumCents, yuanToCents } from './money'
+import { centsToYuan, formatCents, formatQuantity, MAX_ITEM_CENTS, multiplyCents, sumCents, yuanToCents } from './money'
 
 describe('yuanToCents', () => {
   it.each([
@@ -100,6 +100,26 @@ describe('formatCents', () => {
   it('shows a dash for empty values', () => {
     expect(formatCents(null)).toBe('—')
     expect(formatCents(undefined)).toBe('—')
+  })
+})
+
+describe('formatQuantity', () => {
+  it.each([
+    ['1.000', '1'],
+    ['2.500', '2.5'],
+    ['0.250', '0.25'],
+    ['10', '10'],
+    ['100.000', '100'],
+    [' 2.050 ', '2.05'],
+  ])('%j -> %j', (quantity, expected) => {
+    expect(formatQuantity(quantity)).toBe(expected)
+  })
+
+  it('shows a dash for empty values and preserves unexpected text', () => {
+    expect(formatQuantity(null)).toBe('—')
+    expect(formatQuantity(undefined)).toBe('—')
+    expect(formatQuantity('  ')).toBe('—')
+    expect(formatQuantity('abc')).toBe('abc')
   })
 })
 

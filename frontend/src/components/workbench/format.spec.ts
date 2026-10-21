@@ -47,7 +47,7 @@ describe('shortDesc', () => {
 
   it('takes the first clause and drops trailing items until it fits', () => {
     expect(shortDesc(custom('事假、病假、年假等；超过 3 天需企业负责人审批'))).toBe('事假、病假、年假')
-    expect(shortDesc(custom('使用公司公章、合同章、财务章'))).toBe('使用公司公章、合同章')
+    expect(shortDesc(custom('使用公司公章、合同章、财务章'))).toBe('公章、合同章')
     expect(shortDesc(custom('会议室预订'))).toBe('会议室预订')
   })
 

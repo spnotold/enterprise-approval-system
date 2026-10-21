@@ -72,6 +72,11 @@ function isLocked(u: AdminUser): boolean {
   return !!u.lockedUntil && Date.parse(u.lockedUntil) > Date.now()
 }
 
+/** 状态格第二行：MM-DD HH:mm（fmtDateTime 去掉年份） */
+function fmtLockUntil(input: string | null | undefined): string {
+  return fmtDateTime(input).slice(5)
+}
+
 function isSelf(u: AdminUser): boolean {
   return auth.me?.id === u.id
 }
@@ -364,21 +369,31 @@ async function submitGrant() {
     </p>
 
     <el-table v-loading="loading" :data="records" row-key="id" class="users-table eas-row-table">
-        <el-table-column prop="username" label="用户名" min-width="120" />
-        <el-table-column prop="realName" label="姓名" min-width="90" />
-        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
-        <el-table-column label="状态" width="130">
+        <!-- 用户名两行：第一行用户名，第二行邮箱（仅邮箱省略），不再单列邮箱 -->
+        <el-table-column label="用户名" width="148">
+          <template #default="{ row }">
+            <span class="user-cell">
+              <span class="user-name">{{ row.username }}</span>
+              <span class="user-email cell-ellipsis" :title="row.email">{{ row.email }}</span>
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="姓名" width="80">
+          <template #default="{ row }"><span class="cell-nowrap" :title="row.realName">{{ row.realName }}</span></template>
+        </el-table-column>
+        <el-table-column label="状态" width="92">
           <template #default="{ row }">
             <el-tag class="admin-status" :type="USER_STATUS_TAG[row.status as UserStatus]" disable-transitions>
               {{ USER_STATUS_LABEL[row.status as UserStatus] ?? row.status }}
             </el-tag>
             <el-tag v-if="isLocked(row as AdminUser)" type="danger" effect="plain" class="ml4" disable-transitions>已锁定</el-tag>
+            <span v-if="row.lockedUntil" class="lock-line">锁定至 {{ fmtLockUntil(row.lockedUntil) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="部门" min-width="110">
-          <template #default="{ row }">{{ row.deptName ?? '—' }}</template>
+        <el-table-column label="部门" width="68">
+          <template #default="{ row }"><span class="cell-ellipsis" :title="row.deptName ?? ''">{{ row.deptName ?? '—' }}</span></template>
         </el-table-column>
-        <el-table-column label="角色" min-width="260">
+        <el-table-column label="角色" min-width="144">
           <template #default="{ row }">
             <div class="role-tags">
               <el-dropdown
@@ -409,16 +424,10 @@ async function submitGrant() {
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="最近登录" width="150" class="mono">
-          <template #default="{ row }">{{ fmtDateTime(row.lastLoginAt) }}</template>
+        <el-table-column label="最近登录" width="136" class="mono">
+          <template #default="{ row }"><span class="cell-nowrap">{{ fmtDateTime(row.lastLoginAt) }}</span></template>
         </el-table-column>
-        <el-table-column label="锁定至" width="150">
-          <template #default="{ row }">
-            <span v-if="!row.lockedUntil" class="muted">—</span>
-            <span v-else :class="isLocked(row as AdminUser) ? 'text-danger' : 'muted'">{{ fmtDateTime(row.lockedUntil) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="170">
+        <el-table-column label="操作" width="128">
           <template #default="{ row }">
             <span v-if="row.status === 'PENDING'" class="row-actions">
               <el-button link type="primary" @click="router.push('/admin/registrations')">去审核</el-button>
@@ -549,6 +558,46 @@ async function submitGrant() {
 .users-table {
   width: 100%;
 }
+.users-table :deep(.cell) {
+  padding-right: 6px;
+  padding-left: 6px;
+}
+.cell-ellipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-nowrap {
+  white-space: nowrap;
+}
+.user-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.4;
+}
+.user-name {
+  font-size: var(--eas-fs-sm);
+  white-space: nowrap;
+}
+.user-email {
+  font-size: var(--eas-fs-12);
+  color: var(--eas-ink-3);
+}
+.lock-line {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--eas-fs-12);
+  line-height: 1.4;
+  color: var(--eas-ink-3);
+  white-space: nowrap;
+}
+.users-table .row-actions {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
 .role-tags {
   display: flex;
   flex-wrap: wrap;
@@ -558,7 +607,9 @@ async function submitGrant() {
   cursor: pointer;
   gap: 2px;
   height: 22px;
+  max-width: 100%;
   padding: 0 6px;
+  overflow: hidden;
   font-size: var(--eas-fs-xs);
 }
 .primary-badge {

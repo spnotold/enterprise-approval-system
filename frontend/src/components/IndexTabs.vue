@@ -45,7 +45,7 @@ defineEmits<{ select: [key: string] }>()
 <style scoped>
 .index-tabs-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   min-width: 0;
@@ -96,8 +96,10 @@ defineEmits<{ select: [key: string] }>()
   font-variant-numeric: tabular-nums;
 }
 .index-tab-actions {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
   flex: none;
-  padding-bottom: 8px;
 }
 .index-tab-actions:empty { display: none; }
 @media (max-width: 767px) {

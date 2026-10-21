@@ -155,14 +155,24 @@ function onCommand(cmd: string) {
       </div>
     </header>
 
-    <el-drawer v-if="isMobile" v-model="drawer" direction="ltr" size="280px" title="页面导航" class="nav-drawer">
+    <el-drawer v-if="isMobile" v-model="drawer" direction="ltr" size="280px" class="nav-drawer">
+      <template #header>
+        <router-link class="brand drawer-brand" to="/" aria-label="企业审批，工作台" @click="drawer = false">
+          <span class="logo" aria-hidden="true">审</span><span class="brand-text">企业审批</span>
+        </router-link>
+      </template>
       <nav aria-label="全部页面" class="drawer-nav">
         <section v-for="section in sections" :key="section.id" class="drawer-section">
-          <h2>{{ section.label }}<span v-if="section.id === 'approval' && pendingCount" class="pending-count">{{ pendingCount }}</span></h2>
+          <h2 v-if="section.items.length > 1">
+            {{ section.label }}<span v-if="section.id === 'approval' && pendingCount" class="pending-count">{{ pendingCount }}</span>
+          </h2>
           <router-link
             v-for="item in section.items" :key="item.path" :to="item.path"
             :class="{ 'is-active': activePath === item.path }" :aria-current="activePath === item.path ? 'page' : undefined"
-          >{{ item.title }}</router-link>
+            @click="drawer = false"
+          >
+            {{ item.title }}<span v-if="section.items.length === 1 && section.id === 'approval' && pendingCount" class="pending-count">{{ pendingCount }}</span>
+          </router-link>
         </section>
       </nav>
     </el-drawer>
@@ -224,7 +234,7 @@ function onCommand(cmd: string) {
 .admin-page :deep(.page > .sheet:not(.sheet ~ .sheet)), .admin-page :deep(> .sheet) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .drawer-section + .drawer-section { margin-top: 20px; }
 .drawer-section h2 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 0 16px; color: var(--eas-ink-2); font-size: var(--eas-fs-xs); font-weight: 500; }
-.drawer-section a { display: flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--eas-radius-control); color: var(--eas-ink); text-decoration: none; }
+.drawer-section a { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: var(--eas-radius-control); color: var(--eas-ink); text-decoration: none; }
 .drawer-section a:hover { background: var(--eas-row-hover); }
 .drawer-section a.is-active { background: var(--eas-sheet); font-weight: 600; }
 @media (min-width: 768px) and (max-width: 1000px) {
@@ -243,5 +253,7 @@ function onCommand(cmd: string) {
 <style>
 .clickable-notification { cursor: pointer; }
 .nav-drawer.el-drawer { background: var(--eas-desk); }
+.nav-drawer .el-drawer__header { margin-bottom: 0; padding: 18px 32px 10px; }
+.nav-drawer .drawer-brand { flex: 1; padding: 0; }
 .nav-drawer .el-drawer__body { padding: 8px 16px 24px; }
 </style>
