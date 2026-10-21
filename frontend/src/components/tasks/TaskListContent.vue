@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
@@ -11,6 +11,7 @@ import { errorText } from '@/lib/errors'
 import { useListQuery } from '@/composables/useListQuery'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useRowNavigation } from '@/composables/useRowNavigation'
+import { useSectionActionsTarget } from '@/composables/useSectionActionsTarget'
 import { useNoticeStore } from '@/stores/notice'
 import ListEmpty from '@/components/ListEmpty.vue'
 import MoneyText from '@/components/MoneyText.vue'
@@ -27,8 +28,8 @@ const pending = computed(() => props.kind === 'pending')
 const typeOptions = toOptions(APP_TYPE_LABEL)
 const hasUpdates = ref(false)
 // 外壳为本栏目渲染了页签行时，刷新放到页签行右侧；否则留在工具栏里。
-const hasActionsTarget = ref(false)
-onMounted(() => { hasActionsTarget.value = document.getElementById('section-actions') !== null })
+// 栏目内页面可见性随权限/路由变化，目标存在性需在每次路由渲染后重新探测。
+const hasActionsTarget = useSectionActionsTarget()
 const ownPath = route.path
 let active = true
 let fetchSeq = 0

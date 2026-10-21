@@ -15,6 +15,7 @@ import { dateRangeModel, useListQuery } from '@/composables/useListQuery'
 import { useAction } from '@/composables/useAction'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useRowNavigation } from '@/composables/useRowNavigation'
+import { useSectionActionsTarget } from '@/composables/useSectionActionsTarget'
 import { useAuthStore } from '@/stores/auth'
 import { useDictStore } from '@/stores/dict'
 import StatusTag from '@/components/StatusTag.vue'
@@ -37,7 +38,8 @@ const statusOptions = computed(() =>
 const headDepts = computed(() => auth.me?.headDeptIds ?? [])
 const canCreate = computed(() => props.scope === 'mine' && auth.can('APP_CREATE'))
 // 外壳为本栏目渲染了页签行时，页面操作放到页签行右侧；否则留在工具栏里。
-const hasActionsTarget = ref(false)
+// 同一实例会被多个列表范围复用，目标存在性需随路由变化重新探测。
+const hasActionsTarget = useSectionActionsTarget()
 
 const q = useListQuery({
   defaults: {
@@ -82,7 +84,6 @@ async function reload() {
 }
 
 onMounted(() => {
-  hasActionsTarget.value = document.getElementById('section-actions') !== null
   void loadCounts()
   if (props.scope === 'dept' && headDepts.value.length > 1) void dict.loadDepartments().catch(() => undefined)
 })
