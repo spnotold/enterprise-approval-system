@@ -2,7 +2,7 @@
 // 采购明细表：可增删行；金额 = 数量 × 单价（multiplyCents，HALF_UP 到分），合计仅供即时显示
 import { computed } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
-import { multiplyCents, sumCents } from '@/lib/money'
+import { formatQuantity, multiplyCents, sumCents } from '@/lib/money'
 import { emptyPurchaseItem, QUANTITY_PARTIAL, type PurchaseItemDraft } from '@/lib/formModels'
 import AmountInput from './AmountInput.vue'
 import MoneyText from './MoneyText.vue'
@@ -84,7 +84,7 @@ function remove(i: number) {
         </el-table-column>
         <el-table-column label="数量" width="110" align="right">
           <template #default="{ row, $index }">
-            <span v-if="readonly" class="num">{{ row.quantity ?? '—' }}</span>
+            <span v-if="readonly" class="num">{{ formatQuantity(row.quantity) }}</span>
             <div v-else :class="{ 'cell-error': err($index, 'quantity') }">
               <el-input
                 class="num-input"
@@ -166,6 +166,7 @@ function remove(i: number) {
 }
 .num {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .num-input :deep(input) {
   text-align: right;

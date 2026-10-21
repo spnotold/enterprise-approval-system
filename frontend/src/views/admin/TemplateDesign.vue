@@ -358,7 +358,6 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             {{ detail.category === 'BUILTIN' ? '内置' : '自定义' }}
           </el-tag>
           <el-tag v-if="!detail.enabled" size="small" type="info">已停用</el-tag>
-          <span class="muted small">{{ detail.code }}</span>
         </template>
       </div>
       <div v-if="detail" class="head-actions">

@@ -8,7 +8,7 @@ import { NODE_MODE_LABEL, NODE_STATUS_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { nodeKeyOf, useSlipHover } from '@/components/slip/hover'
 
-const props = defineProps<{ flow: FlowView | null }>()
+const props = defineProps<{ flow: FlowView | null; templateName: string }>()
 const hover = useSlipHover()
 // 节点消失或时间线卸载时清掉它留下的悬停 / 焦点
 watch(() => props.flow?.nodes, (nodes) => {
@@ -57,7 +57,7 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   <div class="flow">
     <p v-if="!flow || flow.nodes.length === 0" class="flow-empty">提交后生成审批流程</p>
     <template v-else>
-      <div class="flow-meta"><span>模板 {{ flow.templateCode }}</span><span>版本 v{{ flow.versionNo }}</span></div>
+      <div class="flow-meta"><span>模板 {{ templateName }}</span><span>版本 v{{ flow.versionNo }}</span></div>
       <ol class="flow-rows">
         <li v-for="n in flow.nodes" :key="n.seq" class="flow-row">
           <div

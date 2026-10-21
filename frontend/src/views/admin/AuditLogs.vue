@@ -118,33 +118,34 @@ function hasData(r: AuditLogView): boolean {
     </div>
 
     <el-table v-loading="loading" :data="records" row-key="id" class="audit-table eas-row-table">
-      <el-table-column label="时间" width="170">
-        <template #default="{ row }">{{ fmtDateTime(row.createdAt, true) }}</template>
+      <el-table-column label="时间" width="150">
+        <template #default="{ row }"><span class="cell-nowrap">{{ fmtDateTime(row.createdAt, true) }}</span></template>
       </el-table-column>
-      <el-table-column label="操作人" min-width="90">
-        <template #default="{ row }">{{ row.operatorName ?? '系统' }}</template>
+      <el-table-column label="操作人" width="96">
+        <template #default="{ row }"><span class="cell-nowrap" :title="row.operatorName ?? '系统'">{{ row.operatorName ?? '系统' }}</span></template>
       </el-table-column>
-      <el-table-column label="动作" min-width="160">
-        <template #default="{ row }">{{ row.action }}</template>
+      <el-table-column label="动作" width="130">
+        <template #default="{ row }"><span class="cell-ellipsis" :title="row.action">{{ row.action }}</span></template>
       </el-table-column>
-      <el-table-column label="对象" min-width="170">
+      <el-table-column label="对象" width="140">
         <template #default="{ row }">
           <el-link
+            class="cell-ellipsis"
             underline="never"
-            title="只看该对象的记录"
+            :title="`${row.targetType}${row.targetId ? ` #${row.targetId}` : ''}；点击只看该对象的记录`"
             @click="filterTarget(row as AuditLogView)"
           >
             {{ row.targetType }}<template v-if="row.targetId"> #{{ row.targetId }}</template>
           </el-link>
         </template>
       </el-table-column>
-      <el-table-column label="原因" min-width="180" show-overflow-tooltip>
-        <template #default="{ row }">{{ row.reason ?? '—' }}</template>
+      <el-table-column label="原因" width="200">
+        <template #default="{ row }"><span class="cell-ellipsis" :title="row.reason ?? ''">{{ row.reason ?? '—' }}</span></template>
       </el-table-column>
-      <el-table-column label="IP" min-width="120">
-        <template #default="{ row }">{{ row.ip ?? '—' }}</template>
+      <el-table-column label="IP" width="105">
+        <template #default="{ row }"><span class="cell-nowrap">{{ row.ip ?? '—' }}</span></template>
       </el-table-column>
-      <el-table-column label="操作" width="100">
+      <el-table-column label="操作" width="84">
         <template #default="{ row }">
           <span v-if="hasData(row as AuditLogView)" class="row-actions">
             <el-button link type="primary" @click="openDiff(row as AuditLogView)">前后对比</el-button>
@@ -194,6 +195,23 @@ function hasData(r: AuditLogView): boolean {
 }
 .audit-table {
   width: 100%;
+}
+.audit-table :deep(.cell) {
+  padding-right: 8px;
+  padding-left: 8px;
+}
+.cell-nowrap {
+  white-space: nowrap;
+}
+.cell-ellipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audit-table .el-link.cell-ellipsis {
+  display: block;
 }
 .diff-meta {
   margin-bottom: 16px;

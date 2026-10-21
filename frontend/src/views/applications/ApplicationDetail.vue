@@ -278,7 +278,7 @@ async function urge() {
 </script>
 
 <template>
-  <div class="page application-detail" :style="{ '--detail-action-height': `${actionBarHeight}px` }">
+  <div class="page application-detail" :style="{ '--detail-action-height': `${hasActions ? actionBarHeight : 0}px` }">
     <div class="detail-toolbar">
       <el-button :disabled="acting !== null" @click="back">{{ backLabel }}</el-button>
       <span class="flex-1" />
@@ -317,7 +317,7 @@ async function urge() {
           <div v-for="followUp in detail.followUps" :key="followUp.id" class="application-link"><span class="muted">后续单</span><router-link :to="`/applications/${followUp.id}`">{{ followUp.appNo }}</router-link><StatusTag :status="followUp.status" size="small" /></div>
         </SlipSection>
         <SlipSection :title="full ? '流转记录' : '审批流程结果'">
-          <FlowTimeline :flow="visibleFlow" />
+          <FlowTimeline :flow="visibleFlow" :template-name="detail.templateName" />
         </SlipSection>
         <SlipSection v-if="full" title="审批日志">
           <div class="log-scroll" role="region" aria-label="审批日志" tabindex="0"><el-table class="log-table" :data="logs" row-key="id" size="small" :row-class-name="logRowClass">
@@ -343,7 +343,7 @@ async function urge() {
         </SlipSection>
       </article>
 
-      <div v-if="full" ref="actionBar" class="detail-actions surface">
+      <div v-if="full && hasActions" ref="actionBar" class="detail-actions surface">
         <div class="detail-actions-inner">
           <div class="action-state"><span>{{ statusSentence }}</span><span v-if="nextUrgeAt && ownerAction('URGE')" class="urge-note">下次可催办：{{ fmtDateTime(nextUrgeAt) }}</span></div>
           <div v-if="hasActions" class="action-buttons">

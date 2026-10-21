@@ -18,8 +18,8 @@ export function ago(input: string | null | undefined, now: number = Date.now()):
   return days <= 30 ? `${days} 天前` : fmtDate(input)
 }
 
-/** 入口说明最多 10 个字 */
-export const SHORT_DESC_MAX = 10
+/** 入口说明最多 8 个字，保证五列入口在 1440px 下一行显示 */
+export const SHORT_DESC_MAX = 8
 
 const BUILTIN_SHORT: Partial<Record<TemplateOption['bizType'], string>> = {
   PURCHASE: '采购明细与报价',
@@ -28,12 +28,12 @@ const BUILTIN_SHORT: Partial<Record<TemplateOption['bizType'], string>> = {
 }
 
 /**
- * 入口的简短说明，不超过 10 个字，不加省略号：
+ * 入口的简短说明，不超过 8 个字，不加省略号：
  * 内置类型用固定文字；其余取模板说明的第一句，仍太长时从后往前去掉「、」分项，都不行就不显示。
  */
 export function shortDesc(t: Pick<TemplateOption, 'category' | 'bizType' | 'description'>): string | null {
   if (t.category === 'BUILTIN' && BUILTIN_SHORT[t.bizType]) return BUILTIN_SHORT[t.bizType]!
-  const first = (t.description ?? '').split(/[；;，,。.！!？?\n]/)[0].trim()
+  const first = (t.description ?? '').split(/[；;，,。.！!？?\n]/)[0].trim().replace(/^使用公司/, '')
   if (!first) return null
   const parts = first.split('、')
   while (parts.length) {

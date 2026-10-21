@@ -79,6 +79,7 @@ const roles = computed(() =>
 // ---------- 待你审批（前 5 条） ----------
 
 const pending = useCard<PageResponse<TaskItem>>(() => api.tasks.pending({ page: 1, size: 5 }))
+const pendingIsEmpty = computed(() => pending.data.value?.total === 0)
 
 function taskTarget(t: TaskItem) {
   return { path: `/applications/${t.applicationId}`, query: t.status === 'PENDING' ? { from: 'pending' } : undefined }
@@ -175,7 +176,7 @@ onMounted(() => {
   if (canCreate.value) {
     void personal.load()
     void templates.load()
-    if (!canTask.value) void mineRecent.load()
+    void mineRecent.load()
   }
   if (isAdmin.value && auth.can('ADMIN_USER')) void pendingRegs.load()
   void loadRecent()
@@ -198,8 +199,42 @@ onMounted(() => {
 
     <div class="wb">
       <div class="wb-col">
+        <!-- 没有待办或没有审批权限：我的申请最近 5 条作为左栏主单据 -->
+        <section v-if="canCreate && (!canTask || pendingIsEmpty)" class="sheet wb-primary" aria-labelledby="wb-mine-recent">
+          <div class="sheet-head">
+            <h2 id="wb-mine-recent">我的申请</h2>
+          </div>
+          <div v-if="mineRecent.loading.value && !mineRecent.data.value" class="wb-pad">
+            <el-skeleton :rows="3" animated />
+          </div>
+          <div v-else-if="mineRecent.error.value" class="wb-pad wb-error">
+            <span>{{ mineRecent.error.value }}</span>
+            <el-button link type="primary" @click="mineRecent.load()">重试</el-button>
+          </div>
+          <p v-else-if="!mineRecent.data.value?.records.length" class="wb-pad wb-empty">还没有申请</p>
+          <ul v-else class="rows">
+            <li v-for="a in mineRecent.data.value.records" :key="a.id">
+              <router-link :to="appTarget(a)" class="row app-row">
+                <span class="two-line row-main">
+                  <span class="cell-main">{{ a.title || a.appNo }}</span>
+                  <span class="cell-sub row-meta">
+                    <span>{{ typeLabel(a) }}</span>
+                    <span>{{ a.appNo }}</span>
+                    <MoneyText v-if="a.amountCents !== null" :cents="a.amountCents" />
+                  </span>
+                </span>
+                <StatusTag class="row-status" :status="a.status" :show-node="false" />
+                <span class="row-time">{{ ago(a.updatedAt) }}</span>
+              </router-link>
+            </li>
+          </ul>
+          <div class="sheet-foot">
+            <router-link to="/applications/mine" class="wb-link">查看全部申请</router-link>
+          </div>
+        </section>
+
         <!-- 待你审批 -->
-        <section v-if="canTask" class="sheet" aria-labelledby="wb-pending">
+        <section v-if="canTask && !pendingIsEmpty" class="sheet wb-primary" aria-labelledby="wb-pending">
           <div class="sheet-head">
             <h2 id="wb-pending">
               待你审批<span v-if="pending.data.value" class="head-count">{{ pending.data.value.total }}</span>
@@ -237,42 +272,12 @@ onMounted(() => {
           </div>
         </section>
 
-        <!-- 没有审批权限：我的申请最近 5 条 -->
-        <section v-else-if="canCreate" class="sheet" aria-labelledby="wb-mine-recent">
-          <div class="sheet-head">
-            <h2 id="wb-mine-recent">我的申请</h2>
-          </div>
-          <div v-if="mineRecent.loading.value && !mineRecent.data.value" class="wb-pad">
-            <el-skeleton :rows="3" animated />
-          </div>
-          <div v-else-if="mineRecent.error.value" class="wb-pad wb-error">
-            <span>{{ mineRecent.error.value }}</span>
-            <el-button link type="primary" @click="mineRecent.load()">重试</el-button>
-          </div>
-          <p v-else-if="!mineRecent.data.value?.records.length" class="wb-pad wb-empty">还没有申请</p>
-          <ul v-else class="rows">
-            <li v-for="a in mineRecent.data.value.records" :key="a.id">
-              <router-link :to="appTarget(a)" class="row app-row">
-                <span class="two-line row-main">
-                  <span class="cell-main">{{ a.title || a.appNo }}</span>
-                  <span class="cell-sub row-meta">
-                    <span>{{ typeLabel(a) }}</span>
-                    <span>{{ a.appNo }}</span>
-                    <MoneyText v-if="a.amountCents !== null" :cents="a.amountCents" />
-                  </span>
-                </span>
-                <StatusTag class="row-status" :status="a.status" :show-node="false" />
-                <span class="row-time">{{ ago(a.updatedAt) }}</span>
-              </router-link>
-            </li>
-          </ul>
-          <div class="sheet-foot">
-            <router-link to="/applications/mine" class="wb-link">查看全部申请</router-link>
-          </div>
+        <section v-if="canTask && pendingIsEmpty" class="sheet pending-quiet wb-primary" aria-label="待你审批">
+          <p>没有待你审批的申请</p>
         </section>
 
         <!-- 发起申请：空白单据 -->
-        <section v-if="canCreate" class="sheet" aria-labelledby="wb-apply">
+        <section v-if="canCreate" class="sheet wb-launch" aria-labelledby="wb-apply">
           <div class="sheet-head">
             <h2 id="wb-apply">发起申请</h2>
             <router-link v-if="(templates.data.value?.length ?? 0) > LAUNCHER_MAX" to="/apply" class="wb-link">
@@ -304,7 +309,7 @@ onMounted(() => {
 
         <!-- 管理入口 -->
         <template v-if="isAdmin">
-          <section v-if="auth.can('ADMIN_USER')" class="sheet" aria-labelledby="wb-regs">
+          <section v-if="auth.can('ADMIN_USER')" class="sheet wb-admin-card" aria-labelledby="wb-regs">
             <div class="sheet-head">
               <h2 id="wb-regs">
                 待审核注册<span v-if="pendingRegs.data.value !== null" class="head-count">{{ pendingRegs.data.value }}</span>
@@ -322,7 +327,7 @@ onMounted(() => {
               {{ (pendingRegs.data.value ?? 0) > 0 ? '有新用户等待审核，请分配部门并确认' : '暂无待审核的注册' }}
             </p>
           </section>
-          <section v-if="shortcuts.length" class="sheet" aria-labelledby="wb-admin">
+          <section v-if="shortcuts.length" class="sheet wb-admin-card" aria-labelledby="wb-admin">
             <div class="sheet-head">
               <h2 id="wb-admin">管理入口</h2>
             </div>
@@ -342,7 +347,7 @@ onMounted(() => {
 
       <div class="wb-col">
         <!-- 我的申请：小账单 -->
-        <section v-if="canCreate" class="sheet" aria-labelledby="wb-mine">
+        <section v-if="canCreate" class="sheet wb-ledger" aria-labelledby="wb-mine">
           <div class="sheet-head">
             <h2 id="wb-mine">我的申请</h2>
             <router-link to="/applications/mine" class="wb-link">全部</router-link>
@@ -378,7 +383,7 @@ onMounted(() => {
         </section>
 
         <!-- 最近通知 -->
-        <section class="sheet" aria-labelledby="wb-notice">
+        <section class="sheet wb-notice" aria-labelledby="wb-notice">
           <div class="sheet-head">
             <h2 id="wb-notice">
               最近通知<span v-if="notice.unread > 0" class="head-sub">{{ notice.unread }} 条未读</span>
@@ -495,6 +500,11 @@ onMounted(() => {
   color: var(--eas-danger);
 }
 .wb-empty {
+  color: var(--eas-ink-2);
+}
+.pending-quiet p {
+  margin: 0;
+  padding: 14px var(--eas-sheet-inset);
   color: var(--eas-ink-2);
 }
 .sheet-foot {
@@ -656,6 +666,7 @@ onMounted(() => {
   font-size: var(--eas-fs-12);
   line-height: 1.5;
   color: var(--eas-ink-3);
+  white-space: nowrap;
 }
 
 /* ---------- 我的申请：小账单 ---------- */
@@ -774,6 +785,14 @@ onMounted(() => {
   .wb {
     grid-template-columns: minmax(0, 1fr);
   }
+  .wb-col {
+    display: contents;
+  }
+  .wb-primary { order: 1; }
+  .wb-ledger { order: 2; }
+  .wb-launch { order: 3; }
+  .wb-admin-card { order: 4; }
+  .wb-notice { order: 5; }
 }
 @media (max-width: 768px) {
   .workbench .sheet {

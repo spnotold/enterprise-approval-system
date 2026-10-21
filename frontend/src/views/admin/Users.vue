@@ -364,10 +364,16 @@ async function submitGrant() {
     </p>
 
     <el-table v-loading="loading" :data="records" row-key="id" class="users-table eas-row-table">
-        <el-table-column prop="username" label="用户名" min-width="120" />
-        <el-table-column prop="realName" label="姓名" min-width="90" />
-        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
-        <el-table-column label="状态" width="130">
+        <el-table-column label="用户名" width="84">
+          <template #default="{ row }"><span class="cell-ellipsis" :title="row.username">{{ row.username }}</span></template>
+        </el-table-column>
+        <el-table-column label="姓名" width="92">
+          <template #default="{ row }"><span class="cell-nowrap" :title="row.realName">{{ row.realName }}</span></template>
+        </el-table-column>
+        <el-table-column label="邮箱" width="110">
+          <template #default="{ row }"><span class="cell-ellipsis" :title="row.email">{{ row.email }}</span></template>
+        </el-table-column>
+        <el-table-column label="状态" width="96">
           <template #default="{ row }">
             <el-tag class="admin-status" :type="USER_STATUS_TAG[row.status as UserStatus]" disable-transitions>
               {{ USER_STATUS_LABEL[row.status as UserStatus] ?? row.status }}
@@ -375,10 +381,10 @@ async function submitGrant() {
             <el-tag v-if="isLocked(row as AdminUser)" type="danger" effect="plain" class="ml4" disable-transitions>已锁定</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="部门" min-width="110">
-          <template #default="{ row }">{{ row.deptName ?? '—' }}</template>
+        <el-table-column label="部门" width="78">
+          <template #default="{ row }"><span class="cell-ellipsis" :title="row.deptName ?? ''">{{ row.deptName ?? '—' }}</span></template>
         </el-table-column>
-        <el-table-column label="角色" min-width="260">
+        <el-table-column label="角色" width="96">
           <template #default="{ row }">
             <div class="role-tags">
               <el-dropdown
@@ -409,16 +415,16 @@ async function submitGrant() {
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="最近登录" width="150" class="mono">
-          <template #default="{ row }">{{ fmtDateTime(row.lastLoginAt) }}</template>
+        <el-table-column label="最近登录" width="136" class="mono">
+          <template #default="{ row }"><span class="cell-nowrap">{{ fmtDateTime(row.lastLoginAt) }}</span></template>
         </el-table-column>
-        <el-table-column label="锁定至" width="150">
+        <el-table-column label="锁定至" width="136">
           <template #default="{ row }">
             <span v-if="!row.lockedUntil" class="muted">—</span>
-            <span v-else :class="isLocked(row as AdminUser) ? 'text-danger' : 'muted'">{{ fmtDateTime(row.lockedUntil) }}</span>
+            <span v-else class="cell-nowrap" :class="isLocked(row as AdminUser) ? 'text-danger' : 'muted'">{{ fmtDateTime(row.lockedUntil) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="170">
+        <el-table-column label="操作" width="112">
           <template #default="{ row }">
             <span v-if="row.status === 'PENDING'" class="row-actions">
               <el-button link type="primary" @click="router.push('/admin/registrations')">去审核</el-button>
@@ -548,6 +554,24 @@ async function submitGrant() {
 <style scoped>
 .users-table {
   width: 100%;
+}
+.users-table :deep(.cell) {
+  padding-right: 6px;
+  padding-left: 6px;
+}
+.cell-ellipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-nowrap {
+  white-space: nowrap;
+}
+.users-table .row-actions {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 .role-tags {
   display: flex;
