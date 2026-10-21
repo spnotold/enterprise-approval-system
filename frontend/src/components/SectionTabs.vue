@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import IndexTabs from '@/components/IndexTabs.vue'
+import { sectionTabLink } from '@/components/sectionTabLink'
 import type { MenuSection } from '@/router/menu'
 
 const props = defineProps<{ section: MenuSection; activePath: string; pendingCount?: number; hideTabs?: boolean }>()
+const route = useRoute()
 const tabs = computed(() => props.section.items.map((item) => ({
   key: item.path,
   label: item.title,
-  to: item.path,
+  to: sectionTabLink(item.path, props.activePath, route.query),
   count: item.path === '/tasks/pending' ? props.pendingCount : undefined,
 })))
 </script>
