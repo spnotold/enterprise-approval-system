@@ -19,8 +19,11 @@
   }
 }
 
-/* 单据头：页面名称 26px 宋体 600，至多一行 ink-2 说明，右侧页级操作同行右对齐 */
-.admin-page .page > .sheet-head {
+/* 单据头：页面名称 26px 宋体 600，至多一行 ink-2 说明，右侧页级操作同行右对齐。
+   page 与 admin-page 可能是同一个元素（流程设计页），两种结构都要命中。 */
+.admin-page .page > .sheet-head,
+.admin-page.page > .sheet-head,
+.admin-page > .sheet-head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -46,14 +49,22 @@
 .admin-page .head-actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
   padding-bottom: 6px;
 }
 @media (max-width: 767px) {
   .admin-page .sheet-title {
     font-size: var(--eas-fs-lg);
   }
+  .admin-page .page > .sheet-head,
+  .admin-page.page > .sheet-head,
+  .admin-page > .sheet-head {
+    align-items: flex-start;
+  }
   .admin-page .head-actions {
+    width: 100%;
     padding-bottom: 0;
   }
 }

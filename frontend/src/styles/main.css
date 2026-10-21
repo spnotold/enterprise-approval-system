@@ -351,6 +351,14 @@ body,
   box-shadow: inset 3px 0 0 var(--eas-primary);
 }
 
+/* 行悬停 / 聚焦：底色变浅，次级文字同步提到 ink-2，保证 4.5:1 以上 */
+.el-table__body tr.el-table__row:is(:hover, .hover-row, :focus-within)
+  :is(.cell-sub, .cell-none, .user-email, .lock-line),
+.row:is(:hover, :focus-visible) :is(.cell-sub, .cell-none),
+.notice-row:is(:hover, :focus-within) :is(.cell-sub, .notice-time) {
+  color: var(--eas-ink-2);
+}
+
 /* 行内操作：默认隐藏，行悬停或键盘聚焦时显示；触屏与窄屏常显 */
 .row-actions {
   opacity: 0;
