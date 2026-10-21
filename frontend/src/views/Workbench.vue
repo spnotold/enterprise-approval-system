@@ -202,7 +202,7 @@ onMounted(() => {
         <!-- 没有待办或没有审批权限：我的申请最近 5 条作为左栏主单据 -->
         <section v-if="canCreate && (!canTask || pendingIsEmpty)" class="sheet wb-primary" aria-labelledby="wb-mine-recent">
           <div class="sheet-head">
-            <h2 id="wb-mine-recent">我的申请</h2>
+            <h2 id="wb-mine-recent">最近申请</h2>
           </div>
           <div v-if="mineRecent.loading.value && !mineRecent.data.value" class="wb-pad">
             <el-skeleton :rows="3" animated />
