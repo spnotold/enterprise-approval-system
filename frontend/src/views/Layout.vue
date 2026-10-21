@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import { noticeTarget, useNoticeStore } from '@/stores/notice'
 import { useSse } from '@/composables/useSse'
 import { useBreakpoint } from '@/composables/useBreakpoint'
+import { provideApplicationContext } from '@/composables/applicationContext'
 import { activeMenuPath, activeSection, visibleSections } from '@/router/menu'
 import { detailSectionHint } from '@/router/sectionContext'
 import { NOTIFICATION_TYPE_LABEL, ROLE_LABEL } from '@/lib/labels'
@@ -27,6 +28,9 @@ const drawer = ref(false)
 const desk = ref<HTMLElement | null>(null)
 const pendingCount = ref(0)
 const detailOrigin = ref<string>()
+const applicationContext = provideApplicationContext(() =>
+  route.name === 'application-detail' || route.name === 'application-edit' ? Number(route.params.id) : undefined,
+)
 const sections = computed(() => visibleSections((p) => auth.can(p)))
 const activeId = computed(() => activeSection(route.path, sections.value, detailOrigin.value))
 const currentSection = computed(() => sections.value.find((section) => section.id === activeId.value))
@@ -58,32 +62,28 @@ async function refreshPending() {
   }
 }
 
-watch(() => route.fullPath, async (_path, previousPath, onCleanup) => {
-  let current = true
-  onCleanup(() => { current = false })
+function rememberDetailOrigin() {
+  if (detailOrigin.value) window.history.replaceState({ ...window.history.state, sectionFrom: detailOrigin.value }, '')
+}
+
+watch(() => route.fullPath, (_path, previousPath) => {
   drawer.value = false
   void refreshPending()
   if (route.name !== 'application-detail' && route.name !== 'application-edit') {
     detailOrigin.value = undefined
     return
   }
-  const path = route.path
   const state = window.history.state
   const sources = [route.query.from, state?.sectionFrom, previousPath, state?.back, detailOrigin.value]
   detailOrigin.value = detailSectionHint(sources, sections.value)
-  if (!detailOrigin.value) {
-    try {
-      const detail = await api.applications.detail(Number(route.params.id))
-      if (!current || route.path !== path) return
-      detailOrigin.value = detailSectionHint([], sections.value, detail.applicant.id, auth.me?.id)
-    } catch {
-      // 详情页自身呈现读取错误，外壳保持权限允许的默认栏目。
-    }
-  }
-  if (current && route.path === path && detailOrigin.value) {
-    window.history.replaceState({ ...window.history.state, sectionFrom: detailOrigin.value }, '')
-  }
+  rememberDetailOrigin()
 }, { immediate: true })
+
+watch(applicationContext.applicantId, (applicantId) => {
+  if (detailOrigin.value || applicantId == null) return
+  detailOrigin.value = detailSectionHint([], sections.value, applicantId, auth.me?.id)
+  rememberDetailOrigin()
+})
 
 // 实时通知：保留未读角标、用户提醒、详情页自动刷新与通知点击行为。
 useSse((e) => {
@@ -178,7 +178,9 @@ function onCommand(cmd: string) {
     </el-drawer>
 
     <div ref="desk" class="desk">
-      <PaperField base="--eas-desk" class="layout-paper" :container="() => desk" />
+      <div class="layout-paper">
+        <PaperField base="--eas-desk" :container="() => desk" />
+      </div>
       <main class="content-column">
         <SectionTabs v-if="tabSection" :section="tabSection" :active-path="route.path" :pending-count="pendingCount" :hide-tabs="isMobile" />
         <div class="route-layout" :class="{ 'has-admin-index': adminSection && !isMobile }">
@@ -224,7 +226,7 @@ function onCommand(cmd: string) {
 .user-card { padding: 10px 16px 6px; min-width: 180px; border-bottom: 1px solid var(--eas-rule); }
 .user-card-name { font-weight: 600; margin-bottom: 2px; }
 .desk { position: relative; min-height: calc(100vh - 56px); }
-.layout-paper { z-index: 0; }
+.layout-paper { position: fixed; inset: 56px 0 0; pointer-events: none; z-index: 0; }
 .content-column { position: relative; z-index: 1; box-sizing: border-box; max-width: 1280px; margin: 0 auto; padding: 32px 40px 40px; }
 .route-layout, .routed-page { min-width: 0; }
 .route-layout.has-admin-index { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: start; }

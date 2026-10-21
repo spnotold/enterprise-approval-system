@@ -1049,13 +1049,14 @@ export function usePaperField(
     if (canvas) {
       updateSize()
       registerDprListener()
-      const targetObserved = resolveContainer() || canvas.parentElement
       if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => {
           if (disposed) return
           updateSize()
         })
-        if (targetObserved) resizeObserver.observe(targetObserved)
+        // 事件容器可以是整篇长文档；只在实际画布尺寸改变时重建点阵。
+        // AuthShell 的绝对定位画布仍会随左侧面板一起缩放。
+        resizeObserver.observe(canvas)
       }
 
       if (!isDegraded.value) {
