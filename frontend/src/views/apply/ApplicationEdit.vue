@@ -2,6 +2,7 @@
 // 编辑草稿：按申请类型复用对应表单
 import { onMounted, ref } from 'vue'
 import { api } from '@/lib/api'
+import { useApplicationContext } from '@/composables/applicationContext'
 import type { AppType } from '@/lib/types'
 import { errorText, toApiError } from '@/lib/errors'
 import PurchaseForm from './PurchaseForm.vue'
@@ -10,6 +11,7 @@ import ExpenseForm from './ExpenseForm.vue'
 import CustomForm from './CustomForm.vue'
 
 const props = defineProps<{ id: number }>()
+const applicationContext = useApplicationContext()
 
 const type = ref<AppType | null>(null)
 const templateId = ref<number | null>(null)
@@ -19,6 +21,7 @@ const loading = ref(true)
 onMounted(async () => {
   try {
     const d = await api.applications.detail(props.id)
+    applicationContext?.publish(props.id, d.applicant.id)
     if (d.status !== 'DRAFT' || !d.allowedActions.includes('EDIT')) {
       error.value = '只有本人的草稿可以编辑'
       return

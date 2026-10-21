@@ -9,6 +9,7 @@ import { APP_STATUS_LABEL, LOG_ACTION_LABEL } from '@/lib/labels'
 import { fmtDateTime } from '@/lib/datetime'
 import { ApiError, errorText, isServerError, showError, toApiError } from '@/lib/errors'
 import { useAction } from '@/composables/useAction'
+import { useApplicationContext } from '@/composables/applicationContext'
 import { sessionGeneration, useAuthStore } from '@/stores/auth'
 import { useNoticeStore } from '@/stores/notice'
 import ApprovePanel from '@/components/ApprovePanel.vue'
@@ -25,6 +26,7 @@ import { provideSlipHover } from '@/components/slip/hover'
 import { detailBackLabel, detailStatusSentence } from '@/components/slip/detailPresentation'
 
 const props = defineProps<{ id: number }>()
+const applicationContext = useApplicationContext()
 const router = useRouter()
 const auth = useAuthStore()
 const notice = useNoticeStore()
@@ -147,6 +149,7 @@ async function load() {
     const result = await api.applications.detail(id)
     if (seq !== requestSeq || id !== props.id || generation !== sessionGeneration()) return
     detail.value = result
+    applicationContext?.publish(id, result.applicant.id)
     const mark = stampMark.value
     if (mark?.phase === 'ready' && (mark.appId !== result.id || !hasStamp(result, mark.taskId))) stampMark.value = null
     now.value = Date.now()
