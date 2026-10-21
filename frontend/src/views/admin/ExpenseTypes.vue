@@ -164,37 +164,37 @@ async function remove(t: ExpenseTypeAdmin) {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">费用类型</h2>
-        <div class="page-subtitle">报销明细里可选的费用类型。已有报销单使用的类型不能删除，只能停用。</div>
+        <h2 class="sheet-title">费用类型</h2>
+        <p class="sheet-sub">报销明细里可选的费用类型。已有报销单使用的类型不能删除，只能停用。</p>
       </div>
-      <div class="toolbar">
+      <div class="head-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">新建费用类型</el-button>
       </div>
-    </div>
+    </header>
 
-    <el-card shadow="never">
-      <el-table v-loading="loading" :data="sorted" row-key="id" class="eas-row-table" style="width: 100%">
-        <el-table-column prop="code" label="编码" min-width="120" />
-        <el-table-column prop="name" label="名称" min-width="120" />
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag class="admin-status" :type="row.enabled ? 'success' : 'info'" disable-transitions>
-              {{ row.enabled ? '启用' : '已停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
-        <el-table-column label="使用情况" min-width="150">
-          <template #default="{ row }">
-            <span v-if="row.referenced" class="small">已有报销单使用</span>
-            <span v-else class="muted small">未使用</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="170">
-          <template #default="{ row }">
+    <el-table v-loading="loading" :data="sorted" row-key="id" class="eas-row-table" style="width: 100%">
+      <el-table-column prop="code" label="编码" min-width="120" />
+      <el-table-column prop="name" label="名称" min-width="120" />
+      <el-table-column label="状态" width="90">
+        <template #default="{ row }">
+          <el-tag class="admin-status" :type="row.enabled ? 'success' : 'info'" disable-transitions>
+            {{ row.enabled ? '启用' : '已停用' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
+      <el-table-column label="使用情况" min-width="150">
+        <template #default="{ row }">
+          <span v-if="row.referenced" class="small">已有报销单使用</span>
+          <span v-else class="muted small">未使用</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="170">
+        <template #default="{ row }">
+          <span class="row-actions">
             <el-button link type="primary" :disabled="acting" @click="openEdit(row as ExpenseTypeAdmin)">编辑</el-button>
             <el-button
               link
@@ -216,13 +216,13 @@ async function remove(t: ExpenseTypeAdmin) {
                 </el-button>
               </span>
             </el-tooltip>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty description="暂无费用类型" />
+          </span>
         </template>
-      </el-table>
-    </el-card>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty description="暂无费用类型" />
+      </template>
+    </el-table>
 
     <el-dialog
       v-model="form.visible"
@@ -258,7 +258,6 @@ async function remove(t: ExpenseTypeAdmin) {
 <style scoped>
 .btn-wrap {
   display: inline-flex;
-  margin-left: 12px;
 }
 .ml8 {
   margin-left: 8px;

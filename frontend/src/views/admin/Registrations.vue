@@ -103,61 +103,63 @@ async function reject(u: AdminUser) {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">注册审核</h2>
-        <div class="page-subtitle">新注册用户审核通过后才能登录；通过时确认所属部门，系统自动授予“员工”角色。</div>
+        <h2 class="sheet-title">注册审核</h2>
+        <p class="sheet-sub">通过时确认所属部门，系统自动授予“员工”角色；拒绝为终态，需填写原因。</p>
       </div>
-      <el-button :icon="User" @click="router.push('/admin/users')">用户管理</el-button>
+      <div class="head-actions">
+        <el-button :icon="User" @click="router.push('/admin/users')">用户管理</el-button>
+      </div>
+    </header>
+
+    <div class="toolbar list-filters">
+      <el-input
+        v-model="filters.keyword"
+        placeholder="用户名 / 姓名 / 邮箱"
+        clearable
+        :prefix-icon="Search"
+        @keyup.enter="search"
+        @clear="search"
+      />
+      <el-button type="primary" @click="search">查询</el-button>
+      <el-button link type="primary" @click="reset">重置</el-button>
+      <el-button text @click="load">刷新</el-button>
     </div>
 
-    <el-card shadow="never">
-      <div class="toolbar">
-        <el-input
-          v-model="filters.keyword"
-          placeholder="用户名 / 姓名 / 邮箱"
-          clearable
-          :prefix-icon="Search"
-          @keyup.enter="search"
-          @clear="search"
-        />
-        <el-button type="primary" @click="search">查询</el-button>
-        <el-button link type="primary" @click="reset">重置</el-button>
-        <el-button text @click="load">刷新</el-button>
-      </div>
-
-      <el-table v-loading="loading" :data="records" row-key="id" class="reg-table eas-row-table">
-        <el-table-column prop="username" label="用户名" min-width="120" />
-        <el-table-column prop="realName" label="姓名" min-width="90" />
-        <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />
-        <el-table-column label="申请加入部门" min-width="130">
-          <template #default="{ row }">{{ row.requestedDeptName ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="注册时间" width="160">
-          <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="140">
-          <template #default="{ row }">
+    <el-table v-loading="loading" :data="records" row-key="id" class="reg-table eas-row-table">
+      <el-table-column prop="username" label="用户名" min-width="120" />
+      <el-table-column prop="realName" label="姓名" min-width="90" />
+      <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />
+      <el-table-column label="申请加入部门" min-width="130">
+        <template #default="{ row }">{{ row.requestedDeptName ?? '—' }}</template>
+      </el-table-column>
+      <el-table-column label="注册时间" width="160">
+        <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="140">
+        <template #default="{ row }">
+          <span class="row-actions">
             <el-button link type="primary" :disabled="acting" @click="openApprove(row as AdminUser)">通过</el-button>
             <el-button link type="danger" :disabled="acting" @click="reject(row as AdminUser)">拒绝</el-button>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty :filtered="hasFilters" :description="hasFilters ? undefined : '暂无待审核的注册'" @reset="reset" />
+          </span>
         </template>
-      </el-table>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty :filtered="hasFilters" :description="hasFilters ? undefined : '暂无待审核的注册'" @reset="reset" />
+      </template>
+    </el-table>
 
-      <el-pagination
-        class="pager"
-        layout="total, sizes, prev, pager, next"
-        :total="total"
-        :current-page="page"
-        :page-size="size"
-        background
-        @current-change="onPageChange"
-        @size-change="onSizeChange"
-      />
-    </el-card>
+    <el-pagination
+      class="pager"
+      layout="total, sizes, prev, pager, next"
+      :total="total"
+      :current-page="page"
+      :page-size="size"
+      background
+      @current-change="onPageChange"
+      @size-change="onSizeChange"
+    />
 
     <el-dialog v-model="dlg.visible" title="通过注册" width="min(500px, 94vw)" :close-on-click-modal="false">
       <ServerErrorAlert :error="dlg.error" />
@@ -197,7 +199,6 @@ async function reject(u: AdminUser) {
 
 <style scoped>
 .reg-table {
-  margin-top: 12px;
   width: 100%;
 }
 .user-info {

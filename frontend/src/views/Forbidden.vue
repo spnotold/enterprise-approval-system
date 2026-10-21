@@ -7,9 +7,9 @@ const router = useRouter()
 
 <template>
   <div class="page result-page">
-    <div class="result">
-      <h2 class="page-title"><span class="code">403</span>无权访问该页面</h2>
-      <p class="hint">如需访问，请联系系统管理员授予相应权限。</p>
+    <div class="sheet result-sheet">
+      <h2 class="result-title">没有权限访问</h2>
+      <p class="result-line">需要相应权限，可联系系统管理员。</p>
       <el-button type="primary" @click="router.push('/')">返回工作台</el-button>
     </div>
   </div>
@@ -19,14 +19,24 @@ const router = useRouter()
 .result-page {
   min-height: 50vh;
   justify-content: center;
+  align-items: center;
 }
-.code {
-  margin-right: 16px;
-  color: var(--eas-ink-3);
-  font-variant-numeric: tabular-nums;
+.result-sheet {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  padding: 40px 32px;
 }
-.hint {
-  margin: 8px 0 20px;
+.result-title {
+  margin: 0;
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-doc);
+  font-weight: 600;
+  color: var(--eas-ink);
+}
+.result-line {
+  margin: 12px 0 24px;
+  font-size: var(--eas-fs-14);
   color: var(--eas-ink-2);
 }
 </style>

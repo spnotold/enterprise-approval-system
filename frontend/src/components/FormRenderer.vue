@@ -21,6 +21,7 @@ const props = withDefaults(
     prefix?: string
     /** 只读模式下是否可查看附件 */
     showAttachments?: boolean
+    /** 只读模式的标签宽度 */
     labelWidth?: string
   }>(),
   { readonly: false, error: () => undefined, prefix: 'formValues.', showAttachments: true, labelWidth: '120px' },
@@ -100,6 +101,11 @@ function attachmentCount(key: string): number {
   return Array.isArray(v) ? v.length : metas(key).length
 }
 
+// 长文本和附件独占一行，其余字段排两列
+function isWide(f: FormField): boolean {
+  return f.type === 'TEXTAREA' || f.type === 'ATTACHMENT'
+}
+
 function maxLength(f: FormField): number {
   const type = f.type === 'TEXTAREA' ? 'TEXTAREA' : 'TEXT'
   return Math.min(f.rules?.maxLength ?? DEFAULT_MAX_LENGTH[type], DEFAULT_MAX_LENGTH[type])
@@ -107,11 +113,12 @@ function maxLength(f: FormField): number {
 </script>
 
 <template>
-  <el-form class="form-renderer" :label-width="labelWidth" label-position="right" @submit.prevent>
-    <el-empty v-if="schema.fields.length === 0" :image-size="60" description="该模板没有表单字段" />
+  <el-form class="form-renderer" :class="{ 'form-renderer--edit': !readonly }" :label-position="readonly ? 'right' : 'top'" :label-width="readonly ? labelWidth : undefined" @submit.prevent>
+    <el-empty v-if="schema.fields.length === 0" :image-size="60" description="该模板没有表单字段" class="field--wide" />
     <el-form-item
       v-for="f in schema.fields"
       :key="f.key"
+      :class="{ 'field--wide': isWide(f) }"
       :label="f.label"
       :required="!readonly && !!f.required"
       :error="readonly ? '' : fieldError(f)"
@@ -157,13 +164,11 @@ function maxLength(f: FormField): number {
             controls-position="right"
             :value-on-clear="null"
             :placeholder="f.placeholder ?? ''"
-            style="width: 220px"
             @update:model-value="onNumber(f, $event)"
           />
           <AmountInput
             v-else-if="f.type === 'AMOUNT'"
             :cents="amount(f.key)"
-            style="width: 220px"
             @update:cents="setValue(f.key, $event)"
           />
           <el-date-picker
@@ -199,22 +204,79 @@ function maxLength(f: FormField): number {
 </template>
 
 <style scoped>
+/* 两列网格：字段名在上、输入在下；长文本、附件独占一行 */
+.form-renderer--edit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px var(--eas-gap);
+  align-items: start;
+}
+.form-renderer--edit :deep(.el-form-item) {
+  display: block;
+  margin-bottom: 0;
+  min-width: 0;
+}
+.form-renderer--edit .field--wide {
+  grid-column: 1 / -1;
+}
+.form-renderer--edit :deep(.el-form-item__label) {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: var(--eas-fs-sm);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--eas-ink-2);
+}
+/* 必填星号用 danger */
+.form-renderer :deep(.el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label::before) {
+  color: var(--eas-danger);
+}
+.form-renderer :deep(.el-form-item__content) {
+  font-size: var(--eas-fs-sm);
+  line-height: var(--eas-lh-body);
+  overflow-wrap: anywhere;
+}
+/* 错误提示排在输入框下方并占位，不浮在下一行字段上 */
+.form-renderer :deep(.el-form-item__error) {
+  position: static;
+  width: 100%;
+  padding-top: 4px;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.4;
+  color: var(--eas-danger);
+}
+.form-renderer :deep(.el-empty) {
+  padding: var(--eas-gap) 0;
+}
 .field-body {
   width: 100%;
 }
+.field-body :deep(.el-input-number),
+.field-body :deep(.amount-input),
+.field-body :deep(.el-date-editor.el-input),
+.field-body :deep(.el-date-editor.el-input__wrapper) {
+  --el-date-editor-width: 100%;
+  width: 100%;
+}
+.form-renderer :deep(.el-radio-group) {
+  gap: 8px 20px;
+}
+.form-renderer :deep(.el-radio) {
+  margin-right: 0;
+}
+.form-renderer :deep(.el-radio__original:focus-visible + .el-radio__inner) {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
 .help {
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: var(--eas-fs-xs);
   line-height: 1.5;
   color: var(--eas-ink-3);
 }
 @media (max-width: 768px) {
-  .form-renderer :deep(.el-form-item) {
-    flex-direction: column;
-  }
-  .form-renderer :deep(.el-form-item__label) {
-    justify-content: flex-start;
-    width: auto !important;
-  }
+  .form-renderer--edit { grid-template-columns: minmax(0, 1fr); }
+  .form-renderer:not(.form-renderer--edit) :deep(.el-form-item) { flex-direction: column; }
+  .form-renderer:not(.form-renderer--edit) :deep(.el-form-item__label) { justify-content: flex-start; width: auto !important; }
 }
 </style>

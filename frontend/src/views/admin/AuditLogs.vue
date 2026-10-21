@@ -83,94 +83,91 @@ function hasData(r: AuditLogView): boolean {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">审计日志</h2>
-        <div class="page-subtitle">
-          注册审核、角色与授权变更、部门负责人、模板发布、配置修改、转办、查看业务正文等管理操作的记录；只追加，不可修改或删除。
-        </div>
+        <h2 class="sheet-title">审计日志</h2>
+        <p class="sheet-sub">管理操作只追加记录，不可修改或删除；“前后对比”显示修改前后的值。</p>
       </div>
+    </header>
+
+    <div class="toolbar list-filters">
+      <el-input v-model="filters.action" placeholder="动作" clearable @keyup.enter="search" @clear="search" />
+      <el-input v-model="filters.targetType" placeholder="对象类型" clearable @keyup.enter="search" @clear="search" />
+      <el-input v-model="filters.targetId" placeholder="对象 ID" clearable @keyup.enter="search" @clear="search" />
+      <div class="operator-filter">
+        <UserPicker
+          :model-value="filters.operatorId"
+          :preset="operatorPreset"
+          placeholder="操作人"
+          @update:model-value="onOperator"
+          @change="onOperatorChange"
+        />
+      </div>
+      <el-date-picker
+        :model-value="range"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        range-separator="至"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        unlink-panels
+        @update:model-value="onRange"
+      />
+      <el-button type="primary" :icon="Search" @click="search">查询</el-button>
+      <el-button link type="primary" @click="reset">重置</el-button>
     </div>
 
-    <el-card shadow="never">
-      <div class="toolbar">
-        <el-input v-model="filters.action" placeholder="动作" clearable @keyup.enter="search" @clear="search" />
-        <el-input v-model="filters.targetType" placeholder="对象类型" clearable @keyup.enter="search" @clear="search" />
-        <el-input v-model="filters.targetId" placeholder="对象 ID" clearable @keyup.enter="search" @clear="search" />
-        <div class="operator-filter">
-          <UserPicker
-            :model-value="filters.operatorId"
-            :preset="operatorPreset"
-            placeholder="操作人"
-            @update:model-value="onOperator"
-            @change="onOperatorChange"
-          />
-        </div>
-        <el-date-picker
-          :model-value="range"
-          type="daterange"
-          value-format="YYYY-MM-DD"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          unlink-panels
-          @update:model-value="onRange"
-        />
-        <el-button type="primary" :icon="Search" @click="search">查询</el-button>
-        <el-button link type="primary" @click="reset">重置</el-button>
-      </div>
-
-      <el-table v-loading="loading" :data="records" row-key="id" class="audit-table eas-row-table">
-        <el-table-column label="时间" width="170">
-          <template #default="{ row }">{{ fmtDateTime(row.createdAt, true) }}</template>
-        </el-table-column>
-        <el-table-column label="操作人" min-width="90">
-          <template #default="{ row }">{{ row.operatorName ?? '系统' }}</template>
-        </el-table-column>
-        <el-table-column label="动作" min-width="160">
-          <template #default="{ row }">{{ row.action }}</template>
-        </el-table-column>
-        <el-table-column label="对象" min-width="170">
-          <template #default="{ row }">
-            <el-link
-              underline="never"
-              title="只看该对象的记录"
-              @click="filterTarget(row as AuditLogView)"
-            >
-              {{ row.targetType }}<template v-if="row.targetId"> #{{ row.targetId }}</template>
-            </el-link>
-          </template>
-        </el-table-column>
-        <el-table-column label="原因" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.reason ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="IP" min-width="120">
-          <template #default="{ row }">{{ row.ip ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="100">
-          <template #default="{ row }">
-            <el-button v-if="hasData(row as AuditLogView)" link type="primary" @click="openDiff(row as AuditLogView)">
-              前后对比
-            </el-button>
-            <span v-else class="muted small">无数据</span>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty :filtered="hasFilters" @reset="reset" />
+    <el-table v-loading="loading" :data="records" row-key="id" class="audit-table eas-row-table">
+      <el-table-column label="时间" width="150">
+        <template #default="{ row }"><span class="cell-nowrap">{{ fmtDateTime(row.createdAt, true) }}</span></template>
+      </el-table-column>
+      <el-table-column label="操作人" width="96">
+        <template #default="{ row }"><span class="cell-nowrap" :title="row.operatorName ?? '系统'">{{ row.operatorName ?? '系统' }}</span></template>
+      </el-table-column>
+      <el-table-column label="动作" width="130">
+        <template #default="{ row }"><span class="cell-ellipsis" :title="row.action">{{ row.action }}</span></template>
+      </el-table-column>
+      <el-table-column label="对象" width="140">
+        <template #default="{ row }">
+          <el-link
+            class="cell-ellipsis"
+            underline="never"
+            :title="`${row.targetType}${row.targetId ? ` #${row.targetId}` : ''}；点击只看该对象的记录`"
+            @click="filterTarget(row as AuditLogView)"
+          >
+            {{ row.targetType }}<template v-if="row.targetId"> #{{ row.targetId }}</template>
+          </el-link>
         </template>
-      </el-table>
+      </el-table-column>
+      <el-table-column label="原因" width="200">
+        <template #default="{ row }"><span class="cell-ellipsis" :title="row.reason ?? ''">{{ row.reason ?? '—' }}</span></template>
+      </el-table-column>
+      <el-table-column label="IP" width="105">
+        <template #default="{ row }"><span class="cell-nowrap">{{ row.ip ?? '—' }}</span></template>
+      </el-table-column>
+      <el-table-column label="操作" width="84">
+        <template #default="{ row }">
+          <span v-if="hasData(row as AuditLogView)" class="row-actions">
+            <el-button link type="primary" @click="openDiff(row as AuditLogView)">前后对比</el-button>
+          </span>
+          <span v-else class="muted small">无数据</span>
+        </template>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty :filtered="hasFilters" @reset="reset" />
+      </template>
+    </el-table>
 
-      <el-pagination
-        class="pager"
-        layout="total, sizes, prev, pager, next"
-        :total="total"
-        :current-page="page"
-        :page-size="size"
-        background
-        @current-change="onPageChange"
-        @size-change="onSizeChange"
-      />
-    </el-card>
+    <el-pagination
+      class="pager"
+      layout="total, sizes, prev, pager, next"
+      :total="total"
+      :current-page="page"
+      :page-size="size"
+      background
+      @current-change="onPageChange"
+      @size-change="onSizeChange"
+    />
 
     <el-drawer v-model="drawerOpen" :title="drawerTitle" size="min(960px, 100%)" destroy-on-close>
       <template v-if="current">
@@ -197,8 +194,24 @@ function hasData(r: AuditLogView): boolean {
   width: 180px;
 }
 .audit-table {
-  margin-top: 12px;
   width: 100%;
+}
+.audit-table :deep(.cell) {
+  padding-right: 8px;
+  padding-left: 8px;
+}
+.cell-nowrap {
+  white-space: nowrap;
+}
+.cell-ellipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audit-table .el-link.cell-ellipsis {
+  display: block;
 }
 .diff-meta {
   margin-bottom: 16px;

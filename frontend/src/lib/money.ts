@@ -31,6 +31,17 @@ export function formatCents(cents: number | null | undefined): string {
   return `${neg ? '-' : ''}${grouped}.${frac}`
 }
 
+/** 只读数量去掉小数末尾的 0；保留原字符串语义，不转成浮点数。 */
+export function formatQuantity(quantity: string | null | undefined): string {
+  if (quantity === null || quantity === undefined) return '—'
+  const value = quantity.trim()
+  if (!value) return '—'
+  if (!/^\d+(?:\.\d+)?$/.test(value)) return value
+  const [integer, fraction] = value.split('.')
+  const trimmed = fraction?.replace(/0+$/, '') ?? ''
+  return trimmed ? `${integer}.${trimmed}` : integer
+}
+
 /** 整数分求和，结果仅用于即时显示，以服务端重算为准 */
 export function sumCents(values: (number | null | undefined)[]): number {
   return values.reduce<number>((s, v) => s + (v ?? 0), 0)

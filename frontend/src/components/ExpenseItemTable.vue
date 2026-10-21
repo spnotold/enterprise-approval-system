@@ -137,167 +137,219 @@ function typeName(r: object): string {
 
 <template>
   <div class="expense-table">
-    <el-table :data="items" border row-key="key" size="small" :row-class-name="rowClass">
-      <el-table-column type="index" label="#" width="44" align="center" />
-      <el-table-column label="费用类型" width="130">
-        <template #default="{ row, $index }">
-          <span v-if="readonly">{{ typeName(row) }}</span>
-          <div v-else :class="{ 'cell-error': err($index, 'expenseTypeCode') }">
-            <el-select v-model="row.expenseTypeCode" placeholder="请选择" clearable>
-              <el-option v-for="t in dict.expenseTypes" :key="t.code" :label="t.name" :value="t.code" />
-            </el-select>
-            <div v-if="err($index, 'expenseTypeCode')" class="cell-error-msg">{{ err($index, 'expenseTypeCode') }}</div>
-          </div>
-          <div v-if="!readonly && err($index)" class="cell-error-msg">{{ err($index) }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column label="发生日期" width="150">
-        <template #default="{ row, $index }">
-          <span v-if="readonly">{{ row.occurDate ?? '—' }}</span>
-          <div v-else :class="{ 'cell-error': err($index, 'occurDate') }">
-            <el-date-picker
-              v-model="row.occurDate"
-              type="date"
-              value-format="YYYY-MM-DD"
-              :disabled-date="disabledDate"
-              placeholder="选择日期"
-              style="width: 100%"
-            />
-            <div v-if="err($index, 'occurDate')" class="cell-error-msg">{{ err($index, 'occurDate') }}</div>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="用途说明" min-width="150">
-        <template #default="{ row, $index }">
-          <span v-if="readonly" class="pre-wrap">{{ row.purpose ?? '—' }}</span>
-          <div v-else :class="{ 'cell-error': err($index, 'purpose') }">
-            <el-input v-model="row.purpose" maxlength="200" placeholder="如：北京出差高铁票" />
-            <div v-if="err($index, 'purpose')" class="cell-error-msg">{{ err($index, 'purpose') }}</div>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="金额（元）" width="140" align="right">
-        <template #default="{ row, $index }">
-          <MoneyText v-if="readonly" :cents="row.amountCents" />
-          <div v-else :class="{ 'cell-error': err($index, 'amountCents') }">
-            <AmountInput v-model:cents="row.amountCents" />
-            <div v-if="err($index, 'amountCents')" class="cell-error-msg">{{ err($index, 'amountCents') }}</div>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="票据" min-width="300">
-        <template #default="{ row, $index }">
-          <!-- 只读 -->
-          <template v-if="readonly">
-            <div v-if="row.noInvoice" class="no-invoice">
-              <el-tag type="warning" effect="plain" size="small" disable-transitions>无票</el-tag>
-              <span class="pre-wrap small">原因：{{ row.noInvoiceReason ?? '—' }}</span>
+    <div class="table-scroll" role="region" aria-label="报销明细表" tabindex="0">
+      <el-table :data="items" row-key="key" class="table" :class="{ 'table--edit': !readonly }" :row-class-name="rowClass">
+        <el-table-column type="index" label="#" width="64" align="center" />
+        <el-table-column label="费用类型" width="160">
+          <template #default="{ row, $index }">
+            <span v-if="readonly">{{ typeName(row) }}</span>
+            <div v-else :class="{ 'cell-error': err($index, 'expenseTypeCode') }">
+              <el-select v-model="row.expenseTypeCode" placeholder="请选择" clearable>
+                <el-option v-for="t in dict.expenseTypes" :key="t.code" :label="t.name" :value="t.code" />
+              </el-select>
+              <div v-if="err($index, 'expenseTypeCode')" class="cell-error-msg">{{ err($index, 'expenseTypeCode') }}</div>
             </div>
-            <template v-else-if="showAttachments">
-              <AttachmentUploader :model-value="invoiceMetas(row)" ref-type="EXPENSE_INVOICE" readonly>
-                <template #extra="{ file }">
-                  <div class="invoice-extra">
-                    <span v-if="invoiceOf(row, file.id)?.invoiceNo" class="small">
-                      票据号：<span class="num">{{ invoiceOf(row, file.id)?.invoiceNo }}</span>
-                    </span>
-                    <template v-if="namedDups(invoiceOf(row, file.id)).length">
-                      <el-tag
-                        v-for="(d, k) in namedDups(invoiceOf(row, file.id))"
-                        :key="`${d.otherApplicationId ?? k}-${d.attachmentId}`"
-                        type="danger"
-                        size="small"
-                        disable-transitions
-                        class="dup-tag"
-                      >
-                        疑似重复：{{ dupText(d) }}
-                      </el-tag>
-                    </template>
-                    <div v-else-if="suspected(invoiceOf(row, file.id))" class="dup-hint">
-                      <el-icon><WarningFilled /></el-icon>该票据疑似已在其他报销单中使用
-                    </div>
-                  </div>
-                </template>
-              </AttachmentUploader>
-            </template>
-            <span v-else class="muted small">无权查看票据附件</span>
+            <div v-if="!readonly && err($index)" class="cell-error-msg">{{ err($index) }}</div>
           </template>
-
-          <!-- 编辑 -->
-          <template v-else>
-            <el-checkbox :model-value="row.noInvoice" @update:model-value="toggleNoInvoice(row, !!$event)">无票</el-checkbox>
-            <div v-if="row.noInvoice" :class="{ 'cell-error': err($index, 'noInvoiceReason') }">
-              <el-input
-                v-model="row.noInvoiceReason"
-                type="textarea"
-                :rows="2"
-                maxlength="300"
-                show-word-limit
-                placeholder="无票原因（至少 10 字）"
+        </el-table-column>
+        <el-table-column label="发生日期" width="150">
+          <template #default="{ row, $index }">
+            <span v-if="readonly">{{ row.occurDate ?? '—' }}</span>
+            <div v-else :class="{ 'cell-error': err($index, 'occurDate') }">
+              <el-date-picker
+                v-model="row.occurDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                :disabled-date="disabledDate"
+                placeholder="选择日期"
+                style="width: 100%"
               />
-              <div v-if="err($index, 'noInvoiceReason')" class="cell-error-msg">{{ err($index, 'noInvoiceReason') }}</div>
+              <div v-if="err($index, 'occurDate')" class="cell-error-msg">{{ err($index, 'occurDate') }}</div>
             </div>
-            <div v-else :class="{ 'cell-error': err($index, 'invoices') }">
-              <AttachmentUploader
-                :model-value="invoiceMetas(row)"
-                ref-type="EXPENSE_INVOICE"
-                :max-count="10"
-                button-text="上传票据"
-                tip="JPEG / PNG / PDF，单个 ≤ 10 MB，每条最多 10 张"
-                @update:model-value="setInvoiceMetas(row, $event)"
-              >
-                <template #extra="{ file }">
-                  <div class="invoice-extra">
-                    <el-input
-                      v-if="invoiceOf(row, file.id)"
-                      :model-value="invoiceOf(row, file.id)?.invoiceNo ?? ''"
-                      @update:model-value="setInvoiceNo(row, file.id, $event)"
-                      size="small"
-                      maxlength="64"
-                      placeholder="票据号（可选）"
-                      class="invoice-no"
-                    />
-                    <div v-if="suspected(invoiceOf(row, file.id))" class="dup-hint">
-                      <el-icon><WarningFilled /></el-icon>
-                      <span>
-                        该票据疑似已在其他报销单中使用<template v-if="namedDups(invoiceOf(row, file.id)).length">
-                          （{{ namedDups(invoiceOf(row, file.id)).map(dupText).join('、') }}）</template
-                        >，仍可提交，由财务判断
-                      </span>
-                    </div>
-                  </div>
-                </template>
-              </AttachmentUploader>
-              <div v-if="err($index, 'invoices')" class="cell-error-msg">{{ err($index, 'invoices') }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="用途说明" min-width="190">
+          <template #default="{ row, $index }">
+            <span v-if="readonly" class="pre-wrap">{{ row.purpose ?? '—' }}</span>
+            <div v-else :class="{ 'cell-error': err($index, 'purpose') }">
+              <el-input v-model="row.purpose" maxlength="200" placeholder="如：北京出差高铁票" />
+              <div v-if="err($index, 'purpose')" class="cell-error-msg">{{ err($index, 'purpose') }}</div>
             </div>
-            <template v-for="(inv, k) in row.invoices" :key="inv.attachment.id">
-              <div v-if="err($index, `invoices[${k}]`) || err($index, `invoices[${k}].invoiceNo`)" class="cell-error-msg">
-                票据 {{ k + 1 }}：{{ err($index, `invoices[${k}]`) ?? err($index, `invoices[${k}].invoiceNo`) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="金额（元）" width="145" align="right">
+          <template #default="{ row, $index }">
+            <MoneyText v-if="readonly" :cents="row.amountCents" />
+            <div v-else :class="{ 'cell-error': err($index, 'amountCents') }">
+              <AmountInput v-model:cents="row.amountCents" />
+              <div v-if="err($index, 'amountCents')" class="cell-error-msg">{{ err($index, 'amountCents') }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="票据" min-width="320">
+          <template #default="{ row, $index }">
+            <!-- 只读 -->
+            <template v-if="readonly">
+              <div v-if="row.noInvoice" class="no-invoice">
+                <el-tag type="warning" effect="plain" size="small" disable-transitions>无票</el-tag>
+                <span class="pre-wrap small">原因：{{ row.noInvoiceReason ?? '—' }}</span>
               </div>
+              <template v-else-if="showAttachments">
+                <AttachmentUploader :model-value="invoiceMetas(row)" ref-type="EXPENSE_INVOICE" readonly>
+                  <template #extra="{ file }">
+                    <div class="invoice-extra">
+                      <span v-if="invoiceOf(row, file.id)?.invoiceNo" class="small">
+                        票据号：<span class="num">{{ invoiceOf(row, file.id)?.invoiceNo }}</span>
+                      </span>
+                      <template v-if="namedDups(invoiceOf(row, file.id)).length">
+                        <el-tag
+                          v-for="(d, k) in namedDups(invoiceOf(row, file.id))"
+                          :key="`${d.otherApplicationId ?? k}-${d.attachmentId}`"
+                          type="danger"
+                          size="small"
+                          disable-transitions
+                          class="dup-tag"
+                        >
+                          疑似重复：{{ dupText(d) }}
+                        </el-tag>
+                      </template>
+                      <div v-else-if="suspected(invoiceOf(row, file.id))" class="dup-hint">
+                        <el-icon><WarningFilled /></el-icon>该票据疑似已在其他报销单中使用
+                      </div>
+                    </div>
+                  </template>
+                </AttachmentUploader>
+              </template>
+              <span v-else class="muted small">无权查看票据附件</span>
+            </template>
+
+            <!-- 编辑 -->
+            <template v-else>
+              <el-checkbox :model-value="row.noInvoice" @update:model-value="toggleNoInvoice(row, !!$event)">无票</el-checkbox>
+              <div v-if="row.noInvoice" :class="{ 'cell-error': err($index, 'noInvoiceReason') }">
+                <el-input
+                  v-model="row.noInvoiceReason"
+                  type="textarea"
+                  :rows="2"
+                  maxlength="300"
+                  show-word-limit
+                  placeholder="无票原因（至少 10 字）"
+                />
+                <div v-if="err($index, 'noInvoiceReason')" class="cell-error-msg">{{ err($index, 'noInvoiceReason') }}</div>
+              </div>
+              <div v-else :class="{ 'cell-error': err($index, 'invoices') }">
+                <AttachmentUploader
+                  :model-value="invoiceMetas(row)"
+                  ref-type="EXPENSE_INVOICE"
+                  :max-count="10"
+                  button-text="上传票据"
+                  tip="JPEG / PNG / PDF，单个 ≤ 10 MB，每条最多 10 张"
+                  @update:model-value="setInvoiceMetas(row, $event)"
+                >
+                  <template #extra="{ file }">
+                    <div class="invoice-extra">
+                      <el-input
+                        v-if="invoiceOf(row, file.id)"
+                        :model-value="invoiceOf(row, file.id)?.invoiceNo ?? ''"
+                        @update:model-value="setInvoiceNo(row, file.id, $event)"
+                        size="small"
+                        maxlength="64"
+                        placeholder="票据号（可选）"
+                        class="invoice-no"
+                      />
+                      <div v-if="suspected(invoiceOf(row, file.id))" class="dup-hint">
+                        <el-icon><WarningFilled /></el-icon>
+                        <span>
+                          该票据疑似已在其他报销单中使用<template v-if="namedDups(invoiceOf(row, file.id)).length">
+                            （{{ namedDups(invoiceOf(row, file.id)).map(dupText).join('、') }}）</template
+                          >，仍可提交，由财务判断
+                        </span>
+                      </div>
+                    </div>
+                  </template>
+                </AttachmentUploader>
+                <div v-if="err($index, 'invoices')" class="cell-error-msg">{{ err($index, 'invoices') }}</div>
+              </div>
+              <template v-for="(inv, k) in row.invoices" :key="inv.attachment.id">
+                <div v-if="err($index, `invoices[${k}]`) || err($index, `invoices[${k}].invoiceNo`)" class="cell-error-msg">
+                  票据 {{ k + 1 }}：{{ err($index, `invoices[${k}]`) ?? err($index, `invoices[${k}].invoiceNo`) }}
+                </div>
+              </template>
             </template>
           </template>
-        </template>
-      </el-table-column>
-      <el-table-column v-if="!readonly" label="操作" width="64" align="center" fixed="right">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="remove($index)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <div class="table-foot">
-      <el-button v-if="!readonly" size="small" :icon="Plus" :disabled="items.length >= maxRows" @click="add">添加明细</el-button>
-      <span v-if="!readonly" class="muted small">全空的行不会被保存</span>
-      <span class="flex-1" />
-      <span>合计：<MoneyText :cents="total" strong /></span>
+        </el-table-column>
+        <el-table-column v-if="!readonly" label="操作" width="80" align="center">
+          <template #default="{ $index }">
+            <el-button link type="danger" @click="remove($index)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    <div class="total-row">
+      <span>合计</span>
+      <MoneyText :cents="total" strong />
+    </div>
+    <div v-if="!readonly" class="table-foot">
+      <el-button size="small" :icon="Plus" :disabled="items.length >= maxRows" @click="add">添加明细</el-button>
+      <span class="muted small">空行不会保存</span>
     </div>
   </div>
 </template>
 
 <style scoped>
+.expense-table {
+  min-width: 0;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.table-foot :deep(.el-button),
+.table :deep(.el-button.is-link) {
+  min-height: 32px;
+}
+.table-scroll:focus-visible,
+.table-foot :deep(.el-button:focus-visible),
+.expense-table :deep(.el-checkbox__original:focus-visible + .el-checkbox__inner) {
+  outline: 2px solid var(--eas-primary);
+  outline-offset: 2px;
+}
+.table--edit {
+  min-width: 1120px;
+}
+.table :deep(.el-table__body td.el-table__cell) {
+  vertical-align: top;
+}
+.expense-table :deep(.el-input__wrapper),
+.expense-table :deep(.el-select__wrapper),
+.expense-table :deep(.el-date-editor.el-input__wrapper) {
+  min-height: var(--eas-control-height);
+}
+.expense-table :deep(.el-textarea__inner) {
+  min-height: var(--eas-control-height);
+}
+.total-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 24px;
+  background: var(--eas-row-hover);
+  color: var(--eas-ink-2);
+  border-top: 1px solid var(--eas-rule);
+}
+.total-row :deep(.money) {
+  font-family: var(--eas-font-serif);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--eas-ink);
+}
 .table-foot {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 .no-invoice {
   display: flex;
@@ -324,8 +376,8 @@ function typeName(r: object): string {
   align-items: flex-start;
   gap: 4px;
   padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: var(--eas-radius-control);
+  font-size: var(--eas-fs-12);
   color: var(--eas-warning-text);
   background: var(--eas-warning-tint);
 }

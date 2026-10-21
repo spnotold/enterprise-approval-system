@@ -20,6 +20,8 @@ import { APP_STATUS_LABEL, APP_TYPE_LABEL } from '@/lib/labels'
 import { useAuthStore } from '@/stores/auth'
 import { useDictStore } from '@/stores/dict'
 import StatsChart from '@/components/StatsChart.vue'
+import IndexTabs from '@/components/IndexTabs.vue'
+import ListEmpty from '@/components/ListEmpty.vue'
 import MoneyText from '@/components/MoneyText.vue'
 import type { AppStatus, AppType, EnterpriseStats, FinanceStats, MonthlyRow } from '@/lib/types'
 
@@ -36,12 +38,11 @@ type ChartOption = ComposeOption<
 type TabName = 'personal' | 'dept' | 'finance' | 'enterprise'
 type EnterpriseRow = EnterpriseStats['byDept'][number]
 type FinanceDeptRow = FinanceStats['byDept'][number]
-interface KpiCard {
+interface LedgerItem {
   label: string
   value?: string
   unit?: string
   cents?: number
-  hint?: string
 }
 
 const auth = useAuthStore()
@@ -70,7 +71,7 @@ const CHART_COLORS = Array.from({ length: 6 }, (_, i) => cssVar(`--eas-chart-${i
 const TYPE_ORDER: AppType[] = ['PURCHASE', 'TRAVEL', 'EXPENSE', 'CUSTOM']
 const AXIS_TEXT = cssVar('--eas-ink-2')
 const GRID_LINE = cssVar('--eas-rule')
-const SURFACE = cssVar('--eas-surface')
+const SURFACE = cssVar('--eas-sheet')
 const AXIS_LINE = { lineStyle: { color: GRID_LINE } }
 const CHART_BASE = {
   color: CHART_COLORS,
@@ -85,7 +86,7 @@ const TOOLTIP: TooltipComponentOption = {
   extraCssText: 'box-shadow: none; font-variant-numeric: tabular-nums;',
   axisPointer: {
     lineStyle: { color: GRID_LINE },
-    shadowStyle: { color: cssVar('--eas-paper-deep'), opacity: 0.5 },
+    shadowStyle: { color: cssVar('--eas-tab'), opacity: 0.5 },
   },
 }
 const SERIES_EMPHASIS = { focus: 'series' as const }
@@ -140,11 +141,16 @@ const TAB_DEFS: { name: TabName; label: string; perm?: string }[] = [
   { name: 'personal', label: '个人' },
   { name: 'dept', label: '本部门', perm: 'STATS_DEPT' },
   { name: 'finance', label: '财务', perm: 'FIN_STATS' },
-  { name: 'enterprise', label: '企业', perm: 'ENTERPRISE_STATS' },
+  { name: 'enterprise', label: '全企业', perm: 'ENTERPRISE_STATS' },
 ]
 const tabs = computed(() => TAB_DEFS.filter((t) => !t.perm || auth.can(t.perm)))
+const tabItems = computed(() => tabs.value.map((t) => ({ key: t.name, label: t.label })))
 const initialTab = tabs.value.find((t) => t.name === route.query.tab)?.name ?? 'personal'
 const active = ref<string>(initialTab)
+
+function onSelect(key: string) {
+  active.value = key
+}
 
 watch(active, (t) => {
   void router.replace({ query: { ...route.query, tab: t === 'personal' ? undefined : t } })
@@ -313,19 +319,26 @@ const personalPie = computed(() => (personal.data.value ? statusPie(personal.dat
 
 // ---------- 本部门 ----------
 
-const deptTotalsCards = computed<KpiCard[]>(() => {
+const deptLedger = computed<LedgerItem[]>(() => {
   const t = dept.data.value?.totals
   if (!t) return []
   return [
     { label: '申请数', value: `${t.count}`, unit: '单' },
-    { label: '已通过', value: `${t.approvedCount}`, unit: '单' },
-    { label: '已驳回', value: `${t.rejectedCount}`, unit: '单' },
-    { label: '审批中', value: `${t.inApprovalCount}`, unit: '单' },
-    { label: '已通过金额', cents: t.approvedAmountCents, hint: '仅含已通过申请' },
-    { label: '在途金额', cents: t.inProgressAmountCents, hint: '审批中申请，单独统计，不计入已通过金额' },
-    { label: '通过率', value: pct(t.approvalRate), hint: '已通过 /（已通过 + 已驳回）' },
-    { label: '平均审批时长', value: fmtHours(t.avgApprovalHours), hint: '已通过或已驳回申请' },
+    { label: '已通过金额', cents: t.approvedAmountCents },
+    { label: '通过率', value: pct(t.approvalRate) },
+    { label: '平均审批时长', value: fmtHours(t.avgApprovalHours) },
   ]
+})
+
+/** 账单行下的一行注解：部门、区间，以及在途金额的口径 */
+const deptNote = computed(() => {
+  const d = dept.data.value
+  if (!d) return ''
+  const parts = [`${d.deptName}，${d.from} 至 ${d.to}`]
+  if (d.totals.inProgressAmountCents > 0) {
+    parts.push(`在途金额 ¥${formatCents(d.totals.inProgressAmountCents)} 为审批中申请的金额`)
+  }
+  return parts.join('；')
 })
 
 const deptStatusCounts = computed(() => {
@@ -425,7 +438,7 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
       },
     },
     legend: LEGEND,
-    grid: { left: 8, right: 8, top: 48, bottom: 8, containLabel: true },
+    grid: { left: 32, right: 32, top: 56, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
       data: rows.map((r) => r.month),
@@ -437,8 +450,11 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
       {
         type: 'value',
         name: '申请数（单）',
+        position: 'left',
+        min: 0,
         minInterval: 1,
-        nameTextStyle: { color: AXIS_TEXT },
+        nameGap: 16,
+        nameTextStyle: { color: AXIS_TEXT, align: 'left', padding: [0, 0, 0, 8] },
         axisLine: AXIS_LINE,
         axisLabel: { color: AXIS_TEXT },
         splitLine: { lineStyle: { color: GRID_LINE } },
@@ -446,7 +462,10 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
       {
         type: 'value',
         name: '已通过金额（元）',
-        nameTextStyle: { color: AXIS_TEXT },
+        position: 'right',
+        min: 0,
+        nameGap: 16,
+        nameTextStyle: { color: AXIS_TEXT, align: 'right', padding: [0, 8, 0, 0] },
         axisLine: AXIS_LINE,
         axisLabel: { color: AXIS_TEXT, formatter: yuanAxis },
         splitLine: { show: false },
@@ -455,12 +474,11 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
     series: [
       {
         name: '申请数',
-        type: 'line',
+        type: 'bar',
         yAxisIndex: 0,
-        symbolSize: 8,
-        lineStyle: { width: 2 },
-        itemStyle: { color: CHART_COLORS[0] },
-        emphasis: SERIES_EMPHASIS,
+        barMaxWidth: 32,
+        itemStyle: { color: CHART_COLORS[0], borderRadius: [4, 4, 0, 0] },
+        emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[0], borderWidth: 2 } },
         blur: SERIES_BLUR,
         data: rows.map((r) => r.count),
       },
@@ -468,6 +486,7 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         name: '已通过金额',
         type: 'line',
         yAxisIndex: 1,
+        z: 3,
         symbolSize: 8,
         lineStyle: { width: 2 },
         itemStyle: { color: CHART_COLORS[1] },
@@ -481,6 +500,30 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
 })
 
 // ---------- 财务 ----------
+
+/** 报销 / 采购已通过金额合计，与明细表合计行口径一致 */
+const financeTotals = computed(() => {
+  const rows = finance.data.value?.byDept ?? []
+  const sum = (k: 'expenseAmountCents' | 'purchaseAmountCents') => rows.reduce((s, r) => s + r[k], 0)
+  return { expenseCents: sum('expenseAmountCents'), purchaseCents: sum('purchaseAmountCents') }
+})
+
+const financeLedger = computed<LedgerItem[]>(() => {
+  const d = finance.data.value
+  if (!d) return []
+  return [
+    { label: '报销已通过金额', cents: financeTotals.value.expenseCents },
+    { label: '采购已通过金额', cents: financeTotals.value.purchaseCents },
+    { label: '无票金额', cents: d.noInvoice.amountCents },
+    { label: '无票金额占比', value: pct(d.noInvoice.ratio) },
+  ]
+})
+
+const financeNote = computed(() => {
+  const d = finance.data.value
+  if (!d) return ''
+  return `${d.from} 至 ${d.to}；无票明细 ${d.noInvoice.count} 条`
+})
 
 const financeTypes = computed(() =>
   // 类目轴自下而上排列，升序排序后金额最大的在最上方
@@ -549,6 +592,28 @@ function financeSummary(p: { data: FinanceDeptRow[] }): string[] {
 
 // ---------- 企业 ----------
 
+/** 全企业账单行：各部门合计 */
+const enterpriseTotals = computed(() => {
+  const rows = enterprise.data.value?.byDept ?? []
+  return {
+    count: rows.reduce((s, r) => s + r.count, 0),
+    approvedCount: rows.reduce((s, r) => s + r.approvedCount, 0),
+    rejectedCount: rows.reduce((s, r) => s + r.rejectedCount, 0),
+    approvedAmountCents: rows.reduce((s, r) => s + r.approvedAmountCents, 0),
+  }
+})
+
+const enterpriseLedger = computed<LedgerItem[]>(() => {
+  if (!enterprise.data.value) return []
+  const t = enterpriseTotals.value
+  return [
+    { label: '申请数', value: `${t.count}`, unit: '单' },
+    { label: '已通过', value: `${t.approvedCount}`, unit: '单' },
+    { label: '已驳回', value: `${t.rejectedCount}`, unit: '单' },
+    { label: '已通过金额', cents: t.approvedAmountCents },
+  ]
+})
+
 const enterpriseBar = computed<ChartOption | null>(() => {
   const rows = enterprise.data.value?.byDept ?? []
   if (!rows.length) return null
@@ -599,227 +664,235 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">统计</h2>
-      </div>
-      <div class="toolbar">
-        <el-date-picker
-          v-model="range"
-          type="daterange"
-          value-format="YYYY-MM-DD"
-          format="YYYY-MM-DD"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          unlink-panels
-          :clearable="false"
-          :editable="false"
-          :shortcuts="shortcuts"
-          :disabled-date="disabledDate"
-          class="range-picker"
-        />
-        <el-button :icon="Refresh" :loading="refreshing" @click="refresh">刷新</el-button>
-      </div>
-    </div>
-
-    <el-alert
-      type="info"
-      show-icon
-      :closable="false"
-      title="按提交时间统计；已通过金额仅含已通过申请；部门以提交时所属部门为准"
-    />
-
-    <el-tabs v-model="active" class="stats-tabs">
-      <el-tab-pane v-for="t in tabs" :key="t.name" :name="t.name" :label="t.label" />
-    </el-tabs>
+  <div class="page stats-page">
+    <IndexTabs class="stats-tabs" :items="tabItems" :active="active" label="统计范围" @select="onSelect">
+      <template #actions>
+        <div class="stats-actions">
+          <el-select
+            v-if="active === 'dept' && multiDept"
+            v-model="deptId"
+            aria-label="统计部门"
+            class="dept-select"
+          >
+            <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id" />
+          </el-select>
+          <el-date-picker
+            v-model="range"
+            type="daterange"
+            value-format="YYYY-MM-DD"
+            format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            unlink-panels
+            :clearable="false"
+            :editable="false"
+            :shortcuts="shortcuts"
+            :disabled-date="disabledDate"
+            class="range-picker"
+          />
+          <el-button :icon="Refresh" :loading="refreshing" @click="refresh">刷新</el-button>
+        </div>
+      </template>
+    </IndexTabs>
 
     <!-- 个人 -->
     <section v-if="active === 'personal'" v-loading="personal.loading.value && !!personal.data.value" class="tab-body">
-      <el-skeleton v-if="personal.loading.value && !personal.data.value" :rows="6" animated />
-      <el-empty v-else-if="personal.failed.value" description="统计数据加载失败">
-        <el-button type="primary" @click="personal.ensure(true)">重试</el-button>
-      </el-empty>
+      <div v-if="personal.loading.value && !personal.data.value" class="sheet skeleton-sheet">
+        <el-skeleton :rows="5" animated />
+      </div>
+      <div v-else-if="personal.failed.value" class="sheet">
+        <ListEmpty description="统计数据加载失败">
+          <template #action>
+            <el-button type="primary" @click="personal.ensure(true)">重试</el-button>
+          </template>
+        </ListEmpty>
+      </div>
       <template v-else-if="personal.data.value">
-        <div class="muted small">个人统计为全部时间的数据，不受日期区间影响。</div>
-        <div class="kpi-grid">
-          <router-link v-if="auth.can('TASK_HANDLE')" to="/tasks/pending" class="kpi kpi-link">
-            <span class="kpi-label">我的待办</span>
-            <span class="kpi-value">{{ personal.data.value.pendingTaskCount }}<small>件</small></span>
-          </router-link>
-          <div v-else class="kpi">
-            <span class="kpi-label">我的待办</span>
-            <span class="kpi-value">{{ personal.data.value.pendingTaskCount }}<small>件</small></span>
+        <div class="sheet ledger-sheet">
+          <div class="ledger">
+            <router-link v-if="auth.can('TASK_HANDLE')" to="/tasks/pending" class="ledger-item ledger-link">
+              <span class="ledger-label">我的待办</span>
+              <span class="ledger-value">{{ personal.data.value.pendingTaskCount }}<span class="ledger-unit">件</span></span>
+            </router-link>
+            <div v-else class="ledger-item">
+              <span class="ledger-label">我的待办</span>
+              <span class="ledger-value">{{ personal.data.value.pendingTaskCount }}<span class="ledger-unit">件</span></span>
+            </div>
+            <div class="ledger-item">
+              <span class="ledger-label">已通过申请</span>
+              <span class="ledger-value">{{ personal.data.value.approvedCount }}<span class="ledger-unit">单</span></span>
+            </div>
+            <div class="ledger-item">
+              <span class="ledger-label">已通过金额</span>
+              <span class="ledger-value"><MoneyText :cents="personal.data.value.approvedAmountCents" /></span>
+            </div>
           </div>
-          <div class="kpi">
-            <span class="kpi-label">已通过申请</span>
-            <span class="kpi-value">{{ personal.data.value.approvedCount }}<small>单</small></span>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">已通过金额</span>
-            <span class="kpi-value kpi-money"><MoneyText :cents="personal.data.value.approvedAmountCents" /></span>
-          </div>
+          <p class="ledger-note">个人统计为全部时间的数据</p>
         </div>
-        <el-card shadow="never">
-          <template #header><span class="card-title">我的申请状态分布</span></template>
-          <StatsChart v-if="personalPie" :option="personalPie" :height="320" />
-          <el-empty v-else :image-size="80" description="暂无申请，先到“发起申请”提交一单。" />
-        </el-card>
+        <section class="sheet chart-sheet">
+          <div class="sheet-head"><h2>我的申请状态分布</h2></div>
+          <div class="chart-body">
+            <StatsChart v-if="personalPie" :option="personalPie" :height="320" />
+            <ListEmpty v-else description="还没有申请">
+              <template #action>
+                <el-button v-if="auth.can('APP_CREATE')" type="primary" @click="router.push('/apply')">填写申请</el-button>
+              </template>
+            </ListEmpty>
+          </div>
+        </section>
       </template>
     </section>
 
     <!-- 本部门 -->
     <section v-else-if="active === 'dept'" v-loading="dept.loading.value && !!dept.data.value" class="tab-body">
-      <div v-if="multiDept" class="toolbar">
-        <span class="muted">统计部门</span>
-        <el-select v-model="deptId" placeholder="选择部门" class="dept-select">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id" />
-        </el-select>
+      <div v-if="dept.loading.value && !dept.data.value" class="sheet skeleton-sheet">
+        <el-skeleton :rows="8" animated />
       </div>
-      <el-skeleton v-if="dept.loading.value && !dept.data.value" :rows="8" animated />
-      <el-empty v-else-if="dept.failed.value" description="统计数据加载失败">
-        <el-button type="primary" @click="dept.ensure(true)">重试</el-button>
-      </el-empty>
+      <div v-else-if="dept.failed.value" class="sheet">
+        <ListEmpty description="统计数据加载失败">
+          <template #action>
+            <el-button type="primary" @click="dept.ensure(true)">重试</el-button>
+          </template>
+        </ListEmpty>
+      </div>
       <template v-else-if="dept.data.value">
-        <div class="stats-meta muted small">
-          <span>{{ dept.data.value.deptName }}</span>
-          <span>{{ dept.data.value.from }} 至 {{ dept.data.value.to }}</span>
-        </div>
-        <div class="kpi-grid">
-          <div v-for="c in deptTotalsCards" :key="c.label" class="kpi">
-            <span class="kpi-label">{{ c.label }}</span>
-            <span class="kpi-value" :class="{ 'kpi-money': c.cents !== undefined }">
-              <MoneyText v-if="c.cents !== undefined" :cents="c.cents" />
-              <template v-else>{{ c.value }}<small v-if="c.unit">{{ c.unit }}</small></template>
-            </span>
-            <span v-if="c.hint" class="muted small">{{ c.hint }}</span>
+        <div class="sheet ledger-sheet">
+          <div class="ledger">
+            <div v-for="item in deptLedger" :key="item.label" class="ledger-item">
+              <span class="ledger-label">{{ item.label }}</span>
+              <span class="ledger-value">
+                <MoneyText v-if="item.cents !== undefined" :cents="item.cents" />
+                <template v-else>{{ item.value }}<span v-if="item.unit" class="ledger-unit">{{ item.unit }}</span></template>
+              </span>
+            </div>
           </div>
+          <p class="ledger-note">{{ deptNote }}</p>
         </div>
-        <el-empty
-          v-if="dept.data.value.totals.count === 0"
-          :image-size="80"
-          description="所选区间内本部门暂无已提交的申请"
-        />
-        <el-row v-else :gutter="16" class="chart-row">
-          <el-col :xs="24" :lg="14">
-            <el-card shadow="never">
-              <template #header><span class="card-title">各类型申请数量（按状态堆叠）</span></template>
-              <StatsChart v-if="deptTypeBar" :option="deptTypeBar" :height="320" />
-              <el-empty v-else :image-size="80" />
-            </el-card>
-          </el-col>
-          <el-col :xs="24" :lg="10">
-            <el-card shadow="never">
-              <template #header><span class="card-title">状态分布</span></template>
-              <StatsChart v-if="deptStatusPie" :option="deptStatusPie" :height="320" />
-              <el-empty v-else :image-size="80" />
-            </el-card>
-          </el-col>
-          <el-col :xs="24">
-            <el-card shadow="never">
-              <template #header><span class="card-title">月度趋势（按提交月份）</span></template>
+        <div v-if="dept.data.value.totals.count === 0" class="sheet">
+          <ListEmpty description="所选区间内，本部门没有已提交的申请" />
+        </div>
+        <template v-else>
+          <div class="chart-grid">
+            <section class="sheet chart-sheet">
+              <div class="sheet-head"><h2>各类型申请数量（按状态堆叠）</h2></div>
+              <div class="chart-body">
+                <StatsChart v-if="deptTypeBar" :option="deptTypeBar" :height="320" />
+              </div>
+            </section>
+            <section class="sheet chart-sheet">
+              <div class="sheet-head"><h2>状态分布</h2></div>
+              <div class="chart-body">
+                <StatsChart v-if="deptStatusPie" :option="deptStatusPie" :height="320" />
+              </div>
+            </section>
+          </div>
+          <section class="sheet chart-sheet">
+            <div class="sheet-head"><h2>月度趋势（按提交月份）</h2></div>
+            <div class="chart-body">
               <StatsChart v-if="deptMonthlyLine" :option="deptMonthlyLine" :height="320" />
-              <el-empty v-else :image-size="80" />
-            </el-card>
-          </el-col>
-        </el-row>
+            </div>
+          </section>
+        </template>
       </template>
     </section>
 
     <!-- 财务 -->
     <section v-else-if="active === 'finance'" v-loading="finance.loading.value && !!finance.data.value" class="tab-body">
-      <el-skeleton v-if="finance.loading.value && !finance.data.value" :rows="8" animated />
-      <el-empty v-else-if="finance.failed.value" description="统计数据加载失败">
-        <el-button type="primary" @click="finance.ensure(true)">重试</el-button>
-      </el-empty>
+      <div v-if="finance.loading.value && !finance.data.value" class="sheet skeleton-sheet">
+        <el-skeleton :rows="8" animated />
+      </div>
+      <div v-else-if="finance.failed.value" class="sheet">
+        <ListEmpty description="统计数据加载失败">
+          <template #action>
+            <el-button type="primary" @click="finance.ensure(true)">重试</el-button>
+          </template>
+        </ListEmpty>
+      </div>
       <template v-else-if="finance.data.value">
-        <div class="muted small">{{ finance.data.value.from }} 至 {{ finance.data.value.to }}</div>
-        <el-row :gutter="16" class="chart-row">
-          <el-col :xs="24" :lg="16">
-            <el-card shadow="never">
-              <template #header><span class="card-title">按费用类型的报销已通过金额</span></template>
-              <StatsChart v-if="financeBar" :option="financeBar" :height="financeBarHeight" />
-              <el-empty v-else :image-size="80" description="所选区间内暂无已通过的报销" />
-            </el-card>
-          </el-col>
-          <el-col :xs="24" :lg="8">
-            <el-card shadow="never">
-              <template #header><span class="card-title">无票支出</span></template>
-              <div class="kpi-stack">
-                <div class="kpi flat">
-                  <span class="kpi-label">无票明细数</span>
-                  <span class="kpi-value">{{ finance.data.value.noInvoice.count }}<small>条</small></span>
-                </div>
-                <div class="kpi flat">
-                  <span class="kpi-label">无票金额</span>
-                  <span class="kpi-value kpi-money"><MoneyText :cents="finance.data.value.noInvoice.amountCents" /></span>
-                </div>
-                <div class="kpi flat">
-                  <span class="kpi-label">无票金额占比</span>
-                  <span class="kpi-value">{{ pct(finance.data.value.noInvoice.ratio) }}</span>
-                  <el-progress
-                    v-if="finance.data.value.noInvoice.ratio != null"
-                    :percentage="Math.min(100, Math.round(finance.data.value.noInvoice.ratio * 1000) / 10)"
-                    :show-text="false"
-                    :stroke-width="6"
-                    color="var(--eas-warning)"
-                  />
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-          <el-col :xs="24">
-            <el-card shadow="never">
-              <template #header><span class="card-title">各部门报销与采购已通过金额</span></template>
-              <el-table
-                :data="finance.data.value.byDept"
-                stripe
-                show-summary
-                :summary-method="financeSummary"
-                empty-text="暂无数据"
-                class="full"
-              >
-                <el-table-column prop="deptName" label="部门" min-width="120" />
-                <el-table-column label="报销已通过金额" min-width="150" align="right" sortable :sort-by="'expenseAmountCents'">
-                  <template #default="{ row }"><MoneyText :cents="row.expenseAmountCents" /></template>
-                </el-table-column>
-                <el-table-column label="采购已通过金额" min-width="150" align="right" sortable :sort-by="'purchaseAmountCents'">
-                  <template #default="{ row }"><MoneyText :cents="row.purchaseAmountCents" /></template>
-                </el-table-column>
-              </el-table>
-            </el-card>
-          </el-col>
-        </el-row>
+        <div class="sheet ledger-sheet">
+          <div class="ledger">
+            <div v-for="item in financeLedger" :key="item.label" class="ledger-item">
+              <span class="ledger-label">{{ item.label }}</span>
+              <span class="ledger-value">
+                <MoneyText v-if="item.cents !== undefined" :cents="item.cents" />
+                <template v-else>{{ item.value }}<span v-if="item.unit" class="ledger-unit">{{ item.unit }}</span></template>
+              </span>
+            </div>
+          </div>
+          <p class="ledger-note">{{ financeNote }}</p>
+        </div>
+        <section class="sheet chart-sheet">
+          <div class="sheet-head"><h2>按费用类型的报销已通过金额</h2></div>
+          <div class="chart-body">
+            <StatsChart v-if="financeBar" :option="financeBar" :height="financeBarHeight" />
+            <ListEmpty v-else description="所选区间内没有已通过的报销" />
+          </div>
+        </section>
+        <section class="sheet chart-sheet">
+          <div class="sheet-head"><h2>各部门报销与采购已通过金额</h2></div>
+          <el-table
+            :data="finance.data.value.byDept"
+            show-summary
+            :summary-method="financeSummary"
+            empty-text="暂无数据"
+            class="full"
+          >
+            <el-table-column prop="deptName" label="部门" min-width="120" />
+            <el-table-column label="报销已通过金额" min-width="150" align="right" sortable :sort-by="'expenseAmountCents'">
+              <template #default="{ row }"><MoneyText :cents="row.expenseAmountCents" /></template>
+            </el-table-column>
+            <el-table-column label="采购已通过金额" min-width="150" align="right" sortable :sort-by="'purchaseAmountCents'">
+              <template #default="{ row }"><MoneyText :cents="row.purchaseAmountCents" /></template>
+            </el-table-column>
+          </el-table>
+        </section>
       </template>
     </section>
 
-    <!-- 企业 -->
+    <!-- 全企业 -->
     <section
       v-else-if="active === 'enterprise'"
       v-loading="enterprise.loading.value && !!enterprise.data.value"
       class="tab-body"
     >
-      <el-skeleton v-if="enterprise.loading.value && !enterprise.data.value" :rows="8" animated />
-      <el-empty v-else-if="enterprise.failed.value" description="统计数据加载失败">
-        <el-button type="primary" @click="enterprise.ensure(true)">重试</el-button>
-      </el-empty>
+      <div v-if="enterprise.loading.value && !enterprise.data.value" class="sheet skeleton-sheet">
+        <el-skeleton :rows="8" animated />
+      </div>
+      <div v-else-if="enterprise.failed.value" class="sheet">
+        <ListEmpty description="统计数据加载失败">
+          <template #action>
+            <el-button type="primary" @click="enterprise.ensure(true)">重试</el-button>
+          </template>
+        </ListEmpty>
+      </div>
       <template v-else-if="enterprise.data.value">
-        <div class="muted small">{{ enterprise.data.value.from }} 至 {{ enterprise.data.value.to }}</div>
-        <el-empty
-          v-if="!enterprise.data.value.byDept.length"
-          :image-size="80"
-          description="所选区间内暂无数据"
-        />
+        <div v-if="!enterprise.data.value.byDept.length" class="sheet">
+          <ListEmpty description="所选区间内没有已提交的申请" />
+        </div>
         <template v-else>
-          <el-card shadow="never">
-            <template #header><span class="card-title">各部门申请数量对比</span></template>
-            <StatsChart v-if="enterpriseBar" :option="enterpriseBar" :height="340" />
-          </el-card>
-          <el-card shadow="never">
-            <template #header><span class="card-title">各部门明细</span></template>
-            <el-table :data="enterprise.data.value.byDept" stripe class="full">
-              <el-table-column prop="deptName" label="部门" min-width="110" fixed />
+          <div class="sheet ledger-sheet">
+            <div class="ledger">
+              <div v-for="item in enterpriseLedger" :key="item.label" class="ledger-item">
+                <span class="ledger-label">{{ item.label }}</span>
+                <span class="ledger-value">
+                  <MoneyText v-if="item.cents !== undefined" :cents="item.cents" />
+                  <template v-else>{{ item.value }}<span v-if="item.unit" class="ledger-unit">{{ item.unit }}</span></template>
+                </span>
+              </div>
+            </div>
+            <p class="ledger-note">{{ enterprise.data.value.from }} 至 {{ enterprise.data.value.to }}</p>
+          </div>
+          <section class="sheet chart-sheet">
+            <div class="sheet-head"><h2>各部门申请数量对比</h2></div>
+            <div class="chart-body">
+              <StatsChart v-if="enterpriseBar" :option="enterpriseBar" :height="340" />
+            </div>
+          </section>
+          <section class="sheet chart-sheet">
+            <div class="sheet-head"><h2>各部门明细</h2></div>
+            <el-table :data="enterprise.data.value.byDept" class="full">
+              <el-table-column prop="deptName" label="部门" min-width="110" />
               <el-table-column prop="count" label="申请数" min-width="90" align="right" sortable />
               <el-table-column prop="approvedCount" label="已通过" min-width="90" align="right" sortable />
               <el-table-column prop="rejectedCount" label="已驳回" min-width="90" align="right" sortable />
@@ -861,7 +934,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
                 <template #default="{ row }">{{ fmtHours(row.avgApprovalHours) }}</template>
               </el-table-column>
             </el-table>
-          </el-card>
+          </section>
         </template>
       </template>
     </section>
@@ -869,35 +942,23 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
 </template>
 
 <style scoped>
-.page {
-  font-family: var(--eas-font-sans);
+.stats-page {
+  gap: 0;
   font-variant-numeric: tabular-nums;
 }
-.page-title {
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-xl);
-}
-.page-subtitle {
-  font-size: var(--eas-fs-xs);
-}
-.stats-meta {
+.stats-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
-:deep(.el-card) {
-  border-color: var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  box-shadow: none;
+.dept-select {
+  width: 160px;
 }
-.range-picker {
+.stats-actions .range-picker {
+  width: 260px;
   max-width: 100%;
-}
-.stats-tabs :deep(.el-tabs__header) {
-  margin-bottom: 0;
-}
-.stats-tabs :deep(.el-tabs__content) {
-  display: none;
 }
 .tab-body {
   display: flex;
@@ -905,110 +966,145 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   gap: var(--eas-gap);
   min-height: 200px;
 }
-.dept-select {
-  width: 200px;
+/* 第一张单据与选中的页签连成一片 */
+.tab-body > .sheet:first-child {
+  border-top-left-radius: 0;
 }
-.card-title {
-  font-weight: 600;
-}
-.chart-row {
-  row-gap: 16px;
+.skeleton-sheet {
+  padding: var(--eas-sheet-pad);
 }
 .full {
   width: 100%;
 }
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 12px;
+
+/* 账单行：指标横排，之间 1px 竖线 */
+.ledger-sheet {
+  padding: 20px var(--eas-sheet-pad) 14px;
 }
-.kpi {
+.ledger {
+  display: flex;
+}
+.ledger-item {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
-  background: var(--eas-surface);
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
+  gap: 2px;
+  padding: 4px 24px;
   color: inherit;
   text-decoration: none;
+  border-radius: var(--eas-radius-control);
 }
-.kpi-link {
-  transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
-    transform var(--eas-dur-fast) var(--eas-ease),
-    box-shadow var(--eas-dur-fast) var(--eas-ease);
+.ledger-item:first-child {
+  padding-left: 0;
 }
-.kpi-link:hover,
-.kpi-link:focus-visible {
-  position: relative;
-  z-index: 1;
-  transform: translateY(-2px);
-  border-color: var(--eas-primary);
-  box-shadow: var(--eas-shadow-lift);
+.ledger-item:last-child {
+  padding-right: 0;
 }
-.kpi-link:hover {
-  background: var(--eas-paper);
+.ledger-item + .ledger-item {
+  border-left: 1px solid var(--eas-rule);
 }
-.kpi-link:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
+.ledger-link:hover .ledger-value {
+  color: var(--eas-primary);
 }
-.kpi-link:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-.kpi.flat {
-  padding: 0;
-  border: none;
-}
-.kpi-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.kpi-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.ledger-label {
   font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-2);
+  color: var(--eas-ink-3);
 }
-.kpi-value {
-  font-size: var(--eas-fs-xl);
-  font-weight: 600;
-  line-height: 1.3;
+.ledger-value {
+  font-family: var(--eas-font-serif);
+  font-size: var(--eas-fs-32);
+  line-height: var(--eas-lh-title);
   font-variant-numeric: tabular-nums;
   color: var(--eas-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.kpi-money {
-  text-align: right;
-}
-.kpi-value small {
-  margin-left: 4px;
-  font-size: var(--eas-fs-xs);
-  font-weight: normal;
+.ledger-unit {
+  margin-left: 6px;
+  font-family: var(--eas-font-sans);
+  font-size: var(--eas-fs-sm);
   color: var(--eas-ink-2);
 }
-@media (prefers-reduced-motion: reduce) {
-  .kpi-link,
-  .kpi-link:hover,
-  .kpi-link:focus-visible,
-  .kpi-link:active {
-    transform: none;
-    transition: none;
+.ledger-note {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--eas-rule);
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-2);
+}
+
+/* 图表单据 */
+.chart-body {
+  padding: 8px 16px 16px;
+}
+.chart-grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: var(--eas-gap);
+}
+@media (max-width: 1100px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 768px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* 窄屏：操作区换到页签上一行右对齐，页签仍与单据相接 */
+@media (max-width: 767px) {
+  /* stats-tabs 落在 IndexTabs 的根节点上，与 .index-tabs-row 是同一个元素，直接改它 */
+  .stats-tabs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
   }
-  .kpi-value {
-    font-size: var(--eas-fs-lg);
+  .stats-tabs :deep(.index-tabs) {
+    width: 100%;
+  }
+  .stats-tabs :deep(.index-tab-actions) {
+    order: -1;
+    align-self: flex-end;
+    max-width: 100%;
+    padding-bottom: 10px;
+  }
+  .stats-actions {
+    max-width: 100%;
   }
   .dept-select {
+    width: 140px;
+  }
+  .stats-actions .range-picker {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .stats-tabs :deep(.el-date-editor) {
+    width: 100% !important;
+    min-width: 0;
+  }
+}
+
+/* 账单行窄屏两列 */
+@media (max-width: 700px) {
+  .ledger {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    row-gap: 16px;
+  }
+  .ledger-item,
+  .ledger-item:first-child,
+  .ledger-item:last-child {
+    padding: 4px 0;
+  }
+  .ledger-item + .ledger-item {
+    border-left: 0;
+  }
+  .ledger-item:nth-child(2n) {
+    border-left: 1px solid var(--eas-rule);
+    padding-left: 16px;
+  }
+  .ledger-value {
+    font-size: var(--eas-fs-26);
   }
 }
 </style>

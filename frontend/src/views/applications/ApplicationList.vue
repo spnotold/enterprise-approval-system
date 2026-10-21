@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // 申请列表：我的申请（mine）/ 本部门申请（dept）/ 授权范围申请（granted）
 // 筛选：类型、状态、提交日期、关键词；筛选与分页同步到 URL
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Refresh, Search } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
 import type { ApplicationSummary, AppStatus, AppType, ListScope } from '@/lib/types'
 import { APP_STATUS_LABEL, APP_TYPE_LABEL, toOptions } from '@/lib/labels'
@@ -15,6 +15,7 @@ import { dateRangeModel, useListQuery } from '@/composables/useListQuery'
 import { useAction } from '@/composables/useAction'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useRowNavigation } from '@/composables/useRowNavigation'
+import { useSectionActionsTarget } from '@/composables/useSectionActionsTarget'
 import { useAuthStore } from '@/stores/auth'
 import { useDictStore } from '@/stores/dict'
 import StatusTag from '@/components/StatusTag.vue'
@@ -27,19 +28,18 @@ const router = useRouter()
 const auth = useAuthStore()
 const dict = useDictStore()
 const { isMobile } = useBreakpoint()
-const { isMobile: isCompact } = useBreakpoint('(max-width: 1439px)')
-
-const TITLES: Record<ListScope, { title: string; sub: string }> = {
-  mine: { title: '我的申请', sub: '' },
-  dept: { title: '本部门申请', sub: '本人负责部门的已提交申请（不含草稿），部门按提交时所属部门统计。' },
-  granted: { title: '授权范围申请', sub: '管理员授予的数据范围内的已提交申请。' },
-}
+// 外壳在 767px 以下收起页签，「发起申请」入口改由页面操作区承接
+const { isMobile: isNarrow } = useBreakpoint('(max-width: 767px)')
 
 const typeOptions = toOptions(APP_TYPE_LABEL)
 const statusOptions = computed(() =>
   toOptions(APP_STATUS_LABEL).filter((o) => props.scope === 'mine' || o.value !== 'DRAFT'),
 )
 const headDepts = computed(() => auth.me?.headDeptIds ?? [])
+const canCreate = computed(() => props.scope === 'mine' && auth.can('APP_CREATE'))
+// 外壳为本栏目渲染了页签行时，页面操作放到页签行右侧；否则留在工具栏里。
+// 同一实例会被多个列表范围复用，目标存在性需随路由变化重新探测。
+const hasActionsTarget = useSectionActionsTarget()
 
 const q = useListQuery({
   defaults: {
@@ -55,7 +55,36 @@ const q = useListQuery({
 })
 const range = dateRangeModel(q.filters)
 
+// ---------- 我的申请：状态筛选的数量 ----------
+const statusCounts = ref<Record<AppStatus, number> | null>(null)
+const statusTabs = computed(() => {
+  const counts = statusCounts.value
+  const all = counts ? Object.values(counts).reduce((sum, n) => sum + n, 0) : null
+  return [
+    { value: null as AppStatus | null, count: all },
+    ...statusOptions.value.map((o) => ({ value: o.value as AppStatus, count: counts ? (counts[o.value as AppStatus] ?? 0) : null })),
+  ]
+})
+async function loadCounts() {
+  if (props.scope !== 'mine') return
+  try {
+    statusCounts.value = (await api.stats.personal()).statusCounts
+  } catch {
+    // 数量只是提示，失败时不显示
+  }
+}
+function pickStatus(status: AppStatus | null) {
+  if (q.filters.status === status) return
+  q.filters.status = status
+  void q.search()
+}
+/** 重新加载列表，并同步状态数量 */
+async function reload() {
+  await Promise.all([q.load(), loadCounts()])
+}
+
 onMounted(() => {
+  void loadCounts()
   if (props.scope === 'dept' && headDepts.value.length > 1) void dict.loadDepartments().catch(() => undefined)
 })
 
@@ -72,9 +101,9 @@ async function withdraw(row: ApplicationSummary) {
     },
     action: (key) => api.applications.withdraw(row.id, { appVersion: row.version }, key),
     success: '已撤回',
-    onConflict: () => q.load(),
+    onConflict: () => reload(),
   })
-  if (r) await q.load()
+  if (r) await reload()
 }
 
 async function remove(row: ApplicationSummary) {
@@ -85,9 +114,9 @@ async function remove(row: ApplicationSummary) {
       return true
     },
     success: '草稿已删除',
-    onConflict: () => q.load(),
+    onConflict: () => reload(),
   })
-  if (ok) await q.load()
+  if (ok) await reload()
 }
 
 async function copy(row: ApplicationSummary) {
@@ -111,30 +140,49 @@ function target(row: ApplicationSummary): RouteLocationRaw {
 }
 const { wrap: navWrap, onRowClick } = useRowNavigation<ApplicationSummary>({ target, rows: q.records, enabled: () => !q.loading.value })
 
-const EMPTY_TEXT: Record<ListScope, string> = {
-  mine: '暂无申请。点击右上角「发起申请」开始填写。',
-  dept: '本部门暂无已提交的申请。',
-  granted: '授权范围内暂无已提交的申请。',
+function typeText(row: ApplicationSummary): string {
+  return row.templateName || APP_TYPE_LABEL[row.type as AppType]
 }
 
-/** 金额单元格悬停时显示完整金额，窄列也不至于看不全 */
-function amountTitle(cents: number | null | undefined): string {
-  return cents === null || cents === undefined ? '—' : `¥${formatCents(cents)}`
+/** 第二行：类型与单号，中间隔一个全角空格 */
+function subLine(row: ApplicationSummary): string {
+  return `${typeText(row)}\u3000${row.appNo}`
 }
+
+const EMPTY_TEXT: Record<ListScope, string> = {
+  mine: '暂无申请',
+  dept: '本部门暂无已提交的申请',
+  granted: '授权范围内暂无已提交的申请',
+}
+/** 我的申请只选了状态时，直接说明该状态下没有单据 */
+const emptyDescription = computed(() => {
+  const f = q.filters
+  if (props.scope === 'mine' && f.status && !f.keyword && !f.type && !f.from && !f.to) {
+    return f.status === 'DRAFT' ? '暂无草稿' : `暂无${APP_STATUS_LABEL[f.status]}的申请`
+  }
+  return q.hasFilters.value ? undefined : EMPTY_TEXT[props.scope]
+})
 </script>
 
 <template>
   <div ref="navWrap" class="page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">{{ TITLES[scope].title }}</h2>
-        <div v-if="TITLES[scope].sub" class="page-subtitle">{{ TITLES[scope].sub }}</div>
-      </div>
-      <el-button v-if="scope === 'mine' && auth.can('APP_CREATE')" type="primary" @click="router.push('/apply')">发起申请</el-button>
-    </div>
-
-    <el-card shadow="never">
-      <div class="toolbar list-filters">
+    <div class="sheet">
+      <div class="toolbar list-filters list-filters--wrap">
+        <div v-if="scope === 'mine'" class="status-filters" role="group" aria-label="申请状态">
+          <button
+            v-for="tab in statusTabs"
+            :key="tab.value ?? 'all'"
+            type="button"
+            class="status-filter"
+            :class="{ 'is-active': q.filters.status === tab.value }"
+            :aria-pressed="q.filters.status === tab.value"
+            @click="pickStatus(tab.value)"
+          >
+            <StatusTag v-if="tab.value" :status="tab.value" :show-node="false" />
+            <span v-else>全部</span>
+            <span v-if="tab.count !== null" class="status-filter-count">{{ tab.count }}</span>
+          </button>
+        </div>
         <el-input
           v-model="q.filters.keyword"
           placeholder="编号或标题"
@@ -147,7 +195,7 @@ function amountTitle(cents: number | null | undefined): string {
         <el-select v-model="q.filters.type" placeholder="类型" aria-label="申请类型" clearable @change="q.search()">
           <el-option v-for="o in typeOptions" :key="o.value" :value="o.value" :label="o.label" />
         </el-select>
-        <el-select v-model="q.filters.status" placeholder="状态" aria-label="申请状态" clearable @change="q.search()">
+        <el-select v-if="scope !== 'mine'" v-model="q.filters.status" placeholder="状态" aria-label="申请状态" clearable @change="q.search()">
           <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
         </el-select>
         <el-select
@@ -171,35 +219,41 @@ function amountTitle(cents: number | null | undefined): string {
         />
         <el-button type="primary" @click="q.search()">查询</el-button>
         <el-button v-if="q.hasFilters.value" link type="primary" @click="q.reset()">重置</el-button>
+        <Teleport to="#section-actions" defer :disabled="!hasActionsTarget">
+          <div class="list-actions">
+            <el-button v-if="canCreate && isNarrow" type="primary" @click="router.push('/apply')">发起申请</el-button>
+            <el-button :icon="Refresh" :loading="q.loading.value" :disabled="q.loading.value" @click="reload()">刷新</el-button>
+          </div>
+        </Teleport>
       </div>
 
-      <!-- 窄屏用卡片：数据表列多，固定列会遮住标题；卡片把编号、标题、状态和操作放在同一视线内 -->
-      <div v-if="isMobile && q.error.value && !q.loaded.value" class="mobile-error">
+      <div v-if="q.error.value" class="mobile-error">
         <span>{{ errorText(q.error.value, '列表加载失败') }}</span>
-        <el-button link type="primary" :loading="q.loading.value" @click="q.load()">重新加载</el-button>
+        <el-button link type="primary" :loading="q.loading.value" @click="reload()">重新加载</el-button>
       </div>
       <el-skeleton
         v-else-if="isMobile && !q.loaded.value && q.loading.value"
-        class="mobile-cards"
+        class="list-state"
         :rows="6"
         animated
       />
+      <!-- 窄屏用卡片：数据表列多，卡片把标题、状态和操作放在同一视线内 -->
       <div v-else-if="isMobile" v-loading="q.loading.value" class="mobile-cards">
         <article v-for="row in q.records.value" :key="row.id" class="mobile-card">
           <router-link :to="target(row as ApplicationSummary)" class="mobile-card-main">
             <span class="mobile-card-top">
-              <span class="mobile-card-no eas-tnum">{{ row.appNo }}</span>
+              <span class="mobile-card-no">{{ subLine(row as ApplicationSummary) }}</span>
               <StatusTag :status="row.status" :current-node="row.currentNode" size="small" :show-node="false" />
             </span>
             <span class="mobile-card-title">{{ row.title || '（未填写标题）' }}</span>
             <span class="mobile-card-meta">
-              <span>{{ row.templateName || APP_TYPE_LABEL[row.type as AppType] }}</span>
               <span v-if="scope !== 'mine'">{{ row.applicant.realName }}</span>
               <span v-if="scope !== 'mine' && row.deptName">{{ row.deptName }}</span>
-              <span v-if="row.currentNode && row.status === 'IN_APPROVAL'">
-                {{ row.currentNode.name }}<template v-if="row.currentNode.assigneeName"> {{ row.currentNode.assigneeName }}</template>
-              </span>
-              <span v-if="row.amountCents != null" class="eas-tnum">¥{{ formatCents(row.amountCents) }}</span>
+              <template v-if="row.currentNode && row.status === 'IN_APPROVAL'">
+                <span>{{ row.currentNode.name }}</span>
+                <span v-if="row.currentNode.assigneeName">{{ row.currentNode.assigneeName }}</span>
+              </template>
+              <span v-if="row.amountCents != null">¥{{ formatCents(row.amountCents) }}</span>
               <span>{{ fmtDateTime(row.submittedAt ?? row.updatedAt) }}</span>
             </span>
           </router-link>
@@ -231,9 +285,11 @@ function amountTitle(cents: number | null | undefined): string {
         <ListEmpty
           v-if="q.loaded.value && !q.records.value.length"
           :filtered="q.hasFilters.value"
-          :description="q.hasFilters.value ? undefined : EMPTY_TEXT[scope]"
+          :description="emptyDescription"
           @reset="q.reset()"
-        />
+        >
+          <template #action><el-button v-if="canCreate" type="primary" @click="router.push('/apply')">填写申请</el-button></template>
+        </ListEmpty>
       </div>
 
       <el-table
@@ -241,41 +297,57 @@ function amountTitle(cents: number | null | undefined): string {
         v-loading="q.loading.value"
         :data="q.records.value"
         row-key="id"
-        class="app-table eas-row-table eas-row-clickable"
+        class="eas-row-table eas-row-clickable"
         @row-click="onRowClick"
       >
-        <el-table-column label="编号" width="170" fixed="left">
+        <el-table-column label="申请" min-width="300">
           <template #default="{ row }">
-            <router-link :to="target(row as ApplicationSummary)" class="app-link eas-tnum">{{ row.appNo }}</router-link>
+            <div class="two-line">
+              <div class="cell-main">
+                <router-link :to="target(row as ApplicationSummary)" class="cell-link">{{ row.title || '（未填写标题）' }}</router-link>
+              </div>
+              <div class="cell-sub">{{ subLine(row as ApplicationSummary) }}</div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="标题" min-width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.title || '（未填写标题）' }}</template>
-        </el-table-column>
-        <el-table-column label="类型" width="120" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.templateName || APP_TYPE_LABEL[row.type as AppType] }}</template>
-        </el-table-column>
-        <el-table-column v-if="scope !== 'mine'" label="申请人" width="100">
-          <template #default="{ row }">{{ row.applicant.realName }}</template>
-        </el-table-column>
-        <el-table-column v-if="scope !== 'mine' && !isCompact" label="部门" width="110" prop="deptName" />
-        <el-table-column label="金额" width="134" align="right">
+        <el-table-column v-if="scope !== 'mine'" label="申请人" width="120">
           <template #default="{ row }">
-            <MoneyText :cents="row.amountCents" :title="amountTitle(row.amountCents)" />
+            <div class="two-line">
+              <div>{{ row.applicant.realName }}</div>
+              <div v-if="row.deptName" class="cell-sub">{{ row.deptName }}</div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="状态" min-width="200" show-overflow-tooltip>
-          <template #default="{ row }"><StatusTag :status="row.status" :current-node="row.currentNode" size="small" /></template>
-        </el-table-column>
-        <el-table-column v-if="!isCompact" label="提交时间" width="150">
-          <template #default="{ row }">{{ fmtDateTime(row.submittedAt) }}</template>
-        </el-table-column>
-        <el-table-column v-if="scope === 'mine' && !isCompact" label="更新时间" width="150">
-          <template #default="{ row }">{{ fmtDateTime(row.updatedAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" :width="scope === 'mine' ? 190 : 80" fixed="right">
+        <el-table-column label="当前节点" width="150">
           <template #default="{ row }">
-            <div class="row-actions">
+            <div v-if="row.currentNode && row.status === 'IN_APPROVAL'" class="two-line">
+              <div>{{ row.currentNode.name }}</div>
+              <div v-if="row.currentNode.assigneeName" class="cell-sub">{{ row.currentNode.assigneeName }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="金额" width="120" align="right">
+          <template #default="{ row }">
+            <MoneyText v-if="row.amountCents != null" :cents="row.amountCents" />
+            <span v-else class="cell-none">无</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }"><StatusTag :status="row.status" size="small" :show-node="false" /></template>
+        </el-table-column>
+        <el-table-column label="提交时间" width="150">
+          <template #default="{ row }">
+            <span v-if="row.submittedAt" class="cell-nowrap eas-tnum">{{ fmtDateTime(row.submittedAt) }}</span>
+            <span v-else class="cell-none">未提交</span>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="scope === 'mine'" label="更新时间" width="150">
+          <template #default="{ row }"><span class="cell-nowrap eas-tnum">{{ fmtDateTime(row.updatedAt) }}</span></template>
+        </el-table-column>
+        <el-table-column :width="scope === 'mine' ? 180 : 96">
+          <template #header><span class="eas-sr-only">操作</span></template>
+          <template #default="{ row }">
+            <div class="row-actions row-actions--end">
               <el-button link type="primary" @click.stop="router.push(`/applications/${row.id}`)">查看</el-button>
               <template v-if="scope === 'mine'">
                 <template v-if="row.status === 'DRAFT'">
@@ -306,93 +378,67 @@ function amountTitle(cents: number | null | undefined): string {
         </el-table-column>
         <template #empty>
           <ListEmpty
-            v-if="q.loaded.value"
+            v-if="q.loaded.value && !q.error.value"
             :filtered="q.hasFilters.value"
-            :description="q.hasFilters.value ? undefined : EMPTY_TEXT[scope]"
+            :description="emptyDescription"
             @reset="q.reset()"
-          />
+          >
+            <template #action><el-button v-if="canCreate" type="primary" @click="router.push('/apply')">填写申请</el-button></template>
+          </ListEmpty>
           <span v-else />
         </template>
       </el-table>
-      <el-pagination
-        class="pager"
-        background
-        :layout="isMobile ? 'prev, pager, next' : 'total, sizes, prev, pager, next'"
-        :pager-count="isMobile ? 5 : 7"
-        :total="q.total.value"
-        :current-page="q.page.value"
-        :page-size="q.size.value"
-        :page-sizes="[10, 20, 50, 100]"
-        @current-change="q.onPageChange"
-        @size-change="q.onSizeChange"
-      />
-    </el-card>
+      <div v-if="q.total.value > 0 && !q.error.value" class="pager">
+        <el-pagination
+          :layout="isMobile ? 'prev, pager, next' : 'total, sizes, prev, pager, next'"
+          :pager-count="isMobile ? 5 : 7"
+          :total="q.total.value"
+          :current-page="q.page.value"
+          :page-size="q.size.value"
+          :page-sizes="[10, 20, 50, 100]"
+          @current-change="q.onPageChange"
+          @size-change="q.onSizeChange"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.app-table {
-  margin-top: 12px;
-}
-.app-link {
-  color: var(--el-color-primary);
-  text-decoration: none;
-}
-
-/* 窄屏卡片列表：同一张纸上的分条，不加阴影和圆角 */
-.mobile-cards {
-  margin-top: 12px;
-  border-top: 1px solid var(--eas-rule);
-}
-.mobile-card {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--eas-rule);
-}
-.mobile-card-main {
+/* 我的申请的状态筛选：一排带数量的文字，选中项加粗，前面是该状态的圆点 */
+.status-filters {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: inherit;
-  text-decoration: none;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  flex: 1 0 100%;
 }
-.mobile-card-main:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
-}
-.mobile-card-main:active {
-  background: var(--eas-paper);
-}
-.mobile-card-top {
-  display: flex;
+.status-filter {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.mobile-card-no {
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-3);
-}
-.mobile-card-title {
-  font-weight: 500;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-.mobile-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 12px;
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-2);
-}
-.mobile-card-actions {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-.mobile-card-actions .el-button {
+  gap: 6px;
   min-height: 32px;
-  margin-left: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--eas-ink-2);
+  font: inherit;
+  font-size: var(--eas-fs-sm);
+  cursor: pointer;
+}
+.status-filter:hover {
+  color: var(--eas-ink);
+}
+.status-filter.is-active {
+  color: var(--eas-ink);
+  font-weight: 600;
+}
+.status-filter :deep(.status-tag .label) {
+  color: inherit;
+}
+.status-filter-count {
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-xs);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 </style>

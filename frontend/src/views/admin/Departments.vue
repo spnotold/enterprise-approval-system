@@ -191,46 +191,46 @@ async function submitHead() {
 
 <template>
   <div class="page admin-page">
-    <div class="page-header">
+    <header class="sheet-head">
       <div>
-        <h2 class="page-title">部门管理</h2>
-        <div class="page-subtitle">部门编码创建后不可修改；设置负责人会同步授予 / 回收‘部门负责人’角色。</div>
+        <h2 class="sheet-title">部门管理</h2>
+        <p class="sheet-sub">部门编码创建后不可修改；设置负责人会同步授予 / 回收“部门负责人”角色。</p>
       </div>
-      <div class="toolbar">
+      <div class="head-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">新建部门</el-button>
       </div>
-    </div>
+    </header>
 
-    <el-card shadow="never">
-      <el-table v-loading="loading" :data="list" row-key="id" class="eas-row-table" style="width: 100%">
-        <el-table-column prop="code" label="编码" min-width="110" />
-        <el-table-column prop="name" label="名称" min-width="130" />
-        <el-table-column label="负责人" min-width="110">
-          <template #default="{ row }">
-            <span v-if="row.headName">{{ row.headName }}</span>
-            <span v-else class="muted">未设置</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="用户数" width="90" align="right">
-          <template #default="{ row }"><span class="eas-tnum">{{ row.userCount }}</span></template>
-        </el-table-column>
-        <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
-        <el-table-column label="创建时间" width="160">
-          <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="200">
-          <template #default="{ row }">
+    <el-table v-loading="loading" :data="list" row-key="id" class="eas-row-table" style="width: 100%">
+      <el-table-column prop="code" label="编码" min-width="110" />
+      <el-table-column prop="name" label="名称" min-width="130" />
+      <el-table-column label="负责人" min-width="110">
+        <template #default="{ row }">
+          <span v-if="row.headName">{{ row.headName }}</span>
+          <span v-else class="muted">未设置</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="用户数" width="90" align="right">
+        <template #default="{ row }"><span class="eas-tnum">{{ row.userCount }}</span></template>
+      </el-table-column>
+      <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="200">
+        <template #default="{ row }">
+          <span class="row-actions">
             <el-button link type="primary" :disabled="acting" @click="openEdit(row as AdminDept)">编辑</el-button>
             <el-button link type="primary" :disabled="acting" @click="openHead(row as AdminDept)">设置负责人</el-button>
             <el-button link type="danger" :disabled="acting" @click="remove(row as AdminDept)">删除</el-button>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <ListEmpty description="暂无部门" />
+          </span>
         </template>
-      </el-table>
-    </el-card>
+      </el-table-column>
+      <template #empty>
+        <ListEmpty description="暂无部门" />
+      </template>
+    </el-table>
 
     <!-- 新建 / 编辑 -->
     <el-dialog

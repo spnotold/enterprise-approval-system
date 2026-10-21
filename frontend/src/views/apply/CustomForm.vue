@@ -214,8 +214,9 @@ const loadError = computed(() => draft.loadError.value ?? templateError.value)
         <el-button size="small" type="warning" :loading="refreshing" @click="rerenderWithLatest(false)">按最新版本重新填写</el-button>
       </div>
     </el-alert>
-    <el-card v-if="schema" shadow="never">
-      <el-form label-width="120px" @submit.prevent>
+    <section v-if="schema" class="form-section">
+      <h3 class="section-title">申请信息</h3>
+      <el-form label-position="top" class="title-form" @submit.prevent>
         <el-form-item label="标题" required :error="fe.get('title')">
           <el-input v-model="model.title" maxlength="100" show-word-limit placeholder="简要说明本次申请" />
         </el-form-item>
@@ -226,11 +227,12 @@ const loadError = computed(() => draft.loadError.value ?? templateError.value)
         :schema="schema"
         :error="fe.get"
       />
-    </el-card>
+    </section>
   </FormShell>
 </template>
 
 <style scoped>
+.title-form { margin-bottom: 22px; }
 .version {
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-3);

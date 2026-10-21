@@ -11,10 +11,12 @@ import { errorText } from '@/lib/errors'
 import { useListQuery } from '@/composables/useListQuery'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useRowNavigation } from '@/composables/useRowNavigation'
+import { useSectionActionsTarget } from '@/composables/useSectionActionsTarget'
 import { useNoticeStore } from '@/stores/notice'
 import ListEmpty from '@/components/ListEmpty.vue'
 import MoneyText from '@/components/MoneyText.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { taskDotClass } from '@/components/tasks/dotStatus'
 import '@/styles/listRows.css'
 
 const props = defineProps<{ kind: 'pending' | 'done' }>()
@@ -22,11 +24,12 @@ const route = useRoute()
 const router = useRouter()
 const notice = useNoticeStore()
 const { isMobile } = useBreakpoint()
-const { isMobile: isCompact } = useBreakpoint('(max-width: 1439px)')
 const pending = computed(() => props.kind === 'pending')
-const title = computed(() => pending.value ? '我的待办' : '我的已办')
 const typeOptions = toOptions(APP_TYPE_LABEL)
 const hasUpdates = ref(false)
+// 外壳为本栏目渲染了页签行时，刷新放到页签行右侧；否则留在工具栏里。
+// 栏目内页面可见性随权限/路由变化，目标存在性需在每次路由渲染后重新探测。
+const hasActionsTarget = useSectionActionsTarget()
 const ownPath = route.path
 let active = true
 let fetchSeq = 0
@@ -66,34 +69,33 @@ const { wrap: navWrap, open, onRowClick } = useRowNavigation<TaskItem>({
   rows: records,
   enabled: () => !loading.value,
 })
-function switchKind() {
-  // 只保留当前已经查询的筛选；切换待办 / 已办时从第一页开始。
-  const { page: _page, ...query } = route.query
-  void router.push({ path: pending.value ? '/tasks/done' : '/tasks/pending', query })
-}
 
-/** 金额单元格悬停时显示完整金额，窄列也不至于看不全 */
-function amountTitle(cents: number | null | undefined): string {
-  return cents === null || cents === undefined ? '—' : `¥${formatCents(cents)}`
+/** 定制申请显示模板名，其余显示类型名 */
+function typeText(row: TaskItem): string {
+  return row.type === 'CUSTOM' ? row.templateName : APP_TYPE_LABEL[row.type as AppType]
 }
+/** 第二行：类型与单号，中间隔一个全角空格 */
+function subLine(row: TaskItem): string {
+  return `${typeText(row)}\u3000${row.appNo}`
+}
+function actionText(row: TaskItem): string {
+  return pending.value && row.status === 'PENDING' ? '处理' : '查看'
+}
+function taskStatusText(status: TaskItem['status']): string {
+  return TASK_STATUS_LABEL[status as keyof typeof TASK_STATUS_LABEL] ?? status
+}
+const emptyText = computed(() => (pending.value ? '暂无待办' : '暂无已办记录'))
+const otherPath = computed(() => (pending.value ? '/tasks/done' : '/tasks/pending'))
+const otherText = computed(() => (pending.value ? '查看已办' : '查看待办'))
 </script>
 
 <template>
   <div ref="navWrap" class="page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">{{ title }}</h2>
-        <div v-if="!pending" class="page-subtitle">本人已批准、已驳回或已转办的任务。</div>
+    <div class="sheet">
+      <div v-if="hasUpdates" class="list-note" role="status">
+        <span>收到审批相关更新，刷新可查看最新列表。</span>
+        <el-button link type="primary" :disabled="loading" @click="list.load()">刷新列表</el-button>
       </div>
-      <div class="toolbar">
-        <el-button @click="switchKind">{{ pending ? '查看已办' : '查看待办' }}</el-button>
-        <el-button :icon="Refresh" :loading="loading" :disabled="loading" @click="list.load()">刷新</el-button>
-      </div>
-    </div>
-    <el-alert v-if="hasUpdates" title="收到审批相关更新，刷新可查看最新列表。" type="info" :closable="false" show-icon>
-      <el-button link type="primary" :disabled="loading" @click="list.load()">刷新列表</el-button>
-    </el-alert>
-    <el-card shadow="never">
       <el-form class="toolbar list-filters" @submit.prevent="list.search()">
         <el-input v-model="filters.keyword" placeholder="编号或标题" aria-label="编号或标题" :prefix-icon="Search" maxlength="100" clearable @clear="list.search()" />
         <el-select v-model="filters.type" placeholder="全部申请类型" aria-label="申请类型" clearable @change="list.search()">
@@ -101,176 +103,123 @@ function amountTitle(cents: number | null | undefined): string {
         </el-select>
         <el-button native-type="submit" type="primary" :disabled="loading">查询</el-button>
         <el-button v-if="hasFilters" link type="primary" :disabled="loading" @click="list.reset()">重置</el-button>
+        <Teleport to="#section-actions" defer :disabled="!hasActionsTarget">
+          <div class="list-actions">
+            <el-button :icon="Refresh" :loading="loading" :disabled="loading" @click="list.load()">刷新</el-button>
+          </div>
+        </Teleport>
       </el-form>
-      <el-skeleton v-if="!loaded && loading" class="list-body" :rows="8" animated />
+      <el-skeleton v-if="!loaded && loading" class="list-state" :rows="8" animated />
       <el-result v-else-if="error" icon="warning" :title="errorText(error, '列表加载失败')">
         <template #extra><el-button type="primary" :loading="loading" @click="list.load()">重新加载</el-button></template>
       </el-result>
-      <!-- 窄屏用卡片：待办列多，固定操作列会盖住标题 -->
-      <div v-else-if="isMobile" v-loading="loading" class="mobile-cards list-body">
+      <!-- 窄屏用卡片：待办列多，表格会挤掉标题 -->
+      <div v-else-if="isMobile" v-loading="loading" class="mobile-cards">
         <article v-for="row in records" :key="row.taskId" class="mobile-card">
           <router-link :to="target(row as TaskItem)" class="mobile-card-main">
             <span class="mobile-card-top">
-              <span class="mobile-card-no eas-tnum">{{ row.appNo }}</span>
-              <span class="mobile-card-flags">
-                <el-tag v-if="pending && row.overdue" type="danger" size="small">已超时</el-tag>
-                <StatusTag :status="row.appStatus" size="small" :show-node="false" />
-              </span>
+              <span class="mobile-card-no">{{ subLine(row as TaskItem) }}</span>
+              <StatusTag v-if="!pending" :status="row.appStatus" size="small" :show-node="false" />
             </span>
-            <span class="mobile-card-title">{{ row.title || '—' }}</span>
+            <span class="mobile-card-title">{{ row.title || '（未填写标题）' }}<span v-if="pending && row.overdue" class="tag-overdue">已超时</span></span>
             <span class="mobile-card-meta">
-              <span>{{ APP_TYPE_LABEL[row.type as AppType] }}</span>
-              <span v-if="row.type === 'CUSTOM'">{{ row.templateName }}</span>
               <span>{{ row.applicant.realName }}</span>
               <span v-if="row.deptName">{{ row.deptName }}</span>
-              <span v-if="row.amountCents != null" class="eas-tnum">¥{{ formatCents(row.amountCents) }}</span>
               <span>{{ row.nodeName }}</span>
-              <span>{{ fmtDateTime(pending ? row.createdAt : row.actedAt) }}</span>
+              <span v-if="row.amountCents != null">¥{{ formatCents(row.amountCents) }}</span>
+              <span>{{ fmtDateTime(pending ? row.submittedAt : row.actedAt) }}</span>
             </span>
             <span v-if="!pending" class="mobile-card-task">
-              <span class="dot-status" :class="`st-${String(row.status).toLowerCase()}`">
-                <i class="dot" />{{ TASK_STATUS_LABEL[row.status as keyof typeof TASK_STATUS_LABEL] ?? row.status }}
-              </span>
+              <span :class="taskDotClass(row.status)">{{ taskStatusText(row.status) }}</span>
               <span v-if="row.comment" class="mobile-card-comment" :class="{ 'text-danger': row.status === 'REJECTED' }">{{ row.comment }}</span>
             </span>
-            <span class="mobile-card-go">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</span>
+            <span class="mobile-card-go">{{ actionText(row as TaskItem) }}</span>
           </router-link>
         </article>
         <ListEmpty
           v-if="loaded && records.length === 0"
           :filtered="hasFilters"
-          :description="hasFilters ? undefined : pending ? '暂无待办' : '暂无已办记录'"
+          :description="hasFilters ? undefined : emptyText"
           @reset="list.reset()"
-        />
+        >
+          <template #action><el-button v-if="!hasFilters" @click="router.push(otherPath)">{{ otherText }}</el-button></template>
+        </ListEmpty>
       </div>
       <el-table
         v-else
         v-loading="loading"
         :data="records"
         row-key="taskId"
-        class="list-body eas-row-table eas-row-clickable"
+        class="eas-row-table eas-row-clickable"
         @row-click="onRowClick"
       >
-        <el-table-column label="申请编号" min-width="170">
-          <template #default="{ row }"><router-link :to="target(row as TaskItem)" class="app-link eas-tnum">{{ row.appNo }}</router-link><el-tag v-if="pending && row.overdue" type="danger" size="small" class="overdue">已超时</el-tag></template>
-        </el-table-column>
-        <el-table-column label="类型 / 模板" min-width="120">
-          <template #default="{ row }"><div>{{ APP_TYPE_LABEL[row.type as AppType] }}</div><div v-if="row.type === 'CUSTOM'" class="muted small">{{ row.templateName }}</div></template>
-        </el-table-column>
-        <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.title || '—' }}</template></el-table-column>
-        <el-table-column label="申请人 / 部门" min-width="110"><template #default="{ row }"><div>{{ row.applicant.realName }}</div><div class="muted small">{{ row.deptName || '—' }}</div></template></el-table-column>
-        <el-table-column label="金额" width="140" align="right">
-          <template #default="{ row }"><MoneyText :cents="row.amountCents" :title="amountTitle(row.amountCents)" /></template>
-        </el-table-column>
-        <el-table-column prop="nodeName" label="审批节点" min-width="120" show-overflow-tooltip />
-        <el-table-column v-if="!pending" label="任务状态" width="100">
+        <el-table-column label="申请" :min-width="pending ? 320 : 280">
           <template #default="{ row }">
-            <span class="dot-status" :class="`st-${String(row.status).toLowerCase()}`"><i class="dot" />{{ TASK_STATUS_LABEL[row.status as keyof typeof TASK_STATUS_LABEL] ?? row.status }}</span>
+            <div class="two-line">
+              <div class="cell-main">
+                <router-link :to="target(row as TaskItem)" class="cell-link">{{ row.title || '（未填写标题）' }}</router-link><span v-if="pending && row.overdue" class="tag-overdue">已超时</span>
+              </div>
+              <div class="cell-sub">{{ subLine(row as TaskItem) }}</div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column v-if="!(pending && isCompact)" label="申请状态" width="105"><template #default="{ row }"><StatusTag :status="row.appStatus" size="small" :show-node="false" /></template></el-table-column>
-        <el-table-column v-if="!isCompact" label="提交时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.submittedAt) }}</template></el-table-column>
-        <el-table-column v-if="pending && !isCompact" label="分配时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.createdAt) }}</template></el-table-column>
-        <el-table-column v-else-if="!pending && !isCompact" label="处理时间" width="165"><template #default="{ row }">{{ fmtDateTime(row.actedAt) }}</template></el-table-column>
-        <el-table-column v-if="!pending" label="处理意见" min-width="200" show-overflow-tooltip><template #default="{ row }"><span :class="{ 'text-danger': row.status === 'REJECTED' }">{{ row.comment || '—' }}</span></template></el-table-column>
-        <el-table-column label="操作" width="105" fixed="right">
+        <el-table-column label="申请人" width="120">
           <template #default="{ row }">
-            <div class="row-actions"><el-button link type="primary" :disabled="loading" @click.stop="open(row as TaskItem)">{{ pending && row.status === 'PENDING' ? '进入审批' : '查看详情' }}</el-button></div>
+            <div class="two-line">
+              <div>{{ row.applicant.realName }}</div>
+              <div v-if="row.deptName" class="cell-sub">{{ row.deptName }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column :label="pending ? '当前节点' : '审批节点'" width="150" prop="nodeName" />
+        <el-table-column label="金额" width="120" align="right">
+          <template #default="{ row }">
+            <MoneyText v-if="row.amountCents != null" :cents="row.amountCents" />
+            <span v-else class="cell-none">无</span>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="!pending" label="处理结果" width="190">
+          <template #default="{ row }">
+            <div class="two-line">
+              <div :class="taskDotClass(row.status)">{{ taskStatusText(row.status) }}</div>
+              <div v-if="row.comment" class="cell-sub cell-sub--clip" :class="{ 'text-danger': row.status === 'REJECTED' }" :title="row.comment">{{ row.comment }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="!pending" label="申请状态" width="100">
+          <template #default="{ row }"><StatusTag :status="row.appStatus" size="small" :show-node="false" /></template>
+        </el-table-column>
+        <el-table-column :label="pending ? '提交时间' : '处理时间'" width="160">
+          <template #default="{ row }"><span class="cell-nowrap eas-tnum">{{ fmtDateTime(pending ? row.submittedAt : row.actedAt) }}</span></template>
+        </el-table-column>
+        <el-table-column width="96">
+          <template #header><span class="eas-sr-only">操作</span></template>
+          <template #default="{ row }">
+            <div class="row-actions row-actions--end">
+              <el-button
+                v-if="pending && row.status === 'PENDING'"
+                size="small"
+                type="primary"
+                :disabled="loading"
+                @click.stop="open(row as TaskItem)"
+              >处理</el-button>
+              <el-button v-else link type="primary" :disabled="loading" @click.stop="open(row as TaskItem)">查看</el-button>
+            </div>
           </template>
         </el-table-column>
         <template #empty>
           <ListEmpty
             :filtered="hasFilters"
-            :description="hasFilters ? undefined : pending ? '暂无待办' : '暂无已办记录'"
+            :description="hasFilters ? undefined : emptyText"
             @reset="list.reset()"
-          />
+          >
+            <template #action><el-button v-if="!hasFilters" @click="router.push(otherPath)">{{ otherText }}</el-button></template>
+          </ListEmpty>
         </template>
       </el-table>
       <div v-if="total > 0 && !error" class="pager">
         <el-pagination :current-page="page" :page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" :disabled="loading" :layout="isMobile ? 'prev, pager, next' : 'total, sizes, prev, pager, next, jumper'" @current-change="list.onPageChange" @size-change="list.onSizeChange" />
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.list-body { margin-top: 16px; }
-.app-link { color: var(--el-color-primary); text-decoration: none; }
-.overdue { margin-left: 6px; }
-/* 任务状态：6px 圆点 + 文字；状态类设置 --dot 变量驱动颜色 */
-.dot-status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.dot-status .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--dot, var(--eas-muted)); }
-.st-pending { --dot: var(--eas-primary); }
-.st-approved { --dot: var(--eas-success); }
-.st-rejected { --dot: var(--eas-danger); }
-.st-canceled { --dot: var(--eas-muted); }
-.st-transferred { --dot: var(--eas-warning); }
-
-/* 窄屏卡片列表：与申请列表同一套纸面分条 */
-.mobile-cards {
-  border-top: 1px solid var(--eas-rule);
-}
-.mobile-card {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--eas-rule);
-}
-.mobile-card-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: inherit;
-  text-decoration: none;
-}
-.mobile-card-main:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
-}
-.mobile-card-main:active {
-  background: var(--eas-paper);
-}
-.mobile-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.mobile-card-no {
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-3);
-}
-.mobile-card-flags {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.mobile-card-title {
-  font-weight: 500;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-.mobile-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 12px;
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-2);
-}
-.mobile-card-task {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 2px;
-  font-size: var(--eas-fs-xs);
-}
-.mobile-card-comment {
-  color: var(--eas-ink-2);
-  overflow-wrap: anywhere;
-}
-.mobile-card-go {
-  align-self: flex-end;
-  margin-top: 2px;
-  color: var(--eas-primary);
-  font-size: var(--eas-fs-sm);
-}
-</style>

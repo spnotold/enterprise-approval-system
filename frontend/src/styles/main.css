@@ -1,9 +1,4 @@
-/* 全局样式（设计见 docs/ui_design.md，token 见 tokens.css）；类名被各页面共用，只改样式不改类名 */
-:root {
-  --eas-gap: 16px;
-  --eas-header-height: 52px;
-}
-
+/* 全局样式（设计见 docs/ui_design.md 第二版，token 见 tokens.css）；类名被各页面共用，只改样式不改类名 */
 html,
 body,
 #app {
@@ -12,9 +7,9 @@ body,
   height: 100%;
   font-family: var(--eas-font-sans);
   font-size: var(--eas-fs-sm);
-  line-height: 1.6;
+  line-height: var(--eas-lh-body);
   color: var(--eas-ink);
-  background: var(--eas-paper);
+  background: var(--eas-desk);
 }
 
 ::selection {
@@ -47,12 +42,15 @@ body,
   flex-wrap: wrap;
   gap: 8px;
 }
-.page-title {
+/* 页面标题：没有并列子页面的页用 32px 宋体（有页签的页用页签当标题） */
+.page-title,
+.page-title32 {
   margin: 0;
   font-family: var(--eas-font-serif);
   font-size: var(--eas-fs-xl);
   font-weight: 600;
-  line-height: 1.3;
+  line-height: var(--eas-lh-title);
+  letter-spacing: 0.02em;
   color: var(--eas-ink);
 }
 .page-subtitle {
@@ -77,6 +75,8 @@ body,
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+  font-size: var(--eas-fs-note);
+  color: var(--eas-ink-2);
 }
 .muted {
   color: var(--eas-ink-2);
@@ -130,19 +130,142 @@ body,
   margin-top: 2px;
 }
 
-/* ---------- 卡片：无阴影，1px 线框 ---------- */
+/* ---------- 单据：桌面上唯一的白纸（白色只给单据，顶栏除外） ---------- */
+.sheet {
+  --eas-sheet-inset: var(--eas-sheet-pad);
+  background: var(--eas-sheet);
+  border: 1px solid var(--eas-rule);
+  border-radius: var(--eas-radius-panel);
+  box-shadow: var(--eas-shadow-sheet);
+}
+/* 详情页单据左右内边距 32px */
+.sheet--wide {
+  --eas-sheet-inset: var(--eas-sheet-pad-wide);
+}
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px var(--eas-sheet-inset, var(--eas-sheet-pad)) 12px;
+  border-bottom: 1px solid var(--eas-rule);
+}
+.sheet-head > h2,
+.sheet-head > .sheet-title {
+  margin: 0;
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--eas-ink);
+}
+/* 单据内的分段：段与段之间 1px 线，第一段不画上线 */
+.sheet-section {
+  padding: 22px var(--eas-sheet-inset, var(--eas-sheet-pad));
+  border-top: 1px solid var(--eas-rule);
+}
+.sheet-head + .sheet-section,
+.sheet-section:first-child {
+  border-top: 0;
+}
+/* 单据内顶部工具栏与底部分页 */
+.sheet > .toolbar {
+  padding: 16px var(--eas-sheet-inset, var(--eas-sheet-pad));
+  border-bottom: 1px solid var(--eas-rule);
+}
+.sheet > .pager {
+  margin-top: 0;
+  padding: 14px var(--eas-sheet-inset, var(--eas-sheet-pad));
+  border-top: 1px solid var(--eas-rule);
+}
+
+/* ---------- 登记簿单元格：两行合并信息 ---------- */
+.two-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cell-main {
+  font-size: var(--eas-fs-sm);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--eas-ink);
+  overflow-wrap: anywhere;
+}
+.cell-sub {
+  font-size: var(--eas-fs-xs);
+  line-height: 1.5;
+  color: var(--eas-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+/* 没有值的单元格（如无金额）写「无」 */
+.cell-none {
+  color: var(--eas-ink-3);
+}
+/* 已超时：warning 描边小标签，跟在标题后 */
+.tag-overdue {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--eas-warning-border);
+  border-radius: var(--eas-radius-tag);
+  font-size: var(--eas-fs-xs);
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--eas-warning-text);
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.el-tag.tag-overdue {
+  --el-tag-text-color: var(--eas-warning-text);
+  --el-tag-border-color: var(--eas-warning-border);
+  --el-tag-bg-color: var(--eas-sheet);
+}
+/* 状态：6px 圆点 + 文字；圆点色用 --dot 或下面的色调类 */
+.status-dot {
+  --dot: var(--eas-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-dot::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+.status-dot--primary {
+  --dot: var(--eas-primary);
+}
+.status-dot--success {
+  --dot: var(--eas-success);
+}
+.status-dot--danger {
+  --dot: var(--eas-danger);
+}
+.status-dot--warning {
+  --dot: var(--eas-warning);
+}
+.status-dot--muted {
+  --dot: var(--eas-muted);
+}
+
+/* ---------- 卡片：与单据同款，1px 线框 + 纸的厚度 ---------- */
 .el-card,
 .el-card.is-always-shadow,
 .el-card.is-hover-shadow:hover,
 .el-card.is-hover-shadow:focus {
   --el-card-border-color: var(--eas-rule);
   --el-card-border-radius: var(--eas-radius-panel);
-  box-shadow: none;
+  --el-card-padding: var(--eas-sheet-pad);
+  box-shadow: var(--eas-shadow-sheet);
 }
 .el-card {
   border: 1px solid var(--eas-rule);
   border-radius: var(--eas-radius-panel);
-  background: var(--eas-surface);
+  background: var(--eas-sheet);
 }
 .el-card__header {
   border-bottom: 1px solid var(--eas-rule);
@@ -154,29 +277,86 @@ body,
   margin-top: var(--eas-gap);
 }
 
-/* ---------- 表格 ---------- */
+/* ---------- 表格：登记簿，不用灰底表头、竖线、斑马纹 ---------- */
 .el-table {
-  --el-table-header-bg-color: var(--eas-paper);
-  --el-table-header-text-color: var(--eas-ink-2);
-  --el-table-row-hover-bg-color: var(--eas-paper);
+  --el-table-header-bg-color: var(--eas-sheet);
+  --el-table-header-text-color: var(--eas-ink-3);
+  --el-table-row-hover-bg-color: var(--eas-row-hover);
   --el-table-border-color: var(--eas-rule);
   --el-table-border: 1px solid var(--eas-rule);
   --el-table-text-color: var(--eas-ink);
+  --el-table-bg-color: var(--eas-sheet);
+  --el-table-tr-bg-color: var(--eas-sheet);
+  --el-table-expanded-cell-bg-color: var(--eas-sheet);
   --el-table-current-row-bg-color: var(--eas-primary-tint);
+  /* 不用固定列的阴影 */
+  --el-table-fixed-left-column: none;
+  --el-table-fixed-right-column: none;
 }
+/* 表头：白底，12px ink-3 500，下边 1px rule-strong */
 .el-table th.el-table__cell {
+  padding: 12px 0 8px;
   font-size: var(--eas-fs-xs);
   font-weight: 500;
-  background: var(--eas-paper);
+  color: var(--eas-ink-3);
+  background: var(--eas-sheet);
+}
+.el-table th.el-table__cell.is-leaf {
+  border-bottom: 1px solid var(--eas-rule-strong);
 }
 .el-table th.el-table__cell > .cell {
   font-weight: 500;
 }
-/* 行底色与左侧竖线随悬停淡入，避免整行闪一下 */
+/* 行：上下 14px，行间 1px rule；单元格左右 16px，首末列 24px 与单据对齐 */
+.el-table td.el-table__cell {
+  padding: 14px 0;
+}
+.el-table .cell {
+  padding: 0 16px;
+}
+.el-table .el-table__cell:first-child > .cell {
+  padding-left: var(--eas-sheet-pad);
+}
+.el-table .el-table__cell:last-child > .cell {
+  padding-right: var(--eas-sheet-pad);
+}
+.el-table__body tr:last-child > td.el-table__cell {
+  border-bottom: 0;
+}
+/* 无竖线：border 属性画出的竖线、外框一并去掉 */
+.el-table--border .el-table__cell,
+.el-table--border th.el-table__cell {
+  border-right: 0;
+}
+.el-table--border::before,
+.el-table--border::after,
+.el-table--border .el-table__inner-wrapper::after,
+.el-table__inner-wrapper::before {
+  display: none;
+}
+/* 无斑马纹 */
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: var(--el-table-tr-bg-color);
+}
+/* 行悬停：整行 row-hover，首列左侧 3px primary 竖线；底色与竖线淡入 */
 .el-table__body td.el-table__cell {
   transition:
     background-color var(--eas-dur-fast) var(--eas-ease),
     box-shadow var(--eas-dur-fast) var(--eas-ease);
+}
+.el-table__body tr.el-table__row:is(:hover, .hover-row, :focus-within) > td.el-table__cell {
+  background-color: var(--eas-row-hover);
+}
+.el-table__body tr.el-table__row:is(:hover, .hover-row, :focus-within) > td.el-table__cell:first-child {
+  box-shadow: inset 3px 0 0 var(--eas-primary);
+}
+
+/* 行悬停 / 聚焦：底色变浅，次级文字同步提到 ink-2，保证 4.5:1 以上 */
+.el-table__body tr.el-table__row:is(:hover, .hover-row, :focus-within)
+  :is(.cell-sub, .cell-none, .user-email, .lock-line),
+.row:is(:hover, :focus-visible) :is(.cell-sub, .cell-none),
+.notice-row:is(:hover, :focus-within) :is(.cell-sub, .notice-time) {
+  color: var(--eas-ink-2);
 }
 
 /* 行内操作：默认隐藏，行悬停或键盘聚焦时显示；触屏与窄屏常显 */
@@ -190,7 +370,7 @@ body,
 .row-actions:focus-within {
   opacity: 1;
 }
-@media (hover: none) {
+@media (hover: none), (max-width: 768px) {
   .row-actions {
     opacity: 1;
   }
@@ -207,7 +387,14 @@ body,
   font-weight: 600;
 }
 
-/* ---------- 按钮、标签 ---------- */
+/* ---------- 按钮、输入框、选择器、日期：36px，聚焦 primary 边框 + 2px 外发光 ---------- */
+/* small / large 保持组件库自己的尺寸 */
+.el-button:not(.el-button--small):not(.el-button--large):not(.is-link) {
+  height: var(--el-component-size);
+}
+.el-button.is-circle:not(.el-button--small):not(.el-button--large) {
+  width: var(--el-component-size);
+}
 .el-button:not(.is-disabled):not(.is-loading):active {
   transform: translateY(1px);
 }
@@ -219,20 +406,86 @@ body,
   --el-button-active-bg-color: var(--eas-primary-hover);
   --el-button-active-border-color: var(--eas-primary-hover);
 }
-.el-tag {
-  border-radius: var(--eas-radius-tag);
+.el-select__wrapper {
+  min-height: var(--el-component-size);
+}
+.el-date-editor .el-range-input {
+  height: calc(var(--el-input-height, var(--el-component-size)) - 2px);
+  line-height: calc(var(--el-input-height, var(--el-component-size)) - 2px);
+}
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-date-editor.is-active .el-input__wrapper,
+.el-date-editor.el-input__wrapper.is-active,
+.el-range-editor.is-active,
+.el-textarea__inner:focus {
+  box-shadow:
+    0 0 0 1px var(--eas-primary) inset,
+    0 0 0 2px var(--eas-focus-glow);
+}
+/* 外框已由聚焦边框 + 外发光表示，输入元素本身不再叠一圈 outline */
+.el-input__inner:focus-visible,
+.el-textarea__inner:focus-visible,
+.el-select__input:focus-visible,
+.el-range-input:focus-visible {
+  outline: none;
 }
 
-/* 表单底部固定操作栏 */
+/* ---------- 分页：单据底部、右对齐、13px ink-2 ---------- */
+.el-pagination {
+  --el-component-size: 32px;
+  --el-pagination-font-size: var(--eas-fs-note);
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: var(--eas-ink-2);
+  --el-pagination-button-color: var(--eas-ink-2);
+  --el-pagination-button-bg-color: transparent;
+  --el-pagination-button-disabled-bg-color: transparent;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 浮层：统一 v2 浮层阴影（token 已把 el-box-shadow-* 全部指向它），对话框圆角同单据 ---------- */
+.el-dialog,
+.el-message-box {
+  border-radius: var(--eas-radius-panel);
+}
+
+/* ---------- 标签、空状态 ---------- */
+.el-tag {
+  --el-tag-border-radius: var(--eas-radius-tag);
+  border-radius: var(--eas-radius-tag);
+}
+/* 浅色标签：warning 用深一档文字和描边色，info 用 ink-2，保证对比度 */
+:root .el-tag--light.el-tag--warning {
+  --el-tag-text-color: var(--eas-warning-text);
+  --el-tag-border-color: var(--eas-warning-border);
+}
+:root .el-tag--light.el-tag--info {
+  --el-tag-text-color: var(--eas-ink-2);
+}
+/* 不用组件库默认的空盒子插画，空状态只留文字（和 ListEmpty 里的操作按钮） */
+.el-empty {
+  --el-empty-padding: 40px 24px;
+  --el-empty-description-margin-top: 0;
+  --el-empty-bottom-margin-top: 16px;
+}
+.el-empty__image {
+  display: none;
+}
+
+/* 表单底部固定操作栏：白底、上边 1px rule、高 64px */
 .form-actions {
   position: sticky;
   bottom: 0;
   z-index: 10;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background: var(--eas-surface);
+  min-height: 64px;
+  box-sizing: border-box;
+  padding: 0 var(--eas-sheet-pad);
+  background: var(--eas-sheet);
   border-top: 1px solid var(--eas-rule);
 }
 
@@ -242,10 +495,8 @@ body,
   .toolbar .el-date-editor.el-input__wrapper {
     width: 100%;
   }
-  .page-title {
-    font-size: var(--eas-fs-lg);
-  }
-  .row-actions {
-    opacity: 1;
+  .page-title,
+  .page-title32 {
+    font-size: var(--eas-fs-doc);
   }
 }
