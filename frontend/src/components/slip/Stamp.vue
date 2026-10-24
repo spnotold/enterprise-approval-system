@@ -80,6 +80,15 @@ onBeforeUnmount(consume)
 .stamp.animate {
   animation: stamp-in var(--eas-dur-stamp) var(--eas-ease) both;
 }
+/* 窄屏单据头：章缩小一档，免得贴住单号 */
+@media (max-width: 768px) {
+  .stamp.lg {
+    padding: 7px 11px;
+    font-size: var(--eas-fs-sm);
+    letter-spacing: 0.16em;
+    text-indent: 0.16em;
+  }
+}
 @keyframes stamp-in {
   from {
     opacity: 0;
