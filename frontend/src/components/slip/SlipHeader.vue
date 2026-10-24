@@ -176,7 +176,7 @@ async function copyNo() {
     flex-wrap: wrap;
   }
   .slip-header-main { flex-basis: 100%; }
-  .sealed .slip-kind { padding-right: 104px; gap: 4px 12px; }
+  .sealed .slip-kind { padding-right: 112px; gap: 4px 12px; }
   .sealed .slip-stamp { position: absolute; top: 28px; right: var(--eas-sheet-inset); margin: 0; }
   .slip-header-aside { flex: 1; flex-direction: row; align-items: center; justify-content: flex-end; }
   .slip-amount { margin-left: auto; }
