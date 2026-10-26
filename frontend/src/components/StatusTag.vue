@@ -61,7 +61,8 @@ const nodeParts = computed(() => {
 
 /* 实色胶囊：墨块叠颗粒；色块上的字按第 2 节配色 */
 .pill {
-  --pill-bg: var(--eas-muted);
+  /* 已撤回 / 已取消：深一档的灰墨，纸色字才够 4.5:1 */
+  --pill-bg: var(--eas-ink-2);
   --pill-text: var(--eas-sheet);
   flex: none;
   display: inline-flex;

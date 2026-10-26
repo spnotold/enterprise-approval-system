@@ -173,7 +173,7 @@ const otherText = computed(() => (pending.value ? '查看已办' : '查看待办
         </el-table-column>
         <el-table-column :label="pending ? '当前节点' : '审批节点'" width="150">
           <template #default="{ row }">
-            <el-tag v-if="pending" type="primary" size="small">{{ row.nodeName }}</el-tag>
+            <el-tag v-if="pending" type="primary" size="small" class="node-tag" :title="row.nodeName">{{ row.nodeName }}</el-tag>
             <template v-else>{{ row.nodeName }}</template>
           </template>
         </el-table-column>

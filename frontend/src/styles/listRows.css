@@ -238,3 +238,17 @@
 .eas-row-table .el-table-fixed-column--right.is-first-column {
   border-left: 0;
 }
+
+/* 当前节点胶囊：长节点名换行显示，不截断 */
+.eas-row-table .el-tag.node-tag {
+  height: auto;
+  min-height: 22px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  white-space: normal;
+  line-height: 1.4;
+  text-align: left;
+}
+.eas-row-table .el-tag.node-tag .el-tag__content {
+  overflow-wrap: anywhere;
+}

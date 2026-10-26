@@ -26,7 +26,7 @@ const hint = computed(() => props.hint ?? (props.filtered ? '换个关键词，�
 
 <template>
   <div class="list-empty">
-    <div class="pic" :style="{ width: `${imageSize}px`, height: `${imageSize}px` }">
+    <div class="pic" :style="{ width: `min(${imageSize}px, 100% - 12px)` }">
       <img :src="illustration" alt="" :width="imageSize" :height="imageSize" loading="lazy" />
     </div>
     <h3 class="title">{{ title }}</h3>
@@ -41,12 +41,13 @@ const hint = computed(() => props.hint ?? (props.filtered ? '换个关键词，�
 
 <style scoped>
 .list-empty {
-  padding: 52px 24px 56px;
+  padding: 52px clamp(8px, 4%, 24px) 56px;
   text-align: center;
 }
 /* 圆形插画 + 背后芥黄错版圆 */
 .pic {
   position: relative;
+  aspect-ratio: 1;
   margin: 0 auto 22px;
 }
 .pic::before {

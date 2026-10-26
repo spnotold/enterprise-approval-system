@@ -327,7 +327,7 @@ const emptyDescription = computed(() => {
         <el-table-column label="当前节点" width="150">
           <template #default="{ row }">
             <div v-if="row.currentNode && row.status === 'IN_APPROVAL'" class="two-line">
-              <div><el-tag type="primary" size="small">{{ row.currentNode.name }}</el-tag></div>
+              <div><el-tag type="primary" size="small" class="node-tag" :title="row.currentNode.name">{{ row.currentNode.name }}</el-tag></div>
               <div v-if="row.currentNode.assigneeName" class="cell-sub">{{ row.currentNode.assigneeName }}</div>
             </div>
           </template>
