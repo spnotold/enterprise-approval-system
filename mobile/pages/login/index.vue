@@ -16,6 +16,8 @@ const showDemo = ref(false)
 const focus = ref<'' | 'account' | 'password'>('')
 // 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
 const demoMode = ref(false)
+// 自定义导航栏：顶部内容让出真实状态栏高度（小程序的 --status-bar-height 是编译时写死的 25px；H5 为 0）
+const topInset = `${uni.getSystemInfoSync().statusBarHeight ?? 0}px`
 let redirect = ''
 
 const DEMO_ACCOUNTS = [
@@ -89,7 +91,7 @@ function goRegister(): void {
 </script>
 
 <template>
-  <view class="login">
+  <view class="login" :style="{ '--top-inset': topInset }">
     <!-- 插画头：整幅铺满，状态栏区域也铺图；品牌和标题压在左上的天空上 -->
     <view class="hero">
       <image class="hero-img" src="/static/illustrations/m-login.jpg" mode="aspectFill" />
@@ -140,7 +142,7 @@ function goRegister(): void {
           </view>
         </view>
         <view v-if="error" class="field-err">{{ error }}</view>
-        <button class="btn btn-primary btn-block submit" :loading="busy" :disabled="busy" @tap="submit">登录</button>
+        <button class="btn btn-primary btn-block submit" :loading="busy" :disabled="busy" :hover-stay-time="60" @tap="submit">登录</button>
       </view>
 
       <view class="links">
@@ -266,7 +268,7 @@ function goRegister(): void {
 /* 品牌：铁锈圆章 + 芥黄错版，右上角留给小程序胶囊按钮 */
 .brand {
   position: absolute;
-  top: calc(var(--status-bar-height) + 32rpx);
+  top: calc(var(--top-inset, 0px) + 32rpx);
   left: 40rpx;
   display: flex;
   align-items: center;
@@ -302,7 +304,7 @@ function goRegister(): void {
 
 .hero-title {
   position: absolute;
-  top: calc(var(--status-bar-height) + 152rpx);
+  top: calc(var(--top-inset, 0px) + 152rpx);
   left: 40rpx;
   font-family: var(--eas-font-display);
   font-size: var(--eas-fs-hero);

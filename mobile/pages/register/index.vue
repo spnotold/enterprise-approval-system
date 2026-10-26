@@ -29,8 +29,20 @@ onLoad(async () => {
   }
 })
 
+// 自定义导航栏：顶部内容让出真实状态栏高度（小程序的 --status-bar-height 是编译时写死的 25px；H5 为 0）
+const topInset = `${uni.getSystemInfoSync().statusBarHeight ?? 0}px`
+
+// 没有原生导航栏，返回按钮是唯一出口：H5 直接打开注册页时页面栈只有一页，navigateBack 不会失败而是原地刷新，要先判断
 function goBack(): void {
-  uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages/login/index' }) })
+  const toLogin = () => uni.reLaunch({ url: '/pages/login/index' })
+  if (getCurrentPages().length > 1) uni.navigateBack({ fail: toLogin })
+  else toLogin()
+}
+
+function onBackKey(e: KeyboardEvent): void {
+  if (e.key !== 'Enter' && e.key !== ' ') return
+  e.preventDefault()
+  goBack()
 }
 
 /** 密码强度：只做提示，规则以“8–64 位，至少包含字母和数字”为准 */
@@ -119,12 +131,21 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <view class="register">
+  <view class="register" :style="{ '--top-inset': topInset }">
     <!-- 插画头：同一张插画换个裁切位置，矮一截；左上是返回按钮和标题 -->
     <view class="hero">
       <image class="hero-img" src="/static/illustrations/m-login.jpg" mode="aspectFill" />
       <view class="hero-head">
-        <view class="back" hover-class="is-pressed" :hover-stay-time="60" @tap="goBack">
+        <view
+          class="back"
+          role="button"
+          aria-label="返回登录"
+          tabindex="0"
+          hover-class="is-pressed"
+          :hover-stay-time="60"
+          @tap="goBack"
+          @keydown="onBackKey"
+        >
           <view class="back-arrow" />
         </view>
         <view class="hero-title">注册</view>
@@ -225,7 +246,7 @@ async function submit(): Promise<void> {
           </picker>
         </FormItem>
         <view v-for="m in fe.general.value" :key="m" class="field-err">{{ m }}</view>
-        <button class="btn btn-primary btn-block submit" :loading="busy" :disabled="busy" @tap="submit">提交注册</button>
+        <button class="btn btn-primary btn-block submit" :loading="busy" :disabled="busy" :hover-stay-time="60" @tap="submit">提交注册</button>
         <view class="lead">审核通过后自动成为员工，角色由管理员另行授予。</view>
       </view>
     </view>
@@ -244,19 +265,18 @@ async function submit(): Promise<void> {
   overflow: hidden;
 }
 
+/* 图片按原图 4:3 的高度放，容器只露出上面的天空、山和湖，不露出右下的印章 */
 .hero-img {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
-  /* H5 上把裁切位置往上抬，多留天空；小程序不支持 object-position，取居中裁切 */
-  object-position: center 30%;
+  height: 562.5rpx;
 }
 
 .hero-head {
   position: absolute;
-  top: calc(var(--status-bar-height) + 24rpx);
+  top: calc(var(--top-inset, 0px) + 24rpx);
   left: 32rpx;
   display: flex;
   align-items: center;
@@ -274,6 +294,13 @@ async function submit(): Promise<void> {
   box-shadow: 6rpx 6rpx 0 var(--eas-shade);
   transition: transform var(--eas-dur-fast) var(--eas-ease), box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
+
+/* #ifdef H5 */
+.back:focus-visible {
+  outline: 4rpx solid var(--eas-ink);
+  outline-offset: 6rpx;
+}
+/* #endif */
 
 .back.is-pressed {
   transform: translate(4rpx, 4rpx);
