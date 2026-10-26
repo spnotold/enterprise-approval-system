@@ -425,6 +425,12 @@ onLoad(async q => {
 .link-option {
   margin-right: 8rpx;
   border-radius: var(--eas-radius-control);
+  transition: transform var(--eas-dur-fast) var(--eas-ease);
+}
+
+/* 可见的是里面的关联卡片，外层换底看不出来：按下时整块下沉 */
+.link-option.is-pressed {
+  transform: translate(4rpx, 4rpx);
 }
 
 .link-done {

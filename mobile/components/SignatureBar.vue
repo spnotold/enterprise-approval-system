@@ -274,8 +274,9 @@ const expandedNode = computed<FlowNodeView | null>(() => {
   color: var(--eas-success);
 }
 
+/* 驳回格是铁锈浅底，普通铁锈字不够 4.5:1 */
 .sig-task-status.task-rejected {
-  color: var(--eas-danger);
+  color: var(--eas-rust-deep);
 }
 
 .sig-task-status.task-pending {

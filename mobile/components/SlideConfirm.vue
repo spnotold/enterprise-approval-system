@@ -262,7 +262,7 @@ onBeforeUnmount(clearArm)
   align-items: center;
   justify-content: center;
   background-color: var(--eas-primary);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   border-radius: 50%;

@@ -196,7 +196,7 @@
 
 .note-danger {
   background: var(--eas-danger-tint);
-  color: var(--eas-danger);
+  color: var(--eas-rust-deep);
 }
 
 .note-title {

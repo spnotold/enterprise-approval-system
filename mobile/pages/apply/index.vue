@@ -14,6 +14,8 @@ import { goAppList, goForm } from '@/utils/nav'
 
 const templates = ref<TemplateOption[]>([])
 const loaded = ref(false)
+// 加载失败时不能显示「没有可发起的类型」，要说清是没加载出来
+const loadFailed = ref(false)
 
 const builtin = computed(() => templates.value.filter((t) => t.category === 'BUILTIN'))
 const custom = computed(() => templates.value.filter((t) => t.category === 'CUSTOM'))
@@ -22,7 +24,9 @@ const adminOnly = computed(() => auth.isAdminOnly)
 async function load(): Promise<void> {
   try {
     templates.value = await api.templates.available()
+    loadFailed.value = false
   } catch (e) {
+    loadFailed.value = true
     showError(e)
   } finally {
     loaded.value = true
@@ -104,7 +108,8 @@ function start(t: TemplateOption): void {
         </view>
       </template>
 
-      <EmptyState v-if="loaded && !templates.length" text="暂无可发起的申请类型" />
+      <EmptyState v-if="loaded && !templates.length && loadFailed" kind="none" text="申请类型没有加载出来" action-text="重试" @action="load" />
+      <EmptyState v-else-if="loaded && !templates.length" text="暂无可发起的申请类型" />
     </template>
   </view>
 </template>

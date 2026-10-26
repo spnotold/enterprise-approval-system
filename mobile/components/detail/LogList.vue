@@ -150,6 +150,6 @@ defineProps<{ logs: ApprovalLogView[] }>()
 
 .log-comment.reject {
   background: var(--eas-danger-tint);
-  color: var(--eas-danger);
+  color: var(--eas-rust-deep);
 }
 </style>

@@ -562,6 +562,8 @@ onLoad(async q => {
   box-shadow: var(--eas-offset-mark);
 }
 
+/* 未选的报价本来就是 row-hover 底，按下换暗纸，看得出按到了 */
+.quote-option.is-pressed,
 .quote-option.chosen.is-pressed {
   background-color: var(--eas-tab) !important;
 }

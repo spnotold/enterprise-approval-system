@@ -530,6 +530,10 @@ onLoad(async (q) => {
   border-radius: var(--eas-radius-control);
 }
 
+.user-row.is-pressed {
+  background-color: var(--eas-tab) !important;
+}
+
 .user-meta {
   display: block;
 }

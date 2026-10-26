@@ -292,6 +292,11 @@ onUnmounted(() => {
   border-radius: var(--eas-radius-control);
 }
 
+/* 附件块本身是 row-hover 底，按下预览时换暗纸 */
+.att-main.is-pressed {
+  background-color: var(--eas-tab) !important;
+}
+
 .att-row {
   display: flex;
   align-items: center;
@@ -355,7 +360,7 @@ onUnmounted(() => {
 .att-progress-bar {
   height: 100%;
   background-color: var(--eas-primary);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   border-radius: var(--eas-radius-pill);

@@ -50,15 +50,15 @@ const nodeText = computed(() => {
   line-height: 44rpx;
   white-space: nowrap;
   background-color: var(--eas-ink-2);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   color: var(--eas-sheet);
 }
 
 .tone-draft .pill { background-color: var(--eas-tab); background-image: none; color: var(--eas-ink); }
-.tone-sky .pill { background-color: var(--eas-sky); color: var(--eas-ink); }
-.tone-sage .pill { background-color: var(--eas-sage); color: var(--eas-ink); }
+.tone-sky .pill { background-color: var(--eas-sky); background-image: var(--eas-grain); color: var(--eas-ink); }
+.tone-sage .pill { background-color: var(--eas-sage); background-image: var(--eas-grain); color: var(--eas-ink); }
 .tone-rust .pill { background-color: var(--eas-rust); color: var(--eas-sheet); }
 
 .status-node {

@@ -89,15 +89,15 @@ function copyNo(): void {
         <text class="kv-label">完成时间</text>
         <text class="kv-value num">{{ fmtDateTime(detail.finishedAt) }}</text>
       </view>
-      <view v-if="detail.source" class="kv">
+      <view v-if="detail.source" class="kv kv-link" hover-class="is-pressed" :hover-stay-time="60" @tap="goDetail(detail.source.id)">
         <text class="kv-label">来源单</text>
-        <text class="kv-value link" hover-class="is-pressed" :hover-stay-time="60" @tap="goDetail(detail.source.id)">
+        <text class="kv-value link">
           {{ detail.source.appNo }}（{{ APP_STATUS_LABEL[detail.source.status] }}）
         </text>
       </view>
-      <view v-for="f in detail.followUps" :key="f.id" class="kv">
+      <view v-for="f in detail.followUps" :key="f.id" class="kv kv-link" hover-class="is-pressed" :hover-stay-time="60" @tap="goDetail(f.id)">
         <text class="kv-label">后续单</text>
-        <text class="kv-value link" hover-class="is-pressed" :hover-stay-time="60" @tap="goDetail(f.id)">
+        <text class="kv-value link">
           {{ f.appNo }}（{{ APP_STATUS_LABEL[f.status] }}）
         </text>
       </view>
@@ -139,9 +139,10 @@ function copyNo(): void {
 }
 
 /* 单号：长按复制，按压时有底色反馈 */
+/* 长按复制：上下加透明的触控区，让整块不低于 88rpx，不改变排版 */
 .doc-no {
-  padding: 8rpx 8rpx;
-  margin: -8rpx 0;
+  padding: 26rpx 8rpx;
+  margin: -26rpx 0;
   border-radius: var(--eas-radius-tag);
   font-size: 24rpx;
   color: var(--eas-ink-3);
@@ -149,6 +150,13 @@ function copyNo(): void {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* 来源单、后续单：整行可点，行高不低于 88rpx */
+.kv-link {
+  align-items: center;
+  min-height: 88rpx;
+  border-radius: var(--eas-radius-control);
 }
 
 .doc-summary {

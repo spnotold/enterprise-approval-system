@@ -285,7 +285,7 @@ textarea {
 .btn-primary {
   --btn-shadow: var(--eas-ink-deep);
   background-color: var(--eas-primary);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   color: var(--eas-sheet);
@@ -301,7 +301,7 @@ textarea {
 .btn-danger {
   --btn-shadow: var(--eas-rust-deep);
   background-color: var(--eas-rust);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   color: var(--eas-sheet);
@@ -503,6 +503,7 @@ textarea {
 
 .tag-red {
   background-color: var(--eas-rust);
+  background-image: var(--eas-grain-deep);
   color: var(--eas-sheet);
 }
 
@@ -560,7 +561,7 @@ textarea {
 
 .seg-item.active {
   background-color: var(--eas-ink);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   color: var(--eas-sheet);
@@ -574,7 +575,7 @@ textarea {
   left: 6rpx;
   z-index: 0;
   background-color: var(--eas-ink);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   border-radius: var(--eas-radius-pill);
@@ -630,7 +631,7 @@ textarea {
 
 .filter-chip.active {
   background-color: var(--eas-ink);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   color: var(--eas-sheet);

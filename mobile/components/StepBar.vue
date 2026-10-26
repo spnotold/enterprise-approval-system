@@ -107,7 +107,7 @@ const emit = defineEmits<{ change: [index: number] }>()
 
 .step.active .step-no {
   background-color: var(--eas-ink);
-  background-image: var(--eas-grain);
+  background-image: var(--eas-grain-deep);
   background-size: var(--eas-grain-size);
   background-blend-mode: multiply;
   color: var(--eas-sheet);

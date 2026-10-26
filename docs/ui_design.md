@@ -1,6 +1,6 @@
 # 界面设计规范：套色（第三版）
 
-本文是 Web 端（`frontend/`）和移动端（`mobile/`）界面的设计依据。颜色、字号、圆角、投影一律用 `frontend/src/styles/tokens.css` 里的 token，不在组件里写死色值。静态样稿见 `docs/ui_v3_mockup.html`（用浏览器打开，每屏 1440×900，背景会动），实现时以本文为准、样稿为参照。全局组件样式和外壳的用法见 [套色 v3 基础层](ui_v3_foundation.md)。
+本文是 Web 端（`frontend/`）和移动端（`mobile/`）界面的设计依据。颜色、字号、圆角、投影一律用 token，不在组件里写死色值：Web 端用 `frontend/src/styles/tokens.css`，移动端用 `mobile/styles/tokens.css`（颜色两边一致，尺寸各自按 px / rpx 定义）。静态样稿见 `docs/ui_v3_mockup.html`（用浏览器打开，每屏 1440×900，背景会动），实现时以本文为准、样稿为参照。全局组件样式和外壳的用法见 [套色 v3 基础层](ui_v3_foundation.md)。
 
 移动端用同一套颜色、字体和记号，按手机重新排版，见第 9 节；token 在 `mobile/styles/tokens.css`。
 
@@ -184,7 +184,7 @@
 
 颜色、字体、硬投影、错版、颗粒和网页端一致，尺寸按 750rpx 设计宽度换算（1px ≈ 2rpx）。基础层已经做好的东西（页面改造时直接用，不要在页面里写局部样式改回去）：
 
-- `styles/tokens.css`：和网页端同名的 token（`desk`、`sheet`、`tab`、`shade`、`field`、`ink*`、`mustard*`、`rust*`、`sage*`、`sky*`、`link`、`grain`、`stamp-mask`、`font-display`、`offset-mark`…）。第一版的 `paper` / `surface` / `paper-deep` 仍可用，分别指向 `desk` / `sheet` / `tab`。JS 里要用的色值（图表、`switch` 的 `color`）在 `utils/palette.ts`。
+- `styles/tokens.css`：和网页端同名的 token（`desk`、`sheet`、`tab`、`shade`、`field`、`ink*`、`mustard*`、`rust*`、`sage*`、`sky*`、`link`、`grain`、`stamp-mask`、`font-display`、`offset-mark`…）。第一版的 `paper` / `surface` / `paper-deep` 仍可用，分别指向 `desk` / `sheet` / `tab`。JS 里要用的色值（图表、`switch` 的 `color`）在 `utils/palette.ts`。颗粒分两档：`--eas-grain` 很淡（不透明度 ≤ 0.12），芥黄、鼠尾草、天青这些浅色块叠了它墨字仍有 4.5:1；`--eas-grain-deep` 用在藏青、铁锈、墨这些上面是纸色字的深色块。
 - `App.vue` 全局类：`.card`（单据）、`.card-title`（展示字，可放 `.ink-glyph`）、`.section-title`、`.divider`（虚线）、`.btn` / `.btn-primary` / `.btn-danger` / `.btn-ghost-danger`、`.link-btn`、`.tag` 系列、`.banner-*`、`.seg` + `.seg-indicator`、`.filter-chip`、`.update-tip`、`.input` / `.textarea` / `.picker-value` + `.is-focus`、`.bottom-bar`、`.amount`、`.display`、`.inked`、`.ink-glyph--sun|leaf|hill|bell|stack`。表单页另外 `@import '@/styles/form.css'`。
 - 组件：`StatusTag`（实色胶囊，审批中后跟节点和审批人）、`EmptyState`（`kind="tray"` 空列表、`"search"` 筛选无结果、`"none"` 只有文字，用于加载中 / 出错）。
 - 字体：H5 在 `main.ts` 里引入 Fraunces（柔角）和思源宋体粗体；小程序不打包字体（主包只有 2MB），展示字落到系统宋体。
