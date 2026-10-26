@@ -52,27 +52,27 @@ defineEmits<{ select: [key: string] }>()
 }
 .index-tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
   overflow-x: auto;
-  padding: 3px 3px 0;
-  margin: -3px -3px 0;
+  /* 给错版投影留位置，免得被滚动容器裁掉 */
+  padding: 2px 6px 6px 2px;
+  margin: -2px -6px -6px -2px;
   scrollbar-width: thin;
 }
 .index-tab {
   position: relative;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   flex: none;
   box-sizing: border-box;
-  min-height: 42px;
-  padding: 9px 20px;
-  border: 1px solid transparent;
-  border-bottom: 0;
-  border-radius: var(--eas-radius-panel) var(--eas-radius-panel) 0 0;
+  min-height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--eas-radius-pill);
   background: var(--eas-tab);
   color: var(--eas-ink-2);
   font: inherit;
@@ -80,19 +80,30 @@ defineEmits<{ select: [key: string] }>()
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    color var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 .index-tab:hover { color: var(--eas-ink); }
 .index-tab.is-active {
-  z-index: 1;
-  background: var(--eas-sheet);
-  color: var(--eas-ink);
-  border-color: var(--eas-rule);
+  background-color: var(--eas-ink);
+  background-image: var(--eas-grain);
+  background-blend-mode: multiply;
+  color: var(--eas-sheet);
   font-weight: 600;
+  box-shadow: var(--eas-offset-mark);
 }
 .tab-count {
-  color: var(--eas-primary);
-  font-size: var(--eas-fs-xs);
-  font-weight: 600;
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: var(--eas-radius-pill);
+  background-color: var(--eas-mustard);
+  color: var(--eas-ink);
+  font: 600 12px/1 var(--eas-font-display);
   font-variant-numeric: tabular-nums;
 }
 .index-tab-actions {
@@ -104,6 +115,6 @@ defineEmits<{ select: [key: string] }>()
 .index-tab-actions:empty { display: none; }
 @media (max-width: 767px) {
   .index-tabs-row { gap: 8px; }
-  .index-tab { padding: 9px 12px; }
+  .index-tab { padding: 0 14px; }
 }
 </style>

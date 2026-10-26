@@ -1,5 +1,5 @@
 // 由 tokens.css 里的基础色推出 Element Plus 的 --el-color-*-light-N / dark-2 及几个中性色，写回 tokens.css 的标记区间。
-// 规则（与组件库一致，见 docs/ui_design.md 第 2 节）：light-N = 色与白按 N×10% 混合，dark-2 = 色与黑按 20% 混合。
+// 规则（见 docs/ui_design.md 第 2 节）：light-N = 色与单据纸按 N×10% 混合（套色的浅色都是墨和纸调出来的，不掺白），dark-2 = 色与黑按 20% 混合。
 // 用法：
 //   node scripts/generate-theme-colors.mjs           打印生成的区间
 //   node scripts/generate-theme-colors.mjs --write   写回 tokens.css
@@ -29,13 +29,13 @@ const base = (name) => {
   return m[1].toLowerCase()
 }
 
-const WHITE = '#ffffff'
+const PAPER = base('sheet')
 const BLACK = '#000000'
 const lines = []
 const scale = (el, color) => {
   lines.push(`  --el-color-${el}: ${color};`)
   lines.push(`  --el-color-${el}-rgb: ${parse(color).join(', ')};`)
-  for (const n of [3, 5, 7, 8, 9]) lines.push(`  --el-color-${el}-light-${n}: ${mix(color, WHITE, n / 10)};`)
+  for (const n of [3, 5, 7, 8, 9]) lines.push(`  --el-color-${el}-light-${n}: ${mix(color, PAPER, n / 10)};`)
   lines.push(`  --el-color-${el}-dark-2: ${mix(color, BLACK, 0.2)};`)
 }
 scale('primary', base('primary'))
@@ -49,11 +49,11 @@ scale('info', base('muted'))
 const ruleStrong = base('rule-strong')
 const rowHover = base('row-hover')
 const desk = base('desk')
-lines.push(`  --el-text-color-disabled: ${mix(base('ink-3'), WHITE, 0.4)};`)
+lines.push(`  --el-text-color-disabled: ${mix(base('ink-3'), PAPER, 0.4)};`)
 lines.push(`  --el-border-color-dark: ${mix(ruleStrong, BLACK, 0.1)};`)
 lines.push(`  --el-border-color-darker: ${mix(ruleStrong, BLACK, 0.2)};`)
-lines.push(`  --el-fill-color-lighter: ${mix(rowHover, WHITE, 0.5)};`)
-lines.push(`  --el-fill-color-extra-light: ${mix(rowHover, WHITE, 0.75)};`)
+lines.push(`  --el-fill-color-lighter: ${mix(rowHover, PAPER, 0.5)};`)
+lines.push(`  --el-fill-color-extra-light: ${mix(rowHover, PAPER, 0.75)};`)
 lines.push(`  --el-mask-color: rgba(${parse(desk).join(', ')}, 0.8);`)
 
 const block = [START, ...lines, END].join('\n')

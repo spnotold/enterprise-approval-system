@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 案卷外壳：顶栏栏目、案卷页签、管理索引和铺满桌面的格纸。
+// 套色外壳：顶栏栏目、栏目标题与胶囊页签、管理索引，背后铺满风景（风吹草地、飘叶）。
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElNotification } from 'element-plus'
@@ -15,7 +15,7 @@ import { detailSectionHint } from '@/router/sectionContext'
 import { NOTIFICATION_TYPE_LABEL, ROLE_LABEL } from '@/lib/labels'
 import AdminIndex from '@/components/AdminIndex.vue'
 import NoticeBell from '@/components/NoticeBell.vue'
-import PaperField from '@/components/PaperField.vue'
+import SceneryField from '@/components/SceneryField.vue'
 import SectionTabs from '@/components/SectionTabs.vue'
 
 const auth = useAuthStore()
@@ -25,7 +25,6 @@ const router = useRouter()
 const { isMobile } = useBreakpoint('(max-width: 767px)')
 const KEYED_ROUTES = new Set(['application-detail', 'application-edit', 'apply-custom', 'admin-template-design'])
 const drawer = ref(false)
-const desk = ref<HTMLElement | null>(null)
 const pendingCount = ref(0)
 const detailOrigin = ref<string>()
 const applicationContext = provideApplicationContext(() =>
@@ -129,14 +128,14 @@ function onCommand(cmd: string) {
           class="section-link" :class="{ 'is-active': activeId === section.id }"
           :aria-current="activeId === section.id ? 'true' : undefined"
         >
-          {{ section.label }}<span v-if="section.id === 'approval' && pendingCount" class="pending-count">{{ pendingCount }}</span>
+          <span class="section-link-text">{{ section.label }}</span><span v-if="section.id === 'approval' && pendingCount" class="pending-count">{{ pendingCount }}</span>
         </router-link>
       </nav>
       <div class="topbar-right">
         <NoticeBell />
         <el-dropdown trigger="click" @command="onCommand">
           <button class="user" type="button" aria-label="用户菜单">
-            <el-avatar :size="28" class="avatar">{{ avatarText }}</el-avatar>
+            <el-avatar :size="36" class="avatar">{{ avatarText }}</el-avatar>
             <span v-if="!isMobile" class="user-name">{{ auth.me?.realName }}</span>
             <el-icon v-if="!isMobile"><ArrowDown /></el-icon>
           </button>
@@ -177,10 +176,8 @@ function onCommand(cmd: string) {
       </nav>
     </el-drawer>
 
-    <div ref="desk" class="desk">
-      <div class="layout-paper">
-        <PaperField base="--eas-desk" :container="() => desk" />
-      </div>
+    <SceneryField />
+    <div class="desk">
       <main class="content-column">
         <SectionTabs v-if="tabSection" :section="tabSection" :active-path="route.path" :pending-count="pendingCount" :hide-tabs="isMobile" />
         <div class="route-layout" :class="{ 'has-admin-index': adminSection && !isMobile }">
@@ -197,65 +194,118 @@ function onCommand(cmd: string) {
 </template>
 
 <style scoped>
-.layout { min-height: 100vh; background: var(--eas-desk); }
+.layout { position: relative; min-height: 100vh; background: var(--eas-desk); }
 .topbar {
   position: relative;
   z-index: 5;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   box-sizing: border-box;
-  height: 56px;
-  padding: 0 32px;
-  gap: 40px;
-  background: var(--eas-sheet);
-  border-bottom: 1px solid var(--eas-rule);
+  height: var(--eas-header-height);
+  padding: 0 48px;
+  gap: 36px;
 }
-.brand { display: inline-flex; align-items: center; align-self: center; gap: 10px; flex: none; color: var(--eas-primary); text-decoration: none; white-space: nowrap; }
-.logo { display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; border: 1.5px solid var(--eas-primary); border-radius: var(--eas-radius-control); font: 700 16px var(--eas-font-serif); }
-.brand-text { font: 600 17px var(--eas-font-serif); letter-spacing: 0.04em; }
-.section-nav { display: flex; gap: 4px; height: 44px; margin-bottom: -1px; }
-.section-link { display: flex; align-items: center; gap: 6px; padding: 0 18px; border-radius: 8px 8px 0 0; color: var(--eas-ink-2); text-decoration: none; font-size: 15px; white-space: nowrap; }
-.section-link:hover { background: var(--eas-row-hover); color: var(--eas-ink); }
-.section-link.is-active { background: var(--eas-desk); color: var(--eas-ink); font-weight: 600; }
-.pending-count { color: var(--eas-primary); font-size: var(--eas-fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
-.topbar-right { display: flex; align-items: center; gap: 20px; align-self: center; margin-left: auto; }
-.icon-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--eas-radius-control); background: transparent; color: var(--eas-ink); cursor: pointer; }
-.icon-btn:hover, .user:hover { background: var(--eas-row-hover); }
-.user { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 8px; border: 0; border-radius: var(--eas-radius-control); background: transparent; color: var(--eas-ink); font: inherit; cursor: pointer; }
-.avatar { background: var(--eas-primary-tint); color: var(--eas-primary); font-size: var(--eas-fs-xs); font-weight: 600; }
-.user-card { padding: 10px 16px 6px; min-width: 180px; border-bottom: 1px solid var(--eas-rule); }
+.brand { display: inline-flex; align-items: center; gap: 12px; flex: none; color: var(--eas-ink); text-decoration: none; white-space: nowrap; }
+/* 品牌章：铁锈圆 + 芥黄错版 */
+.logo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: var(--eas-rust);
+  background-image: var(--eas-grain);
+  background-blend-mode: multiply;
+  color: var(--eas-sheet);
+  font: 400 18px var(--eas-font-display);
+  box-shadow: var(--eas-offset-mark);
+}
+.brand-text { font: 600 21px var(--eas-font-display); letter-spacing: var(--eas-display-tracking); }
+.section-nav { display: flex; align-items: center; gap: 8px; }
+.section-link {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  color: var(--eas-ink-2);
+  text-decoration: none;
+  font-size: var(--eas-fs-nav);
+  white-space: nowrap;
+  transition: color var(--eas-dur-fast) var(--eas-ease);
+}
+.section-link:hover { color: var(--eas-ink); }
+.section-link.is-active { color: var(--eas-ink); font-weight: 600; }
+/* 当前栏目：一块手刷的芥黄墨斑垫在字后面 */
+.section-link.is-active::before {
+  content: '';
+  position: absolute;
+  inset: 3px 0 1px;
+  z-index: -1;
+  border-radius: 58% 42% 55% 45% / 62% 48% 52% 38%;
+  background-color: var(--eas-mustard-tint);
+  background-image: var(--eas-grain);
+  background-blend-mode: multiply;
+  transform: rotate(-2deg);
+}
+.pending-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: var(--eas-radius-pill);
+  background-color: var(--eas-mustard);
+  background-image: var(--eas-grain);
+  background-blend-mode: multiply;
+  color: var(--eas-ink);
+  font: 600 12px/1 var(--eas-font-display);
+  font-variant-numeric: tabular-nums;
+}
+.topbar-right { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%; background: var(--eas-sheet); box-shadow: 3px 3px 0 var(--eas-shade); color: var(--eas-ink); cursor: pointer; }
+.user { display: inline-flex; align-items: center; gap: 10px; min-height: 38px; padding: 2px 10px 2px 2px; border: 0; border-radius: var(--eas-radius-pill); background: transparent; color: var(--eas-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.user:hover { background: color-mix(in srgb, var(--eas-sheet) 70%, transparent); }
+.avatar {
+  background-color: var(--eas-sage);
+  background-image: var(--eas-grain);
+  background-blend-mode: multiply;
+  color: var(--eas-ink);
+  font: 400 17px var(--eas-font-display);
+}
+.user-card { padding: 12px 16px 8px; min-width: 180px; border-bottom: 2px dashed var(--eas-rule); }
 .user-card-name { font-weight: 600; margin-bottom: 2px; }
-.desk { position: relative; min-height: calc(100vh - 56px); }
-.layout-paper { position: fixed; inset: 56px 0 0; pointer-events: none; z-index: 0; }
-.content-column { position: relative; z-index: 1; box-sizing: border-box; max-width: 1280px; margin: 0 auto; padding: 32px 40px 40px; }
+.desk { position: relative; z-index: 1; min-height: calc(100vh - var(--eas-header-height)); }
+.content-column { position: relative; box-sizing: border-box; max-width: var(--eas-content-max); margin: 0 auto; padding: 12px 48px 56px; }
 .route-layout, .routed-page { min-width: 0; }
-.route-layout.has-admin-index { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: start; }
+.route-layout.has-admin-index { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; align-items: start; }
 .routed-page.admin-page { padding: 24px; }
-/* 页内第一张单据与外壳页签相接；页面迁移后保持 .page > .sheet 结构。 */
-.section-page :deep(.page > .sheet:not(.sheet ~ .sheet)), .section-page :deep(> .sheet) { border-top-left-radius: 0; }
-.admin-page :deep(.page > .sheet:not(.sheet ~ .sheet)), .admin-page :deep(> .sheet) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .drawer-section + .drawer-section { margin-top: 20px; }
-.drawer-section h2 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 0 16px; color: var(--eas-ink-2); font-size: var(--eas-fs-xs); font-weight: 500; }
-.drawer-section a { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: var(--eas-radius-control); color: var(--eas-ink); text-decoration: none; }
-.drawer-section a:hover { background: var(--eas-row-hover); }
-.drawer-section a.is-active { background: var(--eas-sheet); font-weight: 600; }
+.drawer-section h2 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 0 16px; color: var(--eas-ink); font: 400 17px var(--eas-font-display); letter-spacing: var(--eas-display-tracking); }
+.drawer-section a { display: flex; align-items: center; gap: 6px; min-height: 42px; margin-bottom: 4px; padding: 0 16px; border-radius: var(--eas-radius-pill); color: var(--eas-ink-2); text-decoration: none; }
+.drawer-section a:hover { background: var(--eas-tab); color: var(--eas-ink); }
+.drawer-section a.is-active { background-color: var(--eas-ink); background-image: var(--eas-grain); background-blend-mode: multiply; color: var(--eas-sheet); font-weight: 600; box-shadow: var(--eas-offset-mark); }
 @media (min-width: 768px) and (max-width: 1000px) {
   .topbar { gap: 16px; padding: 0 20px; }
-  .section-link { padding: 0 12px; }
-  .topbar-right { gap: 8px; }
+  .section-link { padding: 0 10px; }
+  .topbar-right { gap: 10px; }
+  .content-column { padding: 12px 24px 48px; }
 }
 @media (max-width: 767px) {
-  .topbar { align-items: center; gap: 10px; padding: 0 12px; }
-  .topbar-right { gap: 8px; }
-  .user { padding: 4px; }
-  .content-column { padding: 24px 16px 32px; }
+  .topbar { gap: 10px; height: 64px; padding: 0 14px; }
+  .topbar-right { gap: 10px; }
+  .user { padding: 2px; }
+  .content-column { padding: 8px 16px 40px; }
 }
 </style>
 
 <style>
 .clickable-notification { cursor: pointer; }
-.nav-drawer.el-drawer { background: var(--eas-desk); }
-.nav-drawer .el-drawer__header { margin-bottom: 0; padding: 18px 32px 10px; }
+.nav-drawer.el-drawer { background: var(--eas-sheet); }
+.nav-drawer .el-drawer__header { margin-bottom: 0; padding: 18px 24px 10px; }
 .nav-drawer .drawer-brand { flex: 1; padding: 0; }
 .nav-drawer .el-drawer__body { padding: 8px 16px 24px; }
 </style>

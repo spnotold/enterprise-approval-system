@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 登录 / 注册共用外壳：左侧桌面承载样例单据，右侧是白底表单。
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import PaperField from '@/components/PaperField.vue'
+import SceneryField from '@/components/SceneryField.vue'
 import SlipDemo from '@/components/SlipDemo.vue'
 import {
   AUTH_FORM_WIDTH_DEFAULT,
@@ -98,8 +98,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
     :class="{ 'is-dragging': dragging }"
     :style="{ '--auth-form-w': `${widthValue}px` }"
   >
+    <SceneryField />
     <aside class="auth-aside">
-      <PaperField class="auth-paper" base="--eas-desk" />
       <div class="aside-inner">
         <div class="auth-brand">
           <span class="brand-mark" aria-hidden="true">审</span>
@@ -165,9 +165,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   background: var(--eas-desk);
   container-name: auth-aside;
   container-type: inline-size;
-}
-.auth-paper {
-  z-index: 0;
 }
 .aside-inner {
   position: absolute;
