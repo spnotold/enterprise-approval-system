@@ -212,7 +212,7 @@ onUnmounted(() => {
           @tap="preview(m)"
           @longpress="onLongPress(i)"
         >
-          <view class="att-icon" :class="isPdf(m.contentType) ? 'pdf' : 'img'">
+          <view class="tag att-icon">
             {{ isPdf(m.contentType) ? 'PDF' : '图' }}
           </view>
           <view class="flex1">
@@ -245,7 +245,7 @@ onUnmounted(() => {
     <view v-for="p in pending" :key="p.key" class="att-item">
       <view class="att-row">
         <view class="att-main">
-          <view class="att-icon" :class="p.local.kind === 'pdf' ? 'pdf' : 'img'">
+          <view class="tag att-icon">
             {{ p.local.kind === 'pdf' ? 'PDF' : '图' }}
           </view>
           <view class="flex1">
@@ -283,9 +283,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+@import '../styles/form.css';
+
 .att-item {
-  padding: 8rpx 0;
-  border-bottom: 1rpx solid var(--eas-rule);
+  padding: 12rpx 20rpx;
+  margin: 16rpx 0;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
 }
 
 .att-row {
@@ -303,26 +307,12 @@ onUnmounted(() => {
 }
 
 .att-icon {
-  width: 72rpx;
-  height: 64rpx;
-  border-radius: var(--eas-radius-control);
+  min-width: 64rpx;
   margin-right: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--eas-fs-xs);
-  font-weight: 600;
   flex-shrink: 0;
-}
-
-.att-icon.pdf {
-  background: var(--eas-danger-tint);
-  color: var(--eas-danger);
-}
-
-.att-icon.img {
-  background: var(--eas-primary-tint);
-  color: var(--eas-primary);
 }
 
 .att-name {
@@ -331,26 +321,18 @@ onUnmounted(() => {
 }
 
 .att-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16rpx;
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-3);
   font-variant-numeric: tabular-nums;
-}
-
-.att-hint {
-  margin-left: 20rpx;
 }
 
 .att-no {
   margin: 8rpx 0;
   height: 88rpx;
   font-size: var(--eas-fs-sm);
-  background: var(--eas-paper);
-  border: 2rpx solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
-}
-
-.att-no.is-focus {
-  border-color: var(--eas-primary);
 }
 
 .att-warn {
@@ -363,8 +345,8 @@ onUnmounted(() => {
 }
 
 .att-progress {
-  height: 8rpx;
-  background: var(--eas-paper-deep);
+  height: 16rpx;
+  background: var(--eas-tab);
   border-radius: var(--eas-radius-tag);
   margin-top: 12rpx;
   overflow: hidden;
@@ -372,33 +354,43 @@ onUnmounted(() => {
 
 .att-progress-bar {
   height: 100%;
-  background: var(--eas-primary);
+  background-color: var(--eas-primary);
+  background-image: var(--eas-grain);
+  background-size: var(--eas-grain-size);
+  background-blend-mode: multiply;
+  border-radius: var(--eas-radius-pill);
   transition: width var(--eas-dur) var(--eas-ease);
 }
 
 .att-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
   margin-top: 16rpx;
 }
 
 .att-btn {
-  flex: 1;
-  height: 88rpx;
-  margin-right: 16rpx;
+  flex: 1 1 136rpx;
+  min-height: 128rpx;
+  padding: 12rpx;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 2rpx dashed var(--eas-rule-strong);
+  gap: 8rpx;
+  border: 4rpx dashed var(--eas-rule-strong);
   border-radius: var(--eas-radius-control);
+  background: var(--eas-field);
   color: var(--eas-primary);
   font-size: var(--eas-fs-sm);
 }
 
-.att-btn:last-child {
-  margin-right: 0;
+.att-btn text {
+  white-space: nowrap;
+  text-align: center;
 }
 
-.att-btn text {
-  margin-left: 8rpx;
+@media (prefers-reduced-motion: reduce) {
+  .att-progress-bar { transition: none; }
 }
 </style>

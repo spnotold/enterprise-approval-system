@@ -22,12 +22,12 @@ defineProps<{
 
 <style scoped>
 .field-label {
-  color: var(--eas-ink-2);
+  color: var(--eas-ink);
   font-size: var(--eas-fs-sm);
 }
 
 .req {
-  color: var(--eas-danger);
+  color: var(--eas-rust);
 }
 
 .field-help {
@@ -36,7 +36,13 @@ defineProps<{
 }
 
 .field-err {
-  color: var(--eas-danger);
+  color: var(--eas-rust-deep);
   font-size: var(--eas-fs-xs);
+}
+
+.field-label,
+.field-help,
+.field-err {
+  overflow-wrap: anywhere;
 }
 </style>

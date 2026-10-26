@@ -263,7 +263,7 @@ onLoad(async (q) => {
     </view>
 
     <view class="card">
-      <view class="card-title">行程信息</view>
+      <view class="card-title"><view class="ink-glyph ink-glyph--hill" /><text class="flex1">行程信息</text></view>
       <FormItem label="标题" :error="fe.get('title')">
         <input
           class="input"
@@ -277,62 +277,64 @@ onLoad(async (q) => {
           @blur="foc = ''"
         />
       </FormItem>
-      <view class="row two">
-        <FormItem class="flex1" label="出发地" required :error="fe.get('origin')">
-          <input
-            class="input"
-            :class="ic('origin')"
-            :value="form.origin"
-            placeholder="如 杭州"
-            placeholder-class="placeholder"
-            maxlength="100"
-            @input="onField('origin', $event)"
-            @focus="foc = 'origin'"
-            @blur="foc = ''"
-          />
-        </FormItem>
-        <FormItem class="flex1" label="目的地" required :error="fe.get('destination')">
-          <input
-            class="input"
-            :class="ic('destination')"
-            :value="form.destination"
-            placeholder="如 北京"
-            placeholder-class="placeholder"
-            maxlength="100"
-            @input="onField('destination', $event)"
-            @focus="foc = 'destination'"
-            @blur="foc = ''"
-          />
-        </FormItem>
-      </view>
+      <view class="trip-block">
+        <view class="row two">
+          <FormItem class="flex1" label="出发地" required :error="fe.get('origin')">
+            <input
+              class="input"
+              :class="ic('origin')"
+              :value="form.origin"
+              placeholder="如 杭州"
+              placeholder-class="placeholder"
+              maxlength="100"
+              @input="onField('origin', $event)"
+              @focus="foc = 'origin'"
+              @blur="foc = ''"
+            />
+          </FormItem>
+          <FormItem class="flex1" label="目的地" required :error="fe.get('destination')">
+            <input
+              class="input"
+              :class="ic('destination')"
+              :value="form.destination"
+              placeholder="如 北京"
+              placeholder-class="placeholder"
+              maxlength="100"
+              @input="onField('destination', $event)"
+              @focus="foc = 'destination'"
+              @blur="foc = ''"
+            />
+          </FormItem>
+        </view>
 
-      <FormItem label="开始时间" required :error="fe.get('startTime')">
-        <view class="row two">
-          <picker class="flex1" mode="date" :value="form.startDate" @change="onPick('startDate', $event)">
-            <view class="picker-value" :class="{ 'is-error': !!fe.get('startTime') }" hover-class="is-pressed" :hover-stay-time="60">
-              <text :class="{ placeholder: !form.startDate }">{{ form.startDate || '选择日期' }}</text>
-              <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
-            </view>
-          </picker>
-          <picker class="time" mode="time" :value="form.startTime" @change="onPick('startTime', $event)">
-            <view class="picker-value num" hover-class="is-pressed" :hover-stay-time="60">{{ form.startTime }}</view>
-          </picker>
-        </view>
-      </FormItem>
-      <FormItem label="结束时间" required :error="fe.get('endTime') || timeError">
-        <view class="row two">
-          <picker class="flex1" mode="date" :value="form.endDate" :start="form.startDate" @change="onPick('endDate', $event)">
-            <view class="picker-value" :class="{ 'is-error': !!fe.get('endTime') || !!timeError }" hover-class="is-pressed" :hover-stay-time="60">
-              <text :class="{ placeholder: !form.endDate }">{{ form.endDate || '选择日期' }}</text>
-              <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
-            </view>
-          </picker>
-          <picker class="time" mode="time" :value="form.endTime" @change="onPick('endTime', $event)">
-            <view class="picker-value num" :class="{ 'is-error': !!timeError }" hover-class="is-pressed" :hover-stay-time="60">{{ form.endTime }}</view>
-          </picker>
-        </view>
-      </FormItem>
-      <view v-if="durationText" class="banner banner-info duration">{{ durationText }}</view>
+        <FormItem label="开始时间" required :error="fe.get('startTime')">
+          <view class="row two">
+            <picker class="flex1" mode="date" :value="form.startDate" @change="onPick('startDate', $event)">
+              <view class="picker-value" :class="{ 'is-error': !!fe.get('startTime') }" hover-class="is-pressed" :hover-stay-time="60">
+                <text :class="{ placeholder: !form.startDate }">{{ form.startDate || '选择日期' }}</text>
+                <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
+              </view>
+            </picker>
+            <picker class="time" mode="time" :value="form.startTime" @change="onPick('startTime', $event)">
+              <view class="picker-value num" hover-class="is-pressed" :hover-stay-time="60">{{ form.startTime }}</view>
+            </picker>
+          </view>
+        </FormItem>
+        <FormItem label="结束时间" required :error="fe.get('endTime') || timeError">
+          <view class="row two">
+            <picker class="flex1" mode="date" :value="form.endDate" :start="form.startDate" @change="onPick('endDate', $event)">
+              <view class="picker-value" :class="{ 'is-error': !!fe.get('endTime') || !!timeError }" hover-class="is-pressed" :hover-stay-time="60">
+                <text :class="{ placeholder: !form.endDate }">{{ form.endDate || '选择日期' }}</text>
+                <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
+              </view>
+            </picker>
+            <picker class="time" mode="time" :value="form.endTime" @change="onPick('endTime', $event)">
+              <view class="picker-value num" :class="{ 'is-error': !!timeError }" hover-class="is-pressed" :hover-stay-time="60">{{ form.endTime }}</view>
+            </picker>
+          </view>
+        </FormItem>
+        <view v-if="durationText" class="banner banner-info duration">{{ durationText }}</view>
+      </view>
 
       <FormItem label="交通方式" required :error="fe.get('transport')">
         <picker :range="TRANSPORT_OPTIONS" range-key="label" :value="Math.max(0, transportIndex)" @change="onTransport">
@@ -367,12 +369,12 @@ onLoad(async (q) => {
     <view class="card">
       <view class="card-title">
         <text class="flex1">同行人员</text>
-        <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="openCompanions">添加</view>
+        <button class="btn companion-add" hover-class="is-pressed" :hover-stay-time="60" @tap="openCompanions">添加</button>
       </view>
       <view v-if="!form.companions.length" class="empty-line">无同行人员</view>
       <view v-for="(c, i) in form.companions" :key="i" class="companion">
         <view class="flex1">
-          <text>{{ c.display || c.name }}</text>
+          <text class="bold companion-name">{{ c.display || c.name }}</text>
           <text class="comp-kind">{{ c.userId ? '系统用户' : '非系统用户' }}</text>
           <view v-if="fe.first(`companions[${i}]`)" class="field-err">{{ fe.first(`companions[${i}]`) }}</view>
         </view>
@@ -418,7 +420,7 @@ onLoad(async (q) => {
           <text class="muted user-meta">{{ u.username }}</text>
           <text v-if="u.deptName" class="muted user-meta">{{ u.deptName }}</text>
         </view>
-        <text class="text-primary">添加</text>
+        <text class="link-btn">添加</text>
       </view>
       <view v-if="picker.keyword && !picker.results.length && !picker.searching" class="muted mt">输入后点“搜索”</view>
       <view class="divider" />
@@ -456,7 +458,8 @@ onLoad(async (q) => {
 }
 
 .time {
-  width: 180rpx;
+  width: 164rpx;
+  flex-shrink: 0;
 }
 
 .num {
@@ -467,6 +470,22 @@ onLoad(async (q) => {
   margin: 4rpx 0 8rpx;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.trip-block {
+  padding: 0 20rpx 16rpx;
+  margin: 12rpx 0;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
+}
+
+.trip-block .picker-value {
+  padding: 0 16rpx;
+  font-size: var(--eas-fs-sm);
+}
+
+.companion-add {
+  margin: 12rpx 8rpx 16rpx 20rpx;
 }
 
 .empty-line {
@@ -481,32 +500,42 @@ onLoad(async (q) => {
   display: flex;
   align-items: center;
   min-height: 88rpx;
-  border-bottom: 1rpx solid var(--eas-rule);
-}
-
-.companion:last-of-type {
-  border-bottom: none;
+  padding: 12rpx 16rpx 12rpx 24rpx;
+  margin: 20rpx 0;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
 }
 
 .comp-kind {
-  margin-left: 20rpx;
+  display: block;
+  margin-top: 4rpx;
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-3);
 }
 
 .search-btn {
   margin-left: 16rpx;
+  margin-right: 8rpx;
   width: 160rpx;
+  flex-shrink: 0;
 }
 
 .user-row {
   display: flex;
   align-items: center;
   min-height: 96rpx;
-  border-bottom: 1rpx solid var(--eas-rule);
+  margin: 20rpx 0;
+  padding: 12rpx 16rpx 12rpx 24rpx;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
 }
 
 .user-meta {
-  margin-left: 20rpx;
+  display: block;
+}
+
+.companion-name,
+.user-row .flex1 {
+  overflow-wrap: anywhere;
 }
 </style>
