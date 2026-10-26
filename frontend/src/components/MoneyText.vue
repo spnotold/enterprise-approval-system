@@ -25,7 +25,10 @@ const text = computed(() => {
 
 <style scoped>
 .money {
+  font-family: var(--eas-font-display);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  letter-spacing: var(--eas-display-tracking);
   white-space: nowrap;
 }
 .strong {

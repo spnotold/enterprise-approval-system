@@ -19,13 +19,13 @@ onBeforeUnmount(() => hover.release('flow'))
 
 // 节点名前的 6px 圆点
 const COLOR: Record<NodeStatus, string> = {
-  WAITING: 'var(--eas-rule-strong)',
-  ACTIVE: 'var(--eas-primary)',
-  APPROVED: 'var(--eas-success)',
+  WAITING: 'var(--eas-ink-3)',
+  ACTIVE: 'var(--eas-mustard)',
+  APPROVED: 'var(--eas-ink-2)',
   REJECTED: 'var(--eas-danger)',
   CANCELED: 'var(--eas-muted)',
-  SKIPPED: 'var(--eas-rule-strong)',
-  NOT_REACHED: 'var(--eas-rule-strong)',
+  SKIPPED: 'var(--eas-ink-3)',
+  NOT_REACHED: 'var(--eas-ink-3)',
 }
 
 // 与签批栏、审批按钮同一套说法
@@ -176,10 +176,10 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
 }
 .node.active {
   --sub: var(--eas-ink-2);
-  background: var(--eas-primary-tint);
+  background: var(--eas-mustard-tint);
 }
 .node.active::before {
-  background: var(--eas-primary);
+  background: var(--eas-mustard);
 }
 .node.rejected::before {
   background: var(--eas-danger);
@@ -189,13 +189,16 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   background: var(--eas-row-hover);
 }
 .node.active.linked {
-  background: var(--eas-primary-tint);
+  background: var(--eas-mustard-tint);
 }
 .node.linked::before {
-  background: var(--eas-primary);
+  background: var(--eas-ink-2);
+}
+.node.active.linked::before {
+  background: var(--eas-mustard);
 }
 .node:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .node.dim {
@@ -233,7 +236,7 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   background: var(--dot);
 }
 .node-dot.hollow {
-  border: 1px solid var(--eas-rule-strong);
+  border: 1px solid var(--eas-ink-3);
   background: transparent;
 }
 .node-name {
@@ -245,11 +248,11 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   color: var(--eas-ink-2);
 }
 .node-status.is-active {
-  color: var(--eas-primary);
+  color: var(--eas-warning-text);
   font-weight: 600;
 }
 .node-status.is-approved {
-  color: var(--eas-success);
+  color: var(--eas-ink-2);
 }
 .node-status.is-rejected {
   color: var(--eas-danger);
@@ -287,13 +290,13 @@ const dim = (n: FlowNodeView) => n.status === 'SKIPPED' || n.status === 'NOT_REA
   color: var(--eas-ink-2);
 }
 .task-approved .task-status {
-  color: var(--eas-success);
+  color: var(--eas-ink-2);
 }
 .task-rejected .task-status {
   color: var(--eas-danger);
 }
 .task-pending .task-status {
-  color: var(--eas-primary);
+  color: var(--eas-warning-text);
 }
 .task-canceled .task-status {
   color: var(--sub);

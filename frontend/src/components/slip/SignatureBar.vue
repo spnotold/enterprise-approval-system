@@ -211,22 +211,18 @@ function cellLabel(cell: Cell): string {
   width: 100%;
   min-width: 0;
   overflow-x: auto;
-  border: 1px solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
-  background: var(--eas-sheet);
+  gap: 10px;
+  padding: 2px 4px 6px 0;
   scrollbar-width: thin;
 }
 .cell-wrap {
   display: flex;
   flex: 1 0 0;
   min-width: 0;
-  border-right: 1px solid var(--eas-rule-strong);
-}
-.cell-wrap:last-child {
-  border-right: 0;
+  border-radius: 14px;
 }
 .signature-bar.scrollable .cell-wrap {
-  flex: 0 0 max(200px, 25%);
+  flex: 0 0 max(200px, calc((100% - 30px) / 4));
 }
 .cell {
   position: relative;
@@ -235,10 +231,11 @@ function cellLabel(cell: Cell): string {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  min-height: 104px;
-  padding: 10px 14px 12px;
+  min-height: 128px;
+  padding: 14px 18px 16px;
+  border-radius: 14px;
   border: 0;
-  background: var(--eas-sheet);
+  background: var(--eas-tab);
   color: var(--eas-ink);
   font: inherit;
   text-align: left;
@@ -253,8 +250,9 @@ function cellLabel(cell: Cell): string {
   display: block;
   max-width: 100%;
   overflow: hidden;
-  color: var(--eas-ink-3);
+  color: var(--eas-ink-2);
   font-size: var(--eas-fs-12);
+  font-weight: 600;
   line-height: 1.5;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -275,8 +273,11 @@ function cellLabel(cell: Cell): string {
 .sign-who {
   min-width: 0;
   color: var(--eas-ink);
-  font-size: var(--eas-fs-nav);
-  font-weight: 600;
+  font-family: var(--eas-font-display);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: var(--eas-display-tracking);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -292,10 +293,11 @@ function cellLabel(cell: Cell): string {
   color: var(--eas-ink-2);
   font-size: var(--eas-fs-12);
 }
+.sign-stamp { align-self: start; }
 .sign-time {
   grid-column: 1;
   color: var(--eas-ink-3);
-  font-size: var(--eas-fs-12);
+  font-size: var(--eas-fs-note);
   font-variant-numeric: tabular-nums;
 }
 .sign-comment {
@@ -315,11 +317,14 @@ function cellLabel(cell: Cell): string {
 .pending-who {
   overflow-wrap: anywhere;
   color: var(--eas-ink);
-  font-size: var(--eas-fs-nav);
-  font-weight: 600;
+  font-family: var(--eas-font-display);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: var(--eas-display-tracking);
 }
 .pending-label {
-  color: var(--eas-primary);
+  color: var(--eas-ink-2);
   font-size: var(--eas-fs-note);
 }
 .aside {
@@ -327,25 +332,40 @@ function cellLabel(cell: Cell): string {
   font-size: var(--eas-fs-note);
 }
 
-/* 共享格线不随状态变化，当前节点在格内描虚线。 */
+/* 状态用整块浅墨表现，格间保留纸色空隙。 */
+.cell.approved,
+.cell.rejected { background: var(--eas-sage-tint); }
+.cell.rejected .sign-stamp :deep(.stamp) { color: var(--eas-danger); }
 .cell.active {
-  background: var(--eas-primary-tint);
-  outline: 1.5px dashed var(--eas-primary);
-  outline-offset: -5px;
+  background: var(--eas-mustard-tint);
+  box-shadow: var(--eas-offset-mark);
 }
 .cell.active .cell-name,
 .cell.active .sign-time,
 .cell.active .aside {
   color: var(--eas-ink-2);
 }
+.cell.waiting,
+.cell.skipped,
+.cell.canceled { background: var(--eas-tab); }
+.cell.waiting .cell-name,
+.cell.waiting .sign-time,
+.cell.waiting .aside,
+.cell.skipped .cell-name,
+.cell.skipped .sign-time,
+.cell.skipped .aside,
+.cell.canceled .cell-name,
+.cell.canceled .sign-time,
+.cell.canceled .aside { color: var(--eas-ink-3); }
 .cell:hover,
 .cell.linked {
   background: var(--eas-row-hover);
-  box-shadow: inset 0 0 0 2px var(--eas-primary);
+  outline: 2px solid var(--eas-ink-2);
+  outline-offset: -2px;
 }
 .cell.active:hover,
 .cell.active.linked {
-  background: var(--eas-primary-tint);
+  background: var(--eas-mustard-tint);
 }
 .cell:hover .cell-name,
 .cell:hover .sign-time,
@@ -356,13 +376,12 @@ function cellLabel(cell: Cell): string {
   color: var(--eas-ink-2);
 }
 .cell:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: -3px;
-  box-shadow: inset 0 0 0 2px var(--eas-primary);
 }
 .cell.active:focus-visible {
-  outline: 1.5px dashed var(--eas-primary);
-  outline-offset: -5px;
+  outline: 2px solid var(--eas-ink);
+  outline-offset: -3px;
 }
 
 @media (max-width: 768px) {

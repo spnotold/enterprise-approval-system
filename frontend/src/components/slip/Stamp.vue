@@ -47,12 +47,19 @@ onBeforeUnmount(consume)
   justify-content: center;
   flex: none;
   box-sizing: border-box;
-  border: 1.5px solid currentColor;
-  border-radius: var(--eas-radius-tag);
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  -webkit-mask-image: var(--eas-stamp-mask);
+  mask-image: var(--eas-stamp-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  font-family: var(--eas-font-display);
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
-  transform: rotate(-8deg);
+  transform: rotate(-10deg);
   user-select: none;
 }
 .stamp.success {
@@ -62,41 +69,43 @@ onBeforeUnmount(consume)
   color: var(--eas-danger);
 }
 .stamp.sm {
-  padding: 3px 6px;
-  font-size: var(--eas-fs-xs);
-  letter-spacing: 0.08em;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 13px;
+  letter-spacing: 0.02em;
 }
-/* 单据头的终态章：双线描边，像一枚真正的印 */
+/* 单据头终态章：双线套印，残缺由基础层的遮罩纹理呈现。 */
 .stamp.lg {
-  padding: 8px 14px;
-  border-width: 2px;
+  width: 86px;
+  height: 86px;
+  padding: 8px;
+  border-width: 2.5px;
   box-shadow:
     inset 0 0 0 2px var(--eas-sheet),
     inset 0 0 0 3px currentColor;
-  font-size: var(--eas-fs-md);
-  letter-spacing: 0.2em;
-  text-indent: 0.2em;
+  font-size: 18px;
+  letter-spacing: 0.04em;
 }
 .stamp.animate {
   animation: stamp-in var(--eas-dur-stamp) var(--eas-ease) both;
 }
-/* 窄屏单据头：章缩小一档，免得贴住单号 */
 @media (max-width: 768px) {
   .stamp.lg {
-    padding: 7px 11px;
-    font-size: var(--eas-fs-sm);
-    letter-spacing: 0.16em;
-    text-indent: 0.16em;
+    width: 68px;
+    height: 68px;
+    padding: 6px;
+    font-size: 15px;
   }
 }
 @keyframes stamp-in {
   from {
     opacity: 0;
-    transform: rotate(-8deg) scale(1.15);
+    transform: rotate(-10deg) scale(1.15);
   }
   to {
     opacity: 1;
-    transform: rotate(-8deg) scale(1);
+    transform: rotate(-10deg) scale(1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
