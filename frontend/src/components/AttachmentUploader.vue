@@ -287,42 +287,38 @@ onBeforeUnmount(() => {
 
     <ul v-if="model.length || pending.length" class="file-list">
       <li v-for="(f, i) in model" :key="f.id" class="file-item">
-        <el-icon class="file-icon"><Picture v-if="isImage(f)" /><Document v-else /></el-icon>
-        <div class="file-main">
-          <div class="file-row">
-            <el-button link type="primary" class="file-name" :title="f.originalName" @click="preview(f)">
-              {{ f.originalName }}
-            </el-button>
-            <span class="file-size">{{ fmtSize(f.sizeBytes) }}</span>
-            <span class="file-actions">
-              <el-button link size="small" @click="preview(f)">预览</el-button>
-              <el-button link size="small" :loading="downloadingId === f.id" @click="download(f)">下载</el-button>
-              <el-button v-if="!readonly && !disabled" link size="small" type="danger" @click="remove(i)">删除</el-button>
-            </span>
-          </div>
-          <slot name="extra" :file="f" :index="i" />
+        <div class="file-chip">
+          <el-icon class="file-icon"><Picture v-if="isImage(f)" /><Document v-else /></el-icon>
+          <el-button link type="primary" class="file-name" :title="f.originalName" @click="preview(f)">
+            {{ f.originalName }}
+          </el-button>
+          <span class="file-size">{{ fmtSize(f.sizeBytes) }}</span>
+          <span class="file-actions">
+            <el-button link size="small" @click="preview(f)">预览</el-button>
+            <el-button link size="small" :loading="downloadingId === f.id" @click="download(f)">下载</el-button>
+            <el-button v-if="!readonly && !disabled" link size="small" type="danger" @click="remove(i)">删除</el-button>
+          </span>
         </div>
+        <slot name="extra" :file="f" :index="i" />
       </li>
       <li v-for="p in pending" :key="`p${p.uid}`" class="file-item pending">
-        <el-icon class="file-icon"><Document /></el-icon>
-        <div class="file-main">
-          <div class="file-row">
-            <span class="file-name-text" :title="p.file.name">{{ p.file.name }}</span>
-            <span class="file-size">{{ fmtSize(p.file.size) }}</span>
-            <span v-if="p.status === 'error'" class="file-actions">
-              <el-button link size="small" type="primary" @click="retry(p)">重试</el-button>
-              <el-button link size="small" type="danger" @click="dropPending(p)">移除</el-button>
-            </span>
-          </div>
-          <el-progress
-            v-if="p.status !== 'error'"
-            :percentage="p.progress"
-            :stroke-width="4"
-            :show-text="false"
-            :indeterminate="p.status === 'waiting'"
-          />
-          <div v-else class="field-error-msg">{{ p.error }}</div>
+        <div class="file-chip">
+          <el-icon class="file-icon"><Document /></el-icon>
+          <span class="file-name-text" :title="p.file.name">{{ p.file.name }}</span>
+          <span class="file-size">{{ fmtSize(p.file.size) }}</span>
+          <span v-if="p.status === 'error'" class="file-actions">
+            <el-button link size="small" type="primary" @click="retry(p)">重试</el-button>
+            <el-button link size="small" type="danger" @click="dropPending(p)">移除</el-button>
+          </span>
         </div>
+        <el-progress
+          v-if="p.status !== 'error'"
+          :percentage="p.progress"
+          :stroke-width="4"
+          :show-text="false"
+          :indeterminate="p.status === 'waiting'"
+        />
+        <div v-else class="field-error-msg">{{ p.error }}</div>
       </li>
     </ul>
     <div v-else-if="readonly" class="file-empty">无附件</div>
@@ -339,26 +335,26 @@ onBeforeUnmount(() => {
 .uploader :deep(.el-button) {
   min-height: 32px;
 }
-/* 上传栏即拖放区：rule-strong 虚线框，拖入文件时虚线变主色、底色 primary-tint */
+/* 上传栏即拖放区：虚线框像纸上裁切线；拖入文件时虚线变藏青、底色变天青浅 */
 .uploader-bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 12px;
   padding: 12px 16px;
-  border: 1px dashed var(--eas-rule-strong);
+  border: 1.5px dashed var(--eas-rule-strong);
   border-radius: var(--eas-radius-control);
-  background: var(--eas-sheet);
+  background: var(--eas-field);
   transition:
     border-color var(--eas-dur-fast) var(--eas-ease),
     background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .uploader-bar.is-dragging {
   border-color: var(--eas-primary);
-  background: var(--eas-primary-tint);
+  background: var(--eas-sky-tint);
 }
 .uploader-bar.is-disabled:not(.is-dragging) {
-  background: var(--eas-row-hover);
+  background: var(--eas-tab);
 }
 .uploader-hint {
   flex: 1 1 200px;
@@ -367,45 +363,46 @@ onBeforeUnmount(() => {
   line-height: 1.5;
   color: var(--eas-ink-3);
 }
-/* 拖入时底色是 primary-tint，ink-3 不到 4.5:1 */
+/* 拖入 / 禁用时底色变深，ink-3 不到 4.5:1 */
 .uploader-bar.is-dragging .uploader-hint,
 .uploader-bar.is-disabled .uploader-hint {
   color: var(--eas-ink-2);
 }
-/* 文件行：不加框，只用 1px rule 分隔 */
+/* 文件小行：纸色胶囊 + 一层纸影，行间留空 */
 .file-list {
   list-style: none;
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .file-item {
   display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  padding: 8px 0;
-}
-.file-item + .file-item {
-  border-top: 1px solid var(--eas-rule);
-}
-.file-icon {
-  margin-top: 4px;
-  color: var(--eas-ink-3);
-}
-.file-main {
-  flex: 1;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
 }
-.file-row {
+.file-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   min-width: 0;
+  min-height: 34px;
+  padding: 4px 14px 4px 12px;
+  background: var(--eas-sheet);
+  border-radius: var(--eas-radius-pill);
+  box-shadow: 2px 2px 0 var(--eas-shade);
+}
+.file-icon {
+  color: var(--eas-ink-3);
 }
 .file-name,
 .file-name-text {
   flex: 0 1 auto;
   min-width: 0;
-  max-width: 320px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -416,7 +413,7 @@ onBeforeUnmount(() => {
   color: var(--eas-ink);
 }
 .file-item.pending :deep(.el-progress) {
-  margin-top: 6px;
+  margin-top: 2px;
 }
 .file-name :deep(span) {
   overflow: hidden;
