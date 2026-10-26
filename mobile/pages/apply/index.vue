@@ -8,6 +8,7 @@ import AdminNotice from '@/components/AdminNotice.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { auth, requireLogin } from '@/stores/auth'
 import { notice } from '@/stores/notice'
+import { applyIllustrationUrl } from '@/utils/applyIllustration'
 import { showError } from '@/utils/feedback'
 import { goAppList, goForm } from '@/utils/nav'
 
@@ -17,14 +18,6 @@ const loaded = ref(false)
 const builtin = computed(() => templates.value.filter((t) => t.category === 'BUILTIN'))
 const custom = computed(() => templates.value.filter((t) => t.category === 'CUSTOM'))
 const adminOnly = computed(() => auth.isAdminOnly)
-
-// 入口图标统一用黛蓝线性图标，不按类型换色
-const ICONS: Record<string, string> = {
-  PURCHASE: 'cart',
-  TRAVEL: 'paperplane',
-  EXPENSE: 'wallet',
-  CUSTOM: 'compose',
-}
 
 async function load(): Promise<void> {
   try {
@@ -55,57 +48,61 @@ function start(t: TemplateOption): void {
   <view class="page">
     <AdminNotice v-if="adminOnly" />
     <template v-else>
-      <view class="panel">
-        <view class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="goAppList({ status: 'DRAFT' })">
-          <view class="tpl-icon">
-            <uni-icons type="folder-add" size="22" color="var(--eas-primary)" />
-          </view>
-          <view class="flex1">
-            <view class="bold">我的草稿</view>
-            <view class="tpl-desc ellipsis">继续填写尚未提交的申请</view>
-          </view>
+      <!-- 我的草稿：横条单据 -->
+      <view
+        class="card draft-card"
+        hover-class="is-pressed"
+        :hover-stay-time="60"
+        @tap="goAppList({ status: 'DRAFT' })"
+      >
+        <view class="ink-glyph ink-glyph--stack draft-glyph" />
+        <view class="draft-info">
+          <view class="draft-title display">我的草稿</view>
+          <view class="draft-desc">继续填写尚未提交的申请</view>
         </view>
       </view>
 
-      <view v-if="builtin.length" class="section-title">常用申请</view>
-      <view v-if="builtin.length" class="panel">
-        <view
-          v-for="t in builtin"
-          :key="t.id"
-          class="row-item"
-          hover-class="is-pressed"
-          :hover-stay-time="60"
-          @tap="start(t)"
-        >
-          <view class="tpl-icon">
-            <uni-icons :type="ICONS[t.bizType]" size="26" color="var(--eas-primary)" />
-          </view>
-          <view class="flex1">
-            <view class="bold">{{ t.name }}</view>
-            <view class="tpl-desc ellipsis">{{ t.description || '' }}</view>
+      <!-- 常用申请 -->
+      <template v-if="builtin.length">
+        <view class="section-title">常用申请</view>
+        <view class="apply-grid">
+          <view
+            v-for="t in builtin"
+            :key="t.id"
+            class="card apply-card"
+            hover-class="is-pressed"
+            :hover-stay-time="60"
+            @tap="start(t)"
+          >
+            <view class="apply-pic">
+              <image class="apply-pic-img" :src="applyIllustrationUrl(t)" mode="aspectFill" />
+            </view>
+            <view class="apply-name display">{{ t.name }}</view>
+            <view v-if="t.description" class="apply-desc">{{ t.description }}</view>
           </view>
         </view>
-      </view>
+      </template>
 
-      <view v-if="custom.length" class="section-title">其他申请</view>
-      <view v-if="custom.length" class="panel">
-        <view
-          v-for="t in custom"
-          :key="t.id"
-          class="row-item"
-          hover-class="is-pressed"
-          :hover-stay-time="60"
-          @tap="start(t)"
-        >
-          <view class="tpl-icon">
-            <uni-icons :type="ICONS.CUSTOM" size="26" color="var(--eas-primary)" />
-          </view>
-          <view class="flex1">
-            <view class="bold">{{ t.name }}</view>
-            <view class="tpl-desc ellipsis">{{ t.description || '' }}</view>
+      <!-- 其他申请 -->
+      <template v-if="custom.length">
+        <view class="section-title">其他申请</view>
+        <view class="apply-grid">
+          <view
+            v-for="t in custom"
+            :key="t.id"
+            class="card apply-card"
+            hover-class="is-pressed"
+            :hover-stay-time="60"
+            @tap="start(t)"
+          >
+            <view class="apply-pic">
+              <image class="apply-pic-img" :src="applyIllustrationUrl(t)" mode="aspectFill" />
+            </view>
+            <view class="apply-name display">{{ t.name }}</view>
+            <view v-if="t.description" class="apply-desc">{{ t.description }}</view>
           </view>
         </view>
-      </view>
+      </template>
 
       <EmptyState v-if="loaded && !templates.length" text="暂无可发起的申请类型" />
     </template>
@@ -113,49 +110,89 @@ function start(t: TemplateOption): void {
 </template>
 
 <style scoped>
-.panel {
-  background: var(--eas-surface);
-  border-radius: var(--eas-radius-panel);
-  margin-bottom: 16rpx;
-  overflow: hidden;
-}
-
-.section-title {
-  margin: 24rpx 8rpx 16rpx;
-  font-size: var(--eas-fs-sm);
-  font-weight: 600;
-  color: var(--eas-ink-2);
-}
-
-.row-item {
+.draft-card {
   display: flex;
   align-items: center;
-  min-height: 128rpx;
-  padding: 20rpx 28rpx;
-  border-bottom: 1rpx solid var(--eas-rule);
-  font-size: var(--eas-fs-md);
-  color: var(--eas-ink);
+  padding: 28rpx 32rpx;
+  margin: 0 8rpx 28rpx 0;
 }
 
-.row-item:last-child {
-  border-bottom: none;
-}
-
-.tpl-icon {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: var(--eas-radius-control);
-  background: var(--eas-primary-tint);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 24rpx;
+.draft-glyph {
+  margin-right: 20rpx;
   flex-shrink: 0;
 }
 
-.tpl-desc {
-  margin-top: 4rpx;
+.draft-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.draft-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--eas-ink);
+  line-height: 1.3;
+  margin-bottom: 6rpx;
+}
+
+.draft-desc {
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-3);
+  line-height: 1.4;
+}
+
+.apply-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20rpx;
+  row-gap: 24rpx;
+  padding-right: 8rpx;
+  padding-bottom: 8rpx;
+  margin-bottom: 28rpx;
+}
+
+.apply-card {
+  margin: 0;
+  padding: 20rpx 20rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.apply-pic {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 20rpx;
+  overflow: hidden;
+  margin-bottom: 16rpx;
+  box-shadow: 0 4rpx 0 var(--eas-shade);
+  background-color: var(--eas-tab);
+}
+
+.apply-pic-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.apply-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--eas-ink);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apply-desc {
+  margin-top: 8rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

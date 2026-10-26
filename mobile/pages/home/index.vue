@@ -7,6 +7,7 @@ import type { NotificationItem, TemplateOption } from '@/lib/types'
 import AdminNotice from '@/components/AdminNotice.vue'
 import { auth, requireLogin } from '@/stores/auth'
 import { notice } from '@/stores/notice'
+import { applyIllustrationUrl } from '@/utils/applyIllustration'
 import { APP_STATUS_LABEL, APP_STATUS_ORDER, APP_TYPE_LABEL } from '@/utils/labels'
 import { go, goAppList, goForm, goTaskHandle, openLink } from '@/utils/nav'
 import { fmtShort } from '@/utils/time'
@@ -41,6 +42,23 @@ const canCreate = computed(() => auth.can('APP_CREATE'))
 const greeting = computed(() => {
   const h = (new Date().getUTCHours() + 8) % 24
   return h < 6 ? '夜深了' : h < 12 ? '上午好' : h < 18 ? '下午好' : '晚上好'
+})
+
+const pendingCount = computed(() => stats.value?.pendingTaskCount ?? state.pendingTotal ?? 0)
+
+const statusCounts = computed(() => stats.value?.statusCounts ?? null)
+const totalStatusCount = computed(() => {
+  if (!statusCounts.value) return 0
+  return APP_STATUS_ORDER.reduce((sum, s) => sum + (statusCounts.value?.[s] ?? 0), 0)
+})
+
+const statusSegments = computed(() => {
+  const counts = statusCounts.value
+  if (!counts || totalStatusCount.value === 0) return []
+  return APP_STATUS_ORDER.map((status) => ({
+    status,
+    count: counts[status] ?? 0,
+  })).filter((s) => s.count > 0)
 })
 
 const apis: HomeApis = {
@@ -122,116 +140,545 @@ function startTemplate(t: TemplateOption): void {
 
 <template>
   <view class="page">
-    <view class="hello">
-      <view class="hello-title">{{ greeting }}，{{ me?.realName ?? '' }}</view>
-      <view class="muted">{{ me?.deptName ?? '' }}</view>
+    <!-- 顶部横幅插画 -->
+    <view class="home-banner">
+      <image
+        class="home-banner-bg"
+        src="/static/illustrations/m-home-banner.jpg"
+        mode="aspectFill"
+      />
+      <view class="home-banner-content">
+        <view class="home-banner-greeting display">{{ greeting }}，{{ me?.realName ?? '' }}</view>
+        <view class="home-banner-sub">
+          <text v-if="me?.deptName">{{ me.deptName }}</text>
+          <text v-if="me?.deptName && canHandle && pendingCount > 0" class="home-banner-sep">　</text>
+          <text v-if="canHandle && pendingCount > 0">
+            有 <text class="home-banner-num display">{{ pendingCount }}</text> 张单子等你审批
+          </text>
+        </view>
+      </view>
     </view>
 
     <AdminNotice v-if="adminOnly" />
 
     <template v-else-if="ready">
+      <!-- 待你审批 -->
       <view v-if="canHandle" class="card">
-        <view class="card-title">待你审批 <text class="pending-count">{{ stats?.pendingTaskCount ?? state.pendingTotal ?? 0 }}</text></view>
+        <view class="card-title">
+          <view class="card-title-left">
+            <view class="ink-glyph ink-glyph--sun" />
+            <text>待你审批</text>
+            <text v-if="pendingCount > 0" class="pending-pill display inked">{{ pendingCount }}</text>
+          </view>
+        </view>
+
         <view v-if="pendingError" class="section-error">
           <text class="section-error-text">{{ pendingError }}</text>
           <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryPending">重试</view>
         </view>
+
         <template v-else>
-          <view v-if="!pending.length" class="muted">暂无待办</view>
-          <view v-for="t in pending" :key="t.taskId" class="pending-row" hover-class="is-pressed" hover-stay-time="60" @tap="goTaskHandle(t.taskId, t.applicationId)">
-            <view class="row between"><text class="tag tag-blue">{{ APP_TYPE_LABEL[t.type] }}</text><text class="muted">{{ fmtShort(t.createdAt) }}</text></view>
-            <view class="bold ellipsis">{{ t.title || t.templateName }}</view>
-            <view class="row between"><text class="muted">{{ t.applicant.realName }}</text><text class="text-primary">去处理</text></view>
+          <view v-if="!pending.length" class="empty-hint muted">暂无待办</view>
+          <view
+            v-for="t in pending.slice(0, 3)"
+            :key="t.taskId"
+            class="task-row"
+            hover-class="is-pressed"
+            hover-stay-time="60"
+            @tap="goTaskHandle(t.taskId, t.applicationId)"
+          >
+            <view class="task-info flex1">
+              <view class="task-row-top">
+                <text class="tag">{{ APP_TYPE_LABEL[t.type] }}</text>
+                <text class="task-title ellipsis">{{ t.title || t.templateName }}</text>
+              </view>
+              <view class="task-meta">
+                <text>{{ t.applicant.realName }}</text>
+                <text class="task-meta-space">　</text>
+                <text>{{ fmtShort(t.createdAt) }}</text>
+              </view>
+            </view>
+            <view class="task-action-btn inked">处理</view>
           </view>
-          <view class="link-btn section-link" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/task/list')">查看全部待办</view>
+          <view class="link-btn pending-all-btn" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/task/list')">
+            查看全部待办
+          </view>
         </template>
       </view>
 
+      <!-- 我的申请 -->
       <view class="card">
         <view class="card-title">
-          我的申请
+          <text>我的申请</text>
           <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="goAppList()">查看全部申请</view>
         </view>
+
         <view v-if="statsError" class="section-error">
           <text class="section-error-text">{{ statsError }}</text>
           <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryStats">重试</view>
         </view>
-        <view v-else class="status-grid">
-          <view v-for="s in APP_STATUS_ORDER" :key="s" class="status-cell" hover-class="is-pressed" hover-stay-time="60" @tap="goAppList({ status: s })">
-            <view class="status-count" :class="`status-${s.toLowerCase()}`">{{ stats?.statusCounts?.[s] ?? 0 }}</view>
-            <view class="muted">{{ APP_STATUS_LABEL[s] }}</view>
+
+        <view v-else>
+          <!-- 状态比例条 -->
+          <view class="status-bar" aria-hidden="true">
+            <template v-if="totalStatusCount > 0">
+              <view
+                v-for="seg in statusSegments"
+                :key="seg.status"
+                class="status-bar-seg"
+                :class="[`status-seg--${seg.status.toLowerCase()}`, { inked: seg.status !== 'DRAFT' }]"
+                :style="{ flexGrow: seg.count }"
+              />
+            </template>
+            <view v-else class="status-bar-empty" />
+          </view>
+
+          <!-- 5 个计数 -->
+          <view class="status-grid">
+            <view
+              v-for="s in APP_STATUS_ORDER"
+              :key="s"
+              class="status-cell"
+              hover-class="is-pressed"
+              hover-stay-time="60"
+              @tap="goAppList({ status: s })"
+            >
+              <view class="status-num display">{{ stats?.statusCounts?.[s] ?? 0 }}</view>
+              <view class="status-label">{{ APP_STATUS_LABEL[s] }}</view>
+            </view>
           </view>
         </view>
       </view>
 
+      <!-- 发起申请 -->
       <view v-if="canCreate" class="card">
         <view class="card-title">
-          发起申请
-          <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/apply/index')">查看发起入口</view>
+          <text>发起申请</text>
+          <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/apply/index')">全部类型</view>
         </view>
+
         <view v-if="templatesError" class="section-error">
           <text class="section-error-text">{{ templatesError }}</text>
           <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryTemplates">重试</view>
         </view>
-        <view v-else-if="!templates.length" class="muted">暂无可发起的模板</view>
-        <view v-else class="quick">
-          <view v-for="t in templates.slice(0, 8)" :key="t.id" class="quick-item" hover-class="is-pressed" hover-stay-time="60" @tap="startTemplate(t)">
-            <view class="quick-icon">{{ t.name.slice(0, 1) }}</view>
-            <text class="quick-name ellipsis">{{ t.name }}</text>
-            <text class="muted">{{ APP_TYPE_LABEL[t.bizType] }}</text>
+
+        <view v-else-if="!templates.length" class="empty-hint muted">暂无可发起的模板</view>
+
+        <view v-else class="home-apply-grid">
+          <view
+            v-for="t in templates.slice(0, 4)"
+            :key="t.id"
+            class="home-apply-card"
+            hover-class="is-pressed"
+            hover-stay-time="60"
+            @tap="startTemplate(t)"
+          >
+            <view class="home-apply-pic">
+              <image class="home-apply-img" :src="applyIllustrationUrl(t)" mode="aspectFill" />
+            </view>
+            <view class="home-apply-name display">{{ t.name }}</view>
           </view>
         </view>
       </view>
     </template>
 
+    <!-- 最近通知 -->
     <view class="card">
       <view class="card-title">
-        最近通知
+        <text>最近通知</text>
         <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/notice/list')">查看全部通知</view>
       </view>
+
       <view v-if="noticesError" class="section-error">
         <text class="section-error-text">{{ noticesError }}</text>
         <view class="link-btn" hover-class="is-pressed" hover-stay-time="60" @tap="retryNotices">重试</view>
       </view>
+
       <template v-else>
-        <view v-if="!notices.length" class="muted">暂无通知</view>
-        <view v-for="n in notices" :key="n.id" class="notice" hover-class="is-pressed" hover-stay-time="60" @tap="tapNotice(n)">
-          <view v-if="!n.read" class="dot" />
-          <view class="flex1">
-            <view class="ellipsis" :class="{ bold: !n.read }">{{ n.title }}</view>
-            <view class="muted">{{ fmtShort(n.createdAt) }}</view>
+        <view v-if="!notices.length" class="empty-hint muted">暂无通知</view>
+        <view
+          v-for="n in notices"
+          :key="n.id"
+          class="notice-row"
+          hover-class="is-pressed"
+          hover-stay-time="60"
+          @tap="tapNotice(n)"
+        >
+          <view v-if="!n.read" class="notice-dot" />
+          <view class="notice-content flex1">
+            <view class="notice-title ellipsis" :class="{ 'is-unread': !n.read, 'is-read': n.read }">
+              {{ n.title }}
+            </view>
+            <view class="notice-time">{{ fmtShort(n.createdAt) }}</view>
           </view>
         </view>
       </template>
     </view>
 
-    <view v-if="!adminOnly" class="card row between" hover-class="is-pressed" hover-stay-time="60" @tap="go('/pages/stats/index')">
-      <text>统计报表</text>
-      <text class="text-primary">查看报表</text>
+    <!-- 统计报表 -->
+    <view
+      v-if="!adminOnly"
+      class="card stats-card"
+      hover-class="is-pressed"
+      hover-stay-time="60"
+      @tap="go('/pages/stats/index')"
+    >
+      <view class="stats-title display">统计报表</view>
+      <view class="stats-action">查看报表</view>
     </view>
   </view>
 </template>
 
 <style scoped>
-.hello { padding: 8rpx 8rpx 32rpx; }
-.hello-title { font-family: var(--eas-font-serif); font-size: var(--eas-fs-lg); font-weight: 600; margin-bottom: 8rpx; }
-.pending-count { color: var(--eas-primary); font-variant-numeric: tabular-nums; margin-left: auto; }
-.pending-row { padding: 20rpx 0; border-bottom: 1rpx solid var(--eas-rule); min-height: 88rpx; }
-.pending-row .bold { margin: 10rpx 0; }
-.section-link { display: flex; }
-.section-error { display: flex; align-items: center; justify-content: space-between; padding: 12rpx 0; min-height: 88rpx; }
-.section-error-text { color: var(--eas-danger); font-size: 26rpx; flex: 1; margin-right: 16rpx; }
-.status-grid { display: flex; }
-.status-cell { flex: 1; text-align: center; padding: 12rpx 0; min-height: 88rpx; }
-.status-count { font-size: var(--eas-fs-lg); font-weight: 600; color: var(--eas-ink-2); }
-.status-in_approval { color: var(--eas-primary); }
-.status-approved { color: var(--eas-success); }
-.status-rejected { color: var(--eas-danger); }
-.quick { display: flex; flex-wrap: wrap; }
-.quick-item { width: 25%; display: flex; flex-direction: column; align-items: center; padding: 16rpx 8rpx; box-sizing: border-box; min-height: 88rpx; }
-.quick-icon { width: 88rpx; height: 88rpx; border: 1rpx solid var(--eas-rule); border-radius: var(--eas-radius-control); background: var(--eas-paper); color: var(--eas-primary); font-size: var(--eas-fs-md); font-weight: 600; display: flex; align-items: center; justify-content: center; margin-bottom: 8rpx; }
-.quick-name { max-width: 100%; font-size: var(--eas-fs-sm); }
-.notice { display: flex; align-items: center; min-height: 112rpx; border-bottom: 1rpx solid var(--eas-rule); }
-.notice:last-child { border-bottom: none; }
-.dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--eas-primary); margin-right: 12rpx; flex-shrink: 0; }
+/* 顶部横幅插画 */
+.home-banner {
+  position: relative;
+  height: 380rpx;
+  border-radius: 32rpx;
+  box-shadow: var(--eas-shadow-sheet);
+  margin: 0 8rpx 32rpx 0;
+  overflow: hidden;
+  background-color: var(--eas-sheet);
+}
+
+.home-banner-bg {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* #ifdef H5 */
+.home-banner-bg :deep(img) {
+  object-position: right center !important;
+}
+/* #endif */
+
+.home-banner-content {
+  position: relative;
+  z-index: 1;
+  padding: 38rpx 36rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-banner-greeting {
+  font-size: 52rpx;
+  line-height: 1.25;
+  color: var(--eas-ink);
+  margin-bottom: 12rpx;
+}
+
+.home-banner-sub {
+  font-size: 26rpx;
+  color: var(--eas-ink-2);
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.home-banner-num {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--eas-ink);
+  margin: 0 4rpx;
+  line-height: 1;
+}
+
+/* 待办 */
+.card-title-left {
+  display: flex;
+  align-items: center;
+}
+
+.pending-pill {
+  height: 40rpx;
+  min-width: 40rpx;
+  padding: 0 16rpx;
+  border-radius: var(--eas-radius-pill);
+  background-color: var(--eas-mustard);
+  color: var(--eas-ink);
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 40rpx;
+  margin-left: 14rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid var(--eas-rule);
+  min-height: 112rpx;
+}
+
+.task-row:last-of-type {
+  border-bottom: none;
+}
+
+.task-info {
+  min-width: 0;
+}
+
+.task-row-top {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--eas-ink);
+  flex: 1;
+  min-width: 0;
+}
+
+.task-meta {
+  font-size: 24rpx;
+  color: var(--eas-ink-3);
+  margin-top: 8rpx;
+  display: flex;
+  align-items: center;
+}
+
+.task-action-btn {
+  flex-shrink: 0;
+  height: 52rpx;
+  line-height: 52rpx;
+  padding: 0 24rpx;
+  border-radius: var(--eas-radius-pill);
+  background-color: var(--eas-mustard);
+  color: var(--eas-ink);
+  font-size: 26rpx;
+  font-weight: 600;
+  box-shadow: 4rpx 4rpx 0 var(--eas-mustard-deep);
+  margin-left: 20rpx;
+}
+
+.pending-all-btn {
+  width: 100%;
+  margin-top: 12rpx;
+}
+
+/* 错误与空提示 */
+.section-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  min-height: 88rpx;
+}
+
+.section-error-text {
+  color: var(--eas-danger);
+  font-size: 26rpx;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.empty-hint {
+  padding: 24rpx 0;
+  text-align: center;
+}
+
+/* 我的申请状态条与网格 */
+.status-bar {
+  display: flex;
+  height: 20rpx;
+  border-radius: var(--eas-radius-pill);
+  overflow: hidden;
+  margin: 16rpx 0 24rpx;
+  background-color: var(--eas-tab);
+  gap: 2rpx;
+}
+
+.status-bar-seg {
+  display: block;
+  flex-basis: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.status-bar-empty {
+  width: 100%;
+  height: 100%;
+  background-color: var(--eas-tab);
+}
+
+.status-seg--draft {
+  background-color: var(--eas-tab);
+}
+
+.status-seg--in_approval {
+  background-color: var(--eas-sky);
+}
+
+.status-seg--approved {
+  background-color: var(--eas-sage);
+}
+
+.status-seg--rejected {
+  background-color: var(--eas-rust);
+}
+
+.status-seg--withdrawn {
+  background-color: var(--eas-ink-2);
+}
+
+.status-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12rpx 0;
+  min-height: 88rpx;
+  border-radius: var(--eas-radius-control);
+}
+
+.status-num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--eas-ink);
+  line-height: 1.2;
+}
+
+.status-label {
+  font-size: 24rpx;
+  color: var(--eas-ink-3);
+  margin-top: 6rpx;
+}
+
+/* 发起申请卡片网格 */
+.home-apply-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24rpx;
+  row-gap: 20rpx;
+  padding-top: 10rpx;
+}
+
+.home-apply-card {
+  display: flex;
+  flex-direction: column;
+  padding: 8rpx 0;
+  min-height: 88rpx;
+  border-radius: var(--eas-radius-control);
+}
+
+.home-apply-card.is-pressed {
+  background-color: transparent !important;
+}
+
+.home-apply-pic {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 20rpx;
+  overflow: hidden;
+  box-shadow: 6rpx 6rpx 0 var(--eas-shade);
+  background-color: var(--eas-tab);
+  margin-bottom: 14rpx;
+  transition: transform var(--eas-dur-fast) var(--eas-ease), box-shadow var(--eas-dur-fast) var(--eas-ease);
+}
+
+.home-apply-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.home-apply-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--eas-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-apply-card.is-pressed .home-apply-pic {
+  transform: translate(4rpx, 4rpx);
+  box-shadow: 2rpx 2rpx 0 var(--eas-shade);
+}
+
+/* 最近通知 */
+.notice-row {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--eas-rule);
+  min-height: 104rpx;
+}
+
+.notice-row:last-child {
+  border-bottom: none;
+}
+
+.notice-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background-color: var(--eas-rust);
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.notice-content {
+  min-width: 0;
+}
+
+.notice-title {
+  font-size: 28rpx;
+  line-height: 1.4;
+}
+
+.notice-title.is-unread {
+  font-weight: 600;
+  color: var(--eas-ink);
+}
+
+.notice-title.is-read {
+  font-weight: 400;
+  color: var(--eas-ink-2);
+}
+
+.notice-time {
+  font-size: 24rpx;
+  color: var(--eas-ink-3);
+  margin-top: 6rpx;
+}
+
+/* 统计报表单据 */
+.stats-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 104rpx;
+  padding: 28rpx 32rpx;
+}
+
+.stats-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--eas-ink);
+}
+
+.stats-action {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--eas-link);
+}
 </style>
