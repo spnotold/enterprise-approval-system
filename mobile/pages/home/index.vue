@@ -10,6 +10,7 @@ import { notice } from '@/stores/notice'
 import { applyIllustrationUrl } from '@/utils/applyIllustration'
 import { APP_STATUS_LABEL, APP_STATUS_ORDER, APP_TYPE_LABEL } from '@/utils/labels'
 import { go, goAppList, goForm, goTaskHandle, openLink } from '@/utils/nav'
+import { formatCents } from '@/lib/money'
 import { fmtShort } from '@/utils/time'
 import {
   createInitialHomeState,
@@ -145,10 +146,10 @@ function startTemplate(t: TemplateOption): void {
       <image
         class="home-banner-bg"
         src="/static/illustrations/m-home-banner.jpg"
-        mode="aspectFill"
+        mode="scaleToFill"
       />
       <view class="home-banner-content">
-        <view class="home-banner-greeting display">{{ greeting }}，{{ me?.realName ?? '' }}</view>
+        <view class="home-banner-greeting display ellipsis">{{ greeting }}，{{ me?.realName ?? '' }}</view>
         <view class="home-banner-sub">
           <text v-if="me?.deptName">{{ me.deptName }}</text>
           <text v-if="me?.deptName && canHandle && pendingCount > 0" class="home-banner-sep">　</text>
@@ -196,6 +197,7 @@ function startTemplate(t: TemplateOption): void {
                 <text>{{ t.applicant.realName }}</text>
                 <text class="task-meta-space">　</text>
                 <text>{{ fmtShort(t.createdAt) }}</text>
+                <text v-if="t.amountCents !== null" class="task-amount amount">¥{{ formatCents(t.amountCents) }}</text>
               </view>
             </view>
             <view class="task-action-btn inked">处理</view>
@@ -341,25 +343,23 @@ function startTemplate(t: TemplateOption): void {
   background-color: var(--eas-sheet);
 }
 
+/* 按原图比例（900×488）定宽高、贴右放，横幅比图窄时裁掉左边的天空，行人始终在右侧 */
 .home-banner-bg {
   position: absolute;
   right: 0;
   top: 0;
-  width: 100%;
   height: 100%;
+  width: 701rpx;
+  min-width: 100%;
   display: block;
 }
 
-/* #ifdef H5 */
-.home-banner-bg :deep(img) {
-  object-position: right center !important;
-}
-/* #endif */
-
+/* 文字只占左上的天空：限宽、单行省略，长姓名不会把副行挤到山上 */
 .home-banner-content {
   position: relative;
   z-index: 1;
-  padding: 38rpx 36rpx;
+  max-width: 62%;
+  padding: 38rpx 0 0 36rpx;
   display: flex;
   flex-direction: column;
 }
@@ -378,6 +378,8 @@ function startTemplate(t: TemplateOption): void {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  max-height: 2.8em;
+  overflow: hidden;
 }
 
 .home-banner-num {
@@ -438,6 +440,13 @@ function startTemplate(t: TemplateOption): void {
   color: var(--eas-ink);
   flex: 1;
   min-width: 0;
+}
+
+.task-amount {
+  margin-left: auto;
+  padding-left: 16rpx;
+  font-size: 28rpx;
+  color: var(--eas-ink);
 }
 
 .task-meta {
@@ -529,7 +538,7 @@ function startTemplate(t: TemplateOption): void {
 }
 
 .status-seg--withdrawn {
-  background-color: var(--eas-ink-2);
+  background-color: var(--eas-muted);
 }
 
 .status-grid {

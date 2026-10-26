@@ -61,3 +61,21 @@ test('自定义模板：未匹配到任何规则时使用兜底 generic', () => 
   assert.equal(resolveApplyIllustrationKey(emptyTpl), 'generic')
   assert.equal(applyIllustrationUrl(emptyTpl), '/static/illustrations/apply-generic.jpg')
 })
+
+test('优先级：业务类型 > 编码 > 名称；编码按完整分段、不分大小写', () => {
+  // 内置类型优先于编码和名称
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'TRAVEL', code: 'TRAVEL_EXTRA', name: '补充采购' }), 'travel')
+  // 编码优先于名称
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'custom_leave', name: '用章申请' }), 'leave')
+  // 名称里「报销」排在「差旅」前面
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'C_9', name: '差旅报销' }), 'expense')
+  // 只认完整分段：TIMESTAMP 不是 STAMP，SEALANT 不是 SEAL
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'TIMESTAMP', name: '记录' }), 'generic')
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'SEALANT', name: '密封胶' }), 'generic')
+  // 编码别名与自定义的采购 / 差旅 / 报销
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'IT_PROCUREMENT', name: '设备' }), 'purchase')
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'BIZ_TRIP', name: '外勤' }), 'travel')
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'REIMBURSE', name: '费用' }), 'expense')
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'C_10', name: '办公用品采购' }), 'purchase')
+  assert.equal(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'C_11', name: '出差申请' }), 'travel')
+})
