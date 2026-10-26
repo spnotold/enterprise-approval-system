@@ -284,8 +284,8 @@ function beforeToday(d: Date) {
     @delete="draft.removeDraft"
   >
     <el-form label-position="top" class="purchase-form" @submit.prevent>
-      <section class="form-section">
-        <h3 class="section-title">申请信息</h3>
+      <section class="sheet-section">
+        <h3 class="section-title"><i class="ink-glyph ink-glyph--sun" aria-hidden="true" />申请信息</h3>
         <el-form-item label="标题" required :error="err('title')">
           <el-input v-model="model.title" maxlength="100" show-word-limit placeholder="如：研发部采购开发用笔记本电脑" />
         </el-form-item>
@@ -312,13 +312,13 @@ function beforeToday(d: Date) {
         </el-row>
       </section>
 
-      <section class="form-section">
+      <section class="sheet-section">
         <h3 class="section-title">采购明细</h3>
         <div v-if="err('items')" class="field-error field-error-msg">{{ err('items') }}</div>
         <ItemTable v-model="model.items" :error="err" />
       </section>
 
-      <section class="form-section">
+      <section class="sheet-section">
         <div class="card-head">
           <h3 class="section-title">报价比较</h3>
           <el-switch v-model="model.singleSource" active-text="单一来源采购" />
@@ -342,7 +342,7 @@ function beforeToday(d: Date) {
         <QuoteTable v-model="model.quotes" v-model:selected="model.selectedQuoteIndex" :error="err" />
       </section>
 
-      <section class="form-section">
+      <section class="sheet-section">
         <h3 class="section-title">采购选择</h3>
         <el-form-item label="拟选供应商" required :error="err('selectedQuoteIndex')">
           <div v-if="selectedQuote" class="selected">
@@ -369,7 +369,7 @@ function beforeToday(d: Date) {
         </el-form-item>
       </section>
 
-      <section class="form-section">
+      <section class="sheet-section">
         <h3 class="section-title">附件</h3>
         <el-form-item label="其他附件" :error="err('attachmentIds')">
           <AttachmentUploader v-model="model.attachments" ref-type="PURCHASE_ATTACHMENT" :max-count="20" />

@@ -152,7 +152,7 @@ function remove(i: number) {
 }
 .table-scroll:focus-visible,
 .table-foot :deep(.el-button:focus-visible) {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .table--edit {
@@ -172,18 +172,27 @@ function remove(i: number) {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+/* 登记簿金额：展示字 16，右对齐 */
+.table :deep(.money) {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* 合计行：row-hover 底 + 裁切虚线，金额展示字右对齐 */
 .total-row {
   display: flex;
   justify-content: flex-end;
   align-items: baseline;
   gap: 16px;
-  padding: 12px 24px;
+  padding: 12px var(--eas-sheet-pad);
   background: var(--eas-row-hover);
   color: var(--eas-ink-2);
-  border-top: 1px solid var(--eas-rule);
+  border-top: 2px dashed var(--eas-rule);
 }
 .total-row :deep(.money) {
-  font-family: var(--eas-font-serif);
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--eas-ink);

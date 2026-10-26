@@ -1,0 +1,8 @@
+Use case: website spot illustration for an entry tile on the "start an application" grid of an enterprise approval system. It is one of a matching set of six.
+Asset type: 4:3 spot illustration, 1024x768, shown about 200x150 px at the top of a card.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: a clipboard holding a blank form with plain lines, a pencil lying across it.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified geometric forms, minimal facial detail, one hard-edged shadow tone per shape, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream paper, mustard yellow, burnt orange / rust, navy and slate blue, sage green, pale sky blue. Keep it muted.
+Composition: one still-life subject centered, filling about 60% of the frame. Background identical across the set: plain flat warm cream wall in the upper two-thirds and a flat muted sage-green tabletop in the lower third, with one hard shadow falling to the right. Nothing else.
+Constraints: no text, letters, numbers, logos, watermark or border; no writing on any paper (only plain lines); natural hands and anatomy; not photorealistic, not 3D.

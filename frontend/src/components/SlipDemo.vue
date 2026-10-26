@@ -147,10 +147,6 @@ onBeforeUnmount(() => {
           <span class="amount-label">金额</span>
           <strong>¥12,800.00</strong>
         </div>
-        <span
-          v-if="step.showPassedStamp"
-          class="passed-stamp stamp-enter"
-        >{{ SLIP_PASSED_STAMP_TEXT }}</span>
       </div>
 
       <div class="signature-part">
@@ -176,6 +172,10 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </div>
+      <span
+        v-if="step.showPassedStamp"
+        class="passed-stamp stamp-enter"
+      >{{ SLIP_PASSED_STAMP_TEXT }}</span>
     </div>
     <p class="slip-caption">{{ SLIP_NOTE }}</p>
   </div>
@@ -183,15 +183,14 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .slip-demo {
-  width: min(540px, 100%);
+  width: min(480px, 100%);
   container: auth-slip / inline-size;
-  pointer-events: auto;
 }
 .specimen-sheet {
   position: relative;
   box-sizing: border-box;
-  overflow: hidden;
   width: 100%;
+  box-shadow: 8px 8px 0 var(--eas-shade);
   opacity: 1;
   transition: opacity var(--eas-dur) var(--eas-ease);
 }
@@ -200,41 +199,41 @@ onBeforeUnmount(() => {
 }
 
 .specimen-head {
-  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px 24px;
-  padding: 22px 24px 18px;
+  align-items: end;
+  gap: 4px 16px;
+  padding: 20px 22px 14px;
 }
 .specimen-copy {
-  min-width: 0;
+  display: contents;
 }
 .specimen-kind {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 2px 14px;
   color: var(--eas-ink-2);
-  font-size: var(--eas-fs-sm);
-}
-.specimen-kind > span {
-  white-space: nowrap;
-  word-break: keep-all;
+  font-size: var(--eas-fs-note);
 }
 .specimen-number {
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .specimen-title {
-  margin: 2px 0 8px;
-  font-family: var(--eas-font-serif);
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.35;
+  grid-column: 1 / -1;
+  font-family: var(--eas-font-display);
+  font-size: calc(var(--eas-fs-lg) + 6px);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: var(--eas-display-tracking);
 }
 .specimen-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px;
+  gap: 4px 16px;
   color: var(--eas-ink-2);
+  font-size: var(--eas-fs-note);
 }
 .specimen-meta b {
   margin-left: 6px;
@@ -242,130 +241,139 @@ onBeforeUnmount(() => {
   font-weight: 400;
 }
 .specimen-amount {
-  display: flex;
-  flex-direction: column;
-  align-self: end;
-  padding-top: 44px;
   text-align: right;
   white-space: nowrap;
 }
 .amount-label {
+  display: inline-block;
+  margin-right: 6px;
   color: var(--eas-ink-3);
   font-size: var(--eas-fs-xs);
 }
 .specimen-amount strong {
-  font-family: var(--eas-font-serif);
-  font-size: 22px;
+  font-family: var(--eas-font-display);
+  font-size: calc(var(--eas-fs-lg) + 4px);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+  letter-spacing: var(--eas-display-tracking);
 }
 
 .signature-part {
-  padding: 16px 24px 20px;
-  border-top: 1px solid var(--eas-rule);
+  padding: 0 22px 32px;
 }
 .signature-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  overflow: hidden;
-  border: 1px solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
+  gap: 10px;
 }
 .signature-cell {
   position: relative;
   min-width: 0;
-  min-height: 88px;
+  min-height: 92px;
   box-sizing: border-box;
-  padding: 10px 14px 12px;
-  border-right: 1px solid var(--eas-rule-strong);
-  background: var(--eas-sheet);
+  padding: 10px 12px 12px;
+  border-radius: calc(var(--eas-radius-control) + 2px);
   transition:
     background-color var(--eas-dur) var(--eas-ease),
-    color var(--eas-dur) var(--eas-ease);
-}
-.signature-cell:last-child {
-  border-right: 0;
+    box-shadow var(--eas-dur) var(--eas-ease);
 }
 .signature-cell.current {
-  z-index: 1;
-  background: var(--eas-primary-tint);
-  outline: 1.5px dashed var(--eas-primary);
-  outline-offset: -5px;
+  background: var(--eas-mustard-tint);
+  box-shadow: var(--eas-offset-mark);
+}
+.signature-cell.approved {
+  background: var(--eas-sage-tint);
+}
+.signature-cell.waiting {
+  background: var(--eas-tab);
+  color: var(--eas-ink-3);
 }
 .cell-node {
-  padding-right: 48px;
-  color: var(--eas-ink-3);
-  font-size: var(--eas-fs-xs);
-  line-height: 1.3;
-  white-space: nowrap;
-}
-.current .cell-node {
+  position: relative;
+  z-index: 1;
   color: var(--eas-ink-2);
+  font-size: var(--eas-fs-xs);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.waiting .cell-node {
+  color: var(--eas-ink-3);
 }
 .cell-person {
-  margin-top: 6px;
-  font-size: var(--eas-fs-nav);
-  font-weight: 600;
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  font-family: var(--eas-font-display);
+  font-size: calc(var(--eas-fs-lg) + 1px);
+  font-weight: 400;
   line-height: 1.2;
-  white-space: nowrap;
+  letter-spacing: var(--eas-display-tracking);
+}
+.cell-time,
+.cell-state {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-xs);
+  line-height: 1.3;
 }
 .cell-time {
-  color: var(--eas-ink-3);
-  font-size: var(--eas-fs-xs);
   font-variant-numeric: tabular-nums;
-  line-height: 1.3;
-  white-space: nowrap;
 }
-.cell-state {
-  margin-top: 6px;
+.waiting .cell-state {
   color: var(--eas-ink-3);
-  font-size: var(--eas-fs-note);
-  line-height: 1.3;
 }
 .current .cell-state {
-  color: var(--eas-primary);
+  color: var(--eas-ink);
 }
 
 .cell-stamp,
 .passed-stamp {
   position: absolute;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   box-sizing: border-box;
-  border: 1.5px solid var(--eas-success);
-  color: var(--eas-success);
-  font-family: var(--eas-font-serif);
-  font-weight: 600;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-family: var(--eas-font-display);
+  font-weight: 400;
   line-height: 1;
   white-space: nowrap;
   user-select: none;
+  -webkit-mask-image: var(--eas-stamp-mask);
+  mask-image: var(--eas-stamp-mask);
+  mask-size: 100% 100%;
 }
 .cell-stamp {
-  top: 7px;
-  right: 10px;
-  padding: 2px 6px;
-  border-radius: var(--eas-radius-tag);
+  top: 6px;
+  right: 6px;
+  width: 40px;
+  height: 40px;
+  color: var(--eas-success);
   font-size: var(--eas-fs-note);
-  letter-spacing: 0.16em;
-  text-indent: 0.16em;
-  transform: rotate(-6deg);
+  transform: rotate(-12deg);
 }
 .passed-stamp {
-  top: 16px;
-  right: 22px;
-  padding: 7px 12px;
-  border-width: 2px;
-  border-radius: var(--eas-radius-panel);
-  box-shadow:
-    inset 0 0 0 2px var(--eas-sheet),
-    inset 0 0 0 3px var(--eas-success);
+  z-index: 2;
+  right: 24px;
+  bottom: -42px;
+  width: 84px;
+  height: 84px;
+  border-width: 3px;
+  color: var(--eas-rust);
   font-size: var(--eas-fs-lg);
-  letter-spacing: 0.2em;
-  text-indent: 0.2em;
-  opacity: 0.9;
-  transform: rotate(-8deg);
+  letter-spacing: var(--eas-display-tracking);
+  transform: rotate(-10deg);
+  pointer-events: none;
+}
+.passed-stamp::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1.5px solid currentColor;
+  border-radius: inherit;
 }
 .cell-stamp.stamp-enter {
   animation: cell-stamp-in var(--eas-dur-stamp) var(--eas-ease) both;
@@ -376,109 +384,128 @@ onBeforeUnmount(() => {
 @keyframes cell-stamp-in {
   from {
     opacity: 0;
-    transform: rotate(-6deg) scale(1.15);
+    transform: rotate(-12deg) scale(1.15);
   }
   to {
     opacity: 1;
-    transform: rotate(-6deg) scale(1);
+    transform: rotate(-12deg) scale(1);
   }
 }
 @keyframes passed-stamp-in {
   from {
     opacity: 0;
-    transform: rotate(-8deg) scale(1.15);
+    transform: rotate(-10deg) scale(1.15);
   }
   to {
-    opacity: 0.9;
-    transform: rotate(-8deg) scale(1);
+    opacity: 1;
+    transform: rotate(-10deg) scale(1);
   }
 }
 
 .slip-caption {
-  margin: 12px 0 0;
+  width: fit-content;
+  margin: 52px 0 0;
+  padding: 2px 8px;
+  border-radius: var(--eas-radius-pill);
+  background: var(--eas-sheet);
   color: var(--eas-ink-2);
-  font-size: var(--eas-fs-xs);
+  font-size: var(--eas-fs-note);
 }
 
-/* Query the paper's available width after the aside's own gutters. */
-@container auth-slip (inline-size < 520px) {
+@container auth-slip (inline-size < 440px) {
   .specimen-head {
-    position: static;
     grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-    padding: 18px 16px 15px;
-  }
-  .specimen-kind {
-    gap: 2px 8px;
-    font-size: var(--eas-fs-xs);
+    padding: 18px 16px 14px;
   }
   .specimen-title {
-    font-size: var(--eas-fs-lg);
-  }
-  .specimen-meta {
-    gap: 14px;
-    font-size: var(--eas-fs-xs);
-  }
-  .specimen-amount strong {
-    font-size: var(--eas-fs-lg);
+    font-size: calc(var(--eas-fs-lg) + 1px);
   }
   .specimen-amount {
-    padding-top: 0;
-    text-align: left;
+    text-align: right;
   }
   .signature-part {
-    /* Keep the final seal's space through every animation step. */
-    padding: 14px 16px 68px;
+    padding: 0 16px 32px;
   }
   .signature-cell {
     padding-right: 8px;
     padding-left: 8px;
   }
-  .cell-node {
-    padding-right: 35px;
-  }
   .cell-stamp {
-    right: 8px;
-    padding: 2px;
+    top: 6px;
+    right: 4px;
+    width: 32px;
+    height: 32px;
     font-size: var(--eas-fs-xs);
-    letter-spacing: 0;
-    text-indent: 0;
-  }
-  .passed-stamp {
-    top: auto;
-    right: 16px;
-    bottom: 20px;
-    font-size: var(--eas-fs-md);
   }
 }
 
-/* Below this width three cells would each have less than 112px. */
 @container auth-slip (inline-size < 372px) {
   .specimen-head {
     padding: 14px 12px;
   }
   .specimen-title {
-    font-size: var(--eas-fs-md);
+    font-size: var(--eas-fs-lg);
   }
   .signature-part {
-    padding: 12px 12px 64px;
+    padding: 0 12px 32px;
   }
   .signature-row {
     grid-template-columns: minmax(0, 1fr);
-    grid-auto-rows: 1fr;
   }
   .signature-cell {
-    border-right: 0;
-    border-bottom: 1px solid var(--eas-rule-strong);
+    min-height: 82px;
+    padding: 10px 12px;
   }
-  .signature-cell:last-child {
-    border-bottom: 0;
+  .cell-person,
+  .cell-time {
+    padding-right: 42px;
+  }
+  .cell-stamp {
+    top: 6px;
+    right: 8px;
+    width: 40px;
+    height: 40px;
   }
   .passed-stamp {
     right: 12px;
-    bottom: 18px;
-    padding: 6px 9px;
-    font-size: var(--eas-fs-sm);
+    bottom: -36px;
+    width: 72px;
+    height: 72px;
+    font-size: var(--eas-fs-md);
+  }
+}
+
+@container auth-slip (inline-size < 200px) {
+  .specimen-kind,
+  .specimen-meta {
+    font-size: var(--eas-fs-xs);
+  }
+  .specimen-title,
+  .specimen-amount strong {
+    font-size: var(--eas-fs-md);
+  }
+  /* 太窄时「金额」叠在数字上面，免得金额伸出纸边 */
+  .specimen-amount {
+    white-space: normal;
+  }
+  .amount-label {
+    display: block;
+    margin-right: 0;
+  }
+  .cell-person,
+  .cell-time {
+    padding-right: 0;
+  }
+  .cell-stamp {
+    position: static;
+    margin-top: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-stamp.stamp-enter,
+  .passed-stamp.stamp-enter {
+    animation: none;
   }
 }
 </style>

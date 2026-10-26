@@ -105,28 +105,35 @@ function viewAll() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   border: none;
-  border-radius: var(--eas-radius-control);
-  background: transparent;
+  border-radius: 50%;
+  background: var(--eas-sheet);
+  box-shadow: 3px 3px 0 var(--eas-shade);
   cursor: pointer;
   color: var(--eas-ink);
-  transition: background var(--eas-dur-fast) var(--eas-ease);
+  transition:
+    transform var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 .bell:hover {
-  background: var(--eas-paper);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--eas-shade);
 }
 .bell:active {
-  background: var(--eas-paper-deep);
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--eas-shade);
 }
 .bell-badge :deep(.el-badge__content) {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  border: 1px solid var(--eas-surface);
-  background: var(--eas-danger);
+  border: 0;
+  background-color: var(--eas-rust);
+  background-image: var(--eas-grain);
+  background-blend-mode: multiply;
   font-size: var(--eas-fs-xs);
   line-height: 14px;
   font-variant-numeric: tabular-nums;

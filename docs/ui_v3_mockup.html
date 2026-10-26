@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>界面样稿：套色（v3）</title>
+<!-- 静态样稿，仅作视觉参照。每个 .frame 是一屏 1440×900。风格规则见 .agents/skills/frontend-design/SKILL.md；插画由 site-illustration skill 生成，位于 frontend/src/assets/illustrations/。 -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&family=Fraunces:opsz,wght,SOFT@9..144,600,100&display=swap" rel="stylesheet" />
+<style>
+:root {
+  /* 纸 */
+  --page: #f1ece1;
+  --paper: #fbf6ea;
+  --paper-lo: #efe5cf;
+  --shade: #d8caab;
+  --rule: #e7dcc4;
+  /* 墨 */
+  --ink: #22313f;
+  --ink-deep: #111c26;
+  --ink-2: #5b6670;
+  --ink-3: #5c646b;
+  --mustard: #d9a441;
+  --mustard-deep: #a97a22;
+  --mustard-tint: #f4e2b3;
+  --rust: #a94a2c;
+  --rust-deep: #7a3320;
+  --sage: #a3b590;
+  --sage-tint: #e2e9d6;
+  --sage-ink: #3f5a38;
+  --sky: #b3cbd5;
+  --slate: #3b6684;
+  --display: 'Fraunces', 'Noto Serif SC', serif;
+  --sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', system-ui, sans-serif;
+  /* 套色颗粒：只叠在有颜色的墨块上（multiply），纸面和文字保持干净 */
+  --grain: url(../frontend/src/assets/textures/grain.png);
+  /* 印章的残缺：噪声遮罩，墨色有缺有浅 */
+  --stamp-mask: url(../frontend/src/assets/textures/stamp-mask.png);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #8c877c; font-family: var(--sans); color: var(--ink); font-size: 14px; line-height: 1.65; }
+.label { font: 600 13px var(--sans); color: #fbf6ea; margin: 20px 0 8px; }
+.frame { width: 1440px; height: 900px; overflow: hidden; position: relative; margin: 0 0 24px; background: var(--page); }
+/* 背景：一张很淡的风景铺满页面；有 WebGL 时由画布重绘并加上风吹草地的效果，叶子另走一层 2D 画布（见底部脚本） */
+.scenery { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(rgba(241, 236, 225, 0.28), rgba(241, 236, 225, 0.28)), url(../frontend/src/assets/illustrations/bg-meadow.webp) center bottom / cover no-repeat; }
+canvas.breeze { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.frame > .top, .frame > .page, .frame > .art, .frame > .form { position: relative; z-index: 1; }
+.num { font-variant-numeric: tabular-nums lining-nums; }
+.display { font-family: var(--display); font-weight: 600; font-variation-settings: 'SOFT' 100; }
+a { color: inherit; text-decoration: none; }
+.inked { background-image: var(--grain); background-blend-mode: multiply; }
+
+/* ── 顶栏 ── */
+.top { height: 72px; display: flex; align-items: center; gap: 40px; padding: 0 48px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.mark { position: relative; width: 34px; height: 34px; }
+.mark::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--mustard); transform: translate(3px, 3px); }
+.mark span { position: absolute; inset: 0; border-radius: 50%; background-color: var(--rust); color: var(--paper); display: grid; place-items: center; font: 400 18px var(--display); }
+.brand-name { font: 600 21px var(--display); letter-spacing: -0.02em; }
+.nav { display: flex; gap: 10px; height: 72px; align-items: center; }
+.nav a { position: relative; display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; color: var(--ink-2); font-size: 15px; isolation: isolate; }
+.nav a:hover { color: var(--ink); }
+/* 当前栏目：一块芥黄色墨斑垫在字后面，边缘不规则，像手刷上去的 */
+.nav a.on { color: var(--ink); font-weight: 600; }
+.nav a.on::before { content: ''; position: absolute; inset: 3px 0 1px; z-index: -1; background-color: var(--mustard-tint); background-image: var(--grain); background-blend-mode: multiply; border-radius: 58% 42% 55% 45% / 62% 48% 52% 38%; transform: rotate(-2deg); }
+.count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; font: 600 12px/1 var(--display); background-color: var(--mustard); color: var(--ink); }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 18px; }
+.bell { position: relative; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--paper); box-shadow: 3px 3px 0 var(--shade); color: var(--ink); }
+.bell b { position: absolute; top: -3px; right: -5px; font: 600 11px/18px var(--display); padding: 0 6px; border-radius: 9px; background-color: var(--rust); color: var(--paper); }
+.me { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; background-color: var(--sage); color: var(--ink); display: grid; place-items: center; font: 400 17px var(--display); }
+
+.page { max-width: 1264px; margin: 0 auto; padding: 10px 48px 40px; }
+h1 { font: 600 44px/1.15 var(--display); font-variation-settings: 'SOFT' 100; margin: 0; letter-spacing: 0.01em; }
+
+/* ── 单据：纸色平涂 + 一层硬投影，不描边 ── */
+.sheet { background: var(--paper); border-radius: 16px; box-shadow: 6px 6px 0 var(--shade); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px 10px; }
+.sheet-head h2 { margin: 0; font: 400 21px var(--display); letter-spacing: 0.01em; display: flex; align-items: center; gap: 10px; }
+.more { font-size: 13px; font-weight: 600; color: var(--slate); text-decoration: underline; text-decoration-color: var(--mustard); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.more:hover { color: var(--ink); }
+/* 小节标题前的两色小图形：两块墨叠印（multiply），每张单据一个 */
+.glyph { position: relative; width: 22px; height: 20px; flex: none; }
+.glyph::before, .glyph::after { content: ''; position: absolute; mix-blend-mode: multiply; }
+.g-sun::before { left: 0; top: 3px; width: 15px; height: 15px; border-radius: 50%; background: var(--mustard); }
+.g-sun::after { left: 8px; top: 0; width: 14px; height: 9px; border-radius: 14px 14px 0 0; background: var(--rust); }
+.g-leaf::before { left: 0; top: 2px; width: 16px; height: 16px; border-radius: 0 100% 0 100%; background: var(--sage); }
+.g-leaf::after { left: 9px; top: 7px; width: 12px; height: 12px; border-radius: 50%; background: var(--sky); }
+.g-hill::before { left: 0; top: 6px; width: 22px; height: 12px; border-radius: 12px 12px 0 0; background: var(--sky); }
+.g-hill::after { left: 11px; top: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--rust); }
+.g-bell::before { left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--sky); }
+.g-bell::after { left: 8px; top: 7px; width: 14px; height: 12px; border-radius: 3px 3px 7px 7px; background: var(--mustard); }
+
+/* ── 按钮：胶囊色块 + 颗粒 + 硬投影；悬停抬起，按下沉进投影 ── */
+.btn { height: 38px; padding: 0 20px; border-radius: 19px; border: 0; font: 600 14px var(--sans); display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; background-image: var(--grain); background-blend-mode: multiply; transition: transform 120ms cubic-bezier(0.2, 0, 0, 1), box-shadow 120ms cubic-bezier(0.2, 0, 0, 1); }
+.btn:hover, .btn.is-hover { transform: translate(-1px, -1px); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--sh) !important; }
+.btn.primary { --sh: var(--ink-deep); background-color: var(--ink); color: var(--paper); box-shadow: 3px 3px 0 var(--sh); }
+.btn.accent { --sh: var(--mustard-deep); background-color: var(--mustard); color: var(--ink); box-shadow: 3px 3px 0 var(--sh); }
+.btn.danger { --sh: var(--rust-deep); background-color: var(--rust); color: var(--paper); box-shadow: 3px 3px 0 var(--sh); }
+.btn.paper { --sh: var(--shade); background-image: none; background-color: var(--paper); color: var(--ink); box-shadow: 3px 3px 0 var(--sh); }
+.btn:hover.primary, .btn:hover.accent, .btn:hover.danger, .btn:hover.paper, .btn.is-hover { box-shadow: 4px 4px 0 var(--sh); }
+.btn.sm { height: 30px; padding: 0 14px; border-radius: 15px; font-size: 13px; }
+
+/* ── 状态：实心色块胶囊 ── */
+.tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 11px; font-size: 12px; font-weight: 600; white-space: nowrap; background-image: var(--grain); background-blend-mode: multiply; }
+.tag.run { background-color: var(--sky); color: var(--ink); }
+.tag.ok { background-color: var(--sage); color: var(--ink); }
+.tag.no { background-color: var(--rust); color: var(--paper); }
+.tag.draft { background-color: var(--paper-lo); color: var(--ink-2); }
+.tag.late { background-color: var(--mustard); color: var(--ink); }
+
+/* ── 登记簿 ── */
+table.reg { width: 100%; border-collapse: collapse; }
+.reg th { text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 10px 16px 8px; border-bottom: 2px solid var(--ink); }
+.reg td { padding: 13px 16px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.reg tr:last-child td { border-bottom: 0; }
+.reg th:first-child, .reg td:first-child { padding-left: 26px; }
+.reg th:last-child, .reg td:last-child { padding-right: 24px; }
+.reg .r { text-align: right; }
+.reg .t1 { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.reg .t2 { font-size: 12px; color: var(--ink-3); }
+.reg .amt { font: 600 16px var(--display); font-variation-settings: 'SOFT' 100; }
+.reg tr.hover td { background: var(--paper-lo); }
+.reg tr.hover td:first-child { box-shadow: inset 5px 0 0 var(--mustard); }
+.reg .act { visibility: hidden; }
+.reg tr.hover .act { visibility: visible; }
+.dim { color: var(--ink-3); }
+
+/* ── 输入 ── */
+.input { height: 44px; border-radius: 12px; background: #fffcf4; box-shadow: inset 0 0 0 1.5px var(--shade); display: flex; align-items: center; padding: 0 14px; color: var(--ink-3); }
+/* 聚焦：墨线框 + 芥黄错版 */
+.input.focus { box-shadow: inset 0 0 0 2px var(--ink), 4px 4px 0 var(--mustard); color: var(--ink); }
+
+/* ── 登录 ── */
+.auth { display: grid; grid-template-columns: 1fr 500px; }
+.art { position: relative; margin: 24px 0 30px 24px; border-radius: 20px; background: #eadcbe center / cover no-repeat; box-shadow: 8px 8px 0 var(--shade); }
+.demo { position: absolute; left: 56px; top: 60px; width: 430px; padding: 20px 22px 22px; background: var(--paper); border-radius: 16px; box-shadow: 8px 8px 0 rgba(34, 49, 63, 0.22); }
+.kind { font-size: 12px; color: var(--ink-3); display: flex; gap: 12px; }
+.demo h3 { font: 400 26px/1.3 var(--display); letter-spacing: 0.01em; margin: 4px 0 2px; }
+.demo .meta { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
+.demo .meta b { font: 600 24px var(--display); font-variation-settings: 'SOFT' 100; color: var(--ink); }
+.demo .sign .cell { min-height: 82px; padding: 10px 14px; }
+.demo .sign .cell .who { font-size: 17px; }
+.seal { position: absolute; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--rust); color: var(--rust); display: grid; place-items: center; font: 400 20px var(--display); letter-spacing: 0.04em; transform: rotate(-11deg); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
+.seal::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; border: 1.5px solid var(--rust); }
+.demo .seal { right: 34px; bottom: -26px; }
+.seal[hidden] { display: none; }
+/* 登录页流转演示（与 SlipDemo.vue 同一套四步）：处理中 = 芥黄错版，同意 = 鼠尾草浅底 + 小章，未到 = 暗纸 */
+.demo .sign .cell { transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1), box-shadow 200ms cubic-bezier(0.2, 0, 0, 1); }
+.cell.current { background-color: var(--mustard-tint); box-shadow: 4px 4px 0 var(--mustard); }
+.cell.current p { color: var(--ink); }
+.cell.approved { background: var(--sage-tint); }
+.cell.waiting { background: var(--paper-lo); }
+.cell.waiting p { color: var(--ink-3); }
+.demo .stamp { width: 44px; height: 44px; right: 6px; top: 6px; font-size: 13px; border-width: 2px; }
+.stamp-in { animation: stamp-in 240ms cubic-bezier(0.2, 0, 0, 1) both; }
+@keyframes stamp-in { from { opacity: 0; scale: 1.15; } to { opacity: 1; scale: 1; } }
+.demo { transition: opacity 200ms; }
+.demo.resetting { opacity: 0.35; }
+@media (prefers-reduced-motion: reduce) { .stamp-in { animation: none; } .demo, .demo .sign .cell { transition: none; } }
+.form { padding: 52px 64px 40px 64px; display: flex; flex-direction: column; }
+.form h1 { font-size: 52px; margin: 84px 0 30px; }
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.btn.block { width: 100%; height: 46px; border-radius: 23px; font-size: 15px; margin-top: 10px; }
+.acc-hint { margin: 30px 0 10px; font-size: 13px; color: var(--ink-2); }
+.acc { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.acc span { border-radius: 12px; padding: 8px 14px; font-size: 14px; font-weight: 600; line-height: 1.4; background: var(--paper); box-shadow: 3px 3px 0 var(--shade); }
+.acc span small { display: block; color: var(--ink-3); font-size: 12px; font-weight: 400; }
+
+/* ── 工作台 ── */
+.banner { height: 236px; border-radius: 20px; background: #eadcbe right 28% / cover no-repeat; padding: 46px 0 0 48px; box-shadow: 6px 6px 0 var(--shade); }
+.banner h1 { font-size: 50px; }
+.banner p { margin: 12px 0 0; font-size: 15px; color: var(--ink-2); display: flex; align-items: center; gap: 16px; }
+.banner p b { font: 600 20px var(--display); font-variation-settings: 'SOFT' 100; color: var(--ink); }
+.wb { display: grid; grid-template-columns: 1fr 340px; gap: 28px; margin-top: 28px; }
+.col { display: grid; gap: 28px; align-content: start; }
+.starts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; padding: 8px 24px 24px; }
+.start { display: block; }
+.start .pic { display: block; border-radius: 12px; overflow: hidden; box-shadow: 4px 4px 0 var(--shade); transition: transform 120ms, box-shadow 120ms; }
+.start img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.start b { display: block; font: 400 19px var(--display); letter-spacing: 0.01em; margin-top: 10px; }
+.start span { font-size: 12px; color: var(--ink-3); }
+/* 悬停：抬起，投影换成芥黄（错版） */
+.start.hover .pic { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--mustard); }
+.ledger { padding: 2px 24px 22px; }
+.bar { display: flex; height: 18px; border-radius: 9px; overflow: hidden; margin: 4px 0 12px; gap: 3px; }
+.bar i { display: block; height: 100%; background-image: var(--grain); background-blend-mode: multiply; }
+.lrow { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--rule); }
+.lrow .sw { width: 12px; height: 12px; border-radius: 4px; }
+.lrow .n { margin-left: auto; font: 600 17px var(--display); font-variation-settings: 'SOFT' 100; }
+.total { margin-top: 14px; padding: 14px 18px; border-radius: 14px; background-color: var(--ink); color: var(--paper); background-image: var(--grain); background-blend-mode: multiply; box-shadow: 4px 4px 0 var(--mustard); }
+.total small { font-size: 12px; color: var(--sky); }
+.total div { font: 600 32px/1.2 var(--display); font-variation-settings: 'SOFT' 100; }
+.notes { padding: 0 24px 16px; }
+.note { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+.note:last-child { border-bottom: 0; }
+.note i { width: 9px; height: 9px; border-radius: 50%; background: var(--mustard); margin-top: 6px; flex: none; }
+.note i.read { background: transparent; }
+.note time { margin-left: auto; color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+
+/* ── 列表页 ── */
+.head { display: flex; align-items: flex-end; justify-content: space-between; margin: 10px 0 22px; }
+.tabs { display: flex; gap: 10px; margin-top: 18px; }
+.tab { height: 36px; padding: 0 18px; border-radius: 18px; display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px; background: var(--paper-lo); }
+.tab:hover { color: var(--ink); }
+/* 选中：藏青色块 + 芥黄错版 */
+.tab.on { background-color: var(--ink); color: var(--paper); font-weight: 600; box-shadow: 3px 3px 0 var(--mustard); background-image: var(--grain); background-blend-mode: multiply; }
+.toolbar { display: flex; align-items: center; gap: 22px; padding: 16px 24px 12px; }
+.search { height: 36px; width: 290px; border-radius: 18px; background: var(--paper-lo); display: flex; align-items: center; gap: 8px; padding: 0 16px; color: var(--ink-3); }
+.filter { display: flex; gap: 8px; font-size: 13px; }
+.filter span { height: 28px; padding: 0 12px; border-radius: 14px; display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.filter span.on { background: var(--mustard-tint); color: var(--ink); font-weight: 600; }
+.pager { display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 12px 24px 18px; font-size: 13px; color: var(--ink-2); }
+.pager b { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background-color: var(--ink); color: var(--paper); font: 600 14px var(--display); box-shadow: 2px 2px 0 var(--mustard); }
+
+/* ── 空状态 ── */
+.empty { padding: 52px 24px 60px; text-align: center; }
+.empty .pic { position: relative; width: 210px; height: 210px; margin: 0 auto 22px; }
+.empty .pic::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--mustard); transform: translate(9px, 9px); }
+.empty img { position: relative; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.empty h3 { font: 400 26px var(--display); letter-spacing: 0.01em; margin: 0 0 4px; }
+.empty p { margin: 0 0 20px; color: var(--ink-2); }
+
+/* ── 详情 ── */
+.doc { max-width: 1040px; margin: 0 auto; }
+.doc-head { padding: 28px 36px 22px; display: grid; grid-template-columns: 1fr auto; gap: 8px 32px; }
+.doc-head h1 { font-size: 38px; margin-top: 6px; }
+.doc-meta { display: flex; align-items: center; gap: 18px; font-size: 13px; color: var(--ink-2); margin-top: 10px; }
+.doc-meta b { color: var(--ink); font-weight: 600; }
+.amount { text-align: right; align-self: end; }
+.amount small { display: block; font-size: 12px; color: var(--ink-3); }
+.amount div { font: 600 44px/1.05 var(--display); font-variation-settings: 'SOFT' 100; }
+.block { padding: 18px 36px 26px; border-top: 2px dashed var(--rule); }
+.block h2 { margin: 0 0 14px; font: 400 21px var(--display); letter-spacing: 0.01em; display: flex; align-items: center; gap: 10px; }
+.block h2 small { margin-left: auto; font: 400 12px var(--sans); color: var(--ink-3); }
+/* 签批栏：一格一块色，格与格之间留纸缝；当前格芥黄并错版 */
+.sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cell { position: relative; padding: 14px 18px 16px; min-height: 128px; border-radius: 14px; }
+.cell small { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.cell .who { font: 400 21px var(--display); letter-spacing: 0.01em; margin-top: 2px; }
+.cell p { margin: 3px 0 0; font-size: 13px; color: var(--ink-2); }
+.cell.done { background: var(--sage-tint); }
+.cell.now { background-color: var(--mustard-tint); box-shadow: 4px 4px 0 var(--mustard); }
+.cell.now p { color: var(--ink); }
+.cell.wait { background: var(--paper-lo); }
+.cell.wait .who, .cell.wait p { color: var(--ink-3); }
+.stamp { position: absolute; right: 14px; top: 12px; width: 54px; height: 54px; border-radius: 50%; border: 2.5px solid var(--sage-ink); color: var(--sage-ink); display: grid; place-items: center; font: 400 16px var(--display); transform: rotate(-12deg); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
+.fields { display: grid; grid-template-columns: 96px 1fr 96px 1fr; gap: 10px 16px; margin: 0; }
+.fields dt { color: var(--ink-2); }
+.fields dd { margin: 0; }
+.fields .wide { grid-column: 2 / 5; }
+.actionbar { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: 72px; background: var(--paper); box-shadow: 0 -4px 0 var(--shade); display: flex; align-items: center; justify-content: center; }
+.actionbar > div { width: 1040px; display: flex; align-items: center; gap: 14px; }
+.actionbar p { margin: 0 auto 0 0; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.actionbar p b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- 顶栏（各屏共用） -->
+<template id="top-tpl">
+  <header class="top">
+    <a class="brand" href="#"><span class="mark"><span class="inked">审</span></span><span class="brand-name">企业审批</span></a>
+    <nav class="nav">
+      <a href="#" data-k="wb">工作台</a><a href="#" data-k="apply">申请</a><a href="#" data-k="task">审批<span class="count inked">4</span></a><a href="#" data-k="stats">统计</a><a href="#" data-k="admin">管理</a>
+    </nav>
+    <div class="top-right">
+      <span class="bell"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2c3 0 5 2.2 5 5.2v3.3l1.5 2.5h-13L4 10.5V7.2C4 4.2 6 2 9 2z" fill="currentColor"/><circle cx="9" cy="15.2" r="1.8" fill="currentColor"/></svg><b class="inked">3</b></span>
+      <span class="me"><span class="avatar inked">李</span>李研</span>
+    </div>
+  </header>
+</template>
+
+<p class="label">1　登录</p>
+<div class="frame auth">
+  <div class="scenery"></div>
+  <div class="art" style="background-image:url(../frontend/src/assets/illustrations/login.webp)">
+    <div class="demo" aria-hidden="true">
+      <div class="kind"><span>采购申请</span><span class="num">CG20261016000017</span></div>
+      <h3>研发部采购测试服务器扩容</h3>
+      <div class="meta"><span>王工　研发部</span><b class="num">¥12,800.00</b></div>
+      <div class="sign"></div>
+      <div class="seal" hidden>已通过</div>
+    </div>
+  </div>
+  <div class="form">
+    <a class="brand" href="#"><span class="mark"><span class="inked">审</span></span><span class="brand-name">企业审批</span></a>
+    <h1>登录</h1>
+    <div class="field"><label>用户名</label><div class="input focus">liyan</div></div>
+    <div class="field"><label>密码</label><div class="input">••••••••••</div></div>
+    <button class="btn primary block">登录</button>
+    <p style="font-size:13px;color:var(--ink-2);margin:16px 0 0">还没有账号？<a class="more" href="#">注册</a></p>
+    <p class="acc-hint">点一个账号自动填入，密码都是 Demo@2026</p>
+    <div class="acc">
+      <span>王工<small>研发部员工</small></span><span>李研<small>研发部负责人</small></span>
+      <span>吴审<small>财务</small></span><span>周总<small>企业负责人</small></span>
+    </div>
+  </div>
+</div>
+
+<p class="label">2　工作台</p>
+<div class="frame" data-on="wb">
+  <div class="scenery"></div>
+  <div class="page">
+    <section class="banner" style="background-image:url(../frontend/src/assets/illustrations/workbench-banner.webp)">
+      <h1>晚上好，李研</h1>
+      <p><span>10 月 26 日 星期一</span><span>有 <b class="num">4</b> 张单子等你审批</span></p>
+    </section>
+    <div class="wb">
+      <div class="col">
+        <section class="sheet">
+          <div class="sheet-head"><h2><i class="glyph g-sun"></i>待你审批</h2><a class="more" href="#">查看全部待办</a></div>
+          <table class="reg"><tbody>
+            <tr class="hover"><td><div class="t1">测试服务器扩容 <span class="tag late">已超时</span></div><div class="t2">采购申请　CG20261016000017</div></td><td>王工<div class="t2">研发部</div></td><td class="r"><span class="amt num">¥12,800.00</span><div class="t2">4 天前</div></td><td class="r"><button class="btn accent sm act">处理</button></td></tr>
+            <tr><td><div class="t1">上海客户现场支持</div><div class="t2">差旅申请　CL20261024000041</div></td><td>陈露<div class="t2">研发部</div></td><td class="r"><span class="amt num">¥3,460.00</span><div class="t2">昨天</div></td><td class="r"><button class="btn accent sm act">处理</button></td></tr>
+            <tr><td><div class="t1">10 月团建餐费</div><div class="t2">报销申请　BX20261024000043</div></td><td>赵一<div class="t2">研发部</div></td><td class="r"><span class="amt num">¥1,280.00</span><div class="t2">昨天</div></td><td class="r"><button class="btn accent sm act">处理</button></td></tr>
+          </tbody></table>
+        </section>
+        <section class="sheet">
+          <div class="sheet-head"><h2><i class="glyph g-leaf"></i>发起申请</h2><a class="more" href="#">全部类型</a></div>
+          <div class="starts">
+            <a class="start hover" href="#"><span class="pic"><img src="../frontend/src/assets/illustrations/apply-purchase.webp" alt="" /></span><b>采购申请</b><span>买东西先申请</span></a>
+            <a class="start" href="#"><span class="pic"><img src="../frontend/src/assets/illustrations/apply-travel.webp" alt="" /></span><b>差旅申请</b><span>出差前填</span></a>
+            <a class="start" href="#"><span class="pic"><img src="../frontend/src/assets/illustrations/apply-expense.webp" alt="" /></span><b>报销申请</b><span>附上发票</span></a>
+            <a class="start" href="#"><span class="pic"><img src="../frontend/src/assets/illustrations/apply-leave.webp" alt="" /></span><b>请假申请</b><span>休假前填</span></a>
+            <a class="start" href="#"><span class="pic"><img src="../frontend/src/assets/illustrations/apply-seal.webp" alt="" /></span><b>用章申请</b><span>盖章前填</span></a>
+          </div>
+        </section>
+      </div>
+      <div class="col">
+        <section class="sheet">
+          <div class="sheet-head"><h2><i class="glyph g-hill"></i>我的申请</h2><a class="more" href="#">全部</a></div>
+          <div class="ledger">
+            <div class="bar"><i style="width:20%;background-color:var(--sky)"></i><i style="width:60%;background-color:var(--sage)"></i><i style="width:20%;background-color:var(--paper-lo)"></i></div>
+            <div class="lrow"><span class="sw inked" style="background-color:var(--sky)"></span>审批中<span class="n num">1</span></div>
+            <div class="lrow"><span class="sw inked" style="background-color:var(--sage)"></span>已通过<span class="n num">3</span></div>
+            <div class="lrow"><span class="sw inked" style="background-color:var(--rust)"></span>已驳回<span class="n num">0</span></div>
+            <div class="lrow"><span class="sw" style="background-color:var(--paper-lo);box-shadow:inset 0 0 0 1px var(--shade)"></span>草稿<span class="n num">1</span></div>
+            <div class="total"><small>已通过金额</small><div class="num">¥12,800.00</div></div>
+          </div>
+        </section>
+        <section class="sheet">
+          <div class="sheet-head"><h2><i class="glyph g-bell"></i>最近通知</h2><a class="more" href="#">通知中心</a></div>
+          <div class="notes">
+            <div class="note"><i></i>待审批：测试服务器扩容<time>4 天前</time></div>
+            <div class="note"><i></i>陈露提交了差旅申请<time>昨天</time></div>
+            <div class="note"><i class="read"></i>你的报销申请已通过<time>10-22</time></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="label">3　列表</p>
+<div class="frame" data-on="task">
+  <div class="scenery"></div>
+  <div class="page">
+    <div class="head">
+      <div>
+        <h1>审批</h1>
+        <div class="tabs"><a class="tab on" href="#">我的待办 <span class="count inked">4</span></a><a class="tab" href="#">我的已办</a><a class="tab" href="#">本部门申请</a><a class="tab" href="#">授权范围申请</a></div>
+      </div>
+      <button class="btn paper">刷新</button>
+    </div>
+    <section class="sheet">
+      <div class="toolbar"><div class="search">搜索标题或单号</div><div class="filter"><span class="on">全部 4</span><span>已超时 1</span></div></div>
+      <table class="reg">
+        <thead><tr><th>申请</th><th>申请人</th><th>当前节点</th><th class="r">金额</th><th>到达时间</th><th></th></tr></thead>
+        <tbody>
+          <tr class="hover"><td><div class="t1">测试服务器扩容 <span class="tag late">已超时</span></div><div class="t2">采购申请　CG20261016000017</div></td><td>王工<div class="t2">研发部</div></td><td><span class="tag run">部门负责人审批</span></td><td class="r"><span class="amt num">¥12,800.00</span></td><td class="num">2026-10-21 09:12</td><td class="r"><button class="btn accent sm act">处理</button></td></tr>
+          <tr><td><div class="t1">上海客户现场支持</div><div class="t2">差旅申请　CL20261024000041</div></td><td>陈露<div class="t2">研发部</div></td><td><span class="tag run">部门负责人审批</span></td><td class="r"><span class="amt num">¥3,460.00</span></td><td class="num">2026-10-24 16:40</td><td class="r"><button class="btn accent sm act">处理</button></td></tr>
+          <tr><td><div class="t1">10 月团建餐费</div><div class="t2">报销申请　BX20261024000043</div></td><td>赵一<div class="t2">研发部</div></td><td><span class="tag run">部门负责人审批</span></td><td class="r"><span class="amt num">¥1,280.00</span></td><td class="num">2026-10-24 18:05</td><td class="r"><button class="btn accent sm act">处理</button></td></tr>
+          <tr><td><div class="t1">年假 3 天</div><div class="t2">请假申请　ZD20261025000044</div></td><td>孙晴<div class="t2">研发部</div></td><td><span class="tag run">部门负责人审批</span></td><td class="r dim">无</td><td class="num">2026-10-25 10:20</td><td class="r"><button class="btn accent sm act">处理</button></td></tr>
+        </tbody>
+      </table>
+      <div class="pager">共 4 条<b>1</b></div>
+    </section>
+  </div>
+</div>
+
+<p class="label">4　详情</p>
+<div class="frame" data-on="task">
+  <div class="scenery"></div>
+  <div class="page" style="padding-bottom:90px">
+    <div class="doc">
+      <div style="display:flex;justify-content:space-between;margin:4px 0 18px"><button class="btn paper sm">返回我的待办</button><button class="btn paper sm">刷新</button></div>
+      <article class="sheet">
+        <header class="doc-head">
+          <div>
+            <div class="kind" style="font-size:13px"><span>采购申请</span><span class="num">CG20261016000017</span></div>
+            <h1>研发部采购测试服务器扩容</h1>
+            <div class="doc-meta"><span class="tag run">审批中</span><span>申请人 <b>王工</b></span><span>研发部</span><span class="num">提交于 2026-10-16 14:20</span></div>
+          </div>
+          <div class="amount"><small>金额</small><div class="num">¥12,800.00</div></div>
+        </header>
+        <section class="block">
+          <h2><i class="glyph g-sun"></i>签批</h2>
+          <div class="sign">
+            <div class="cell done"><small>部门负责人审批</small><div class="who">李研</div><p class="num">10-16 15:02</p><p>同意，按最低报价采购</p><span class="stamp">同意</span></div>
+            <div class="cell now"><small>财务审批</small><div class="who">吴审</div><p>处理中，已等 4 天</p></div>
+            <div class="cell wait"><small>企业负责人审批</small><div class="who">周总</div><p>未到</p></div>
+          </div>
+        </section>
+        <section class="block">
+          <h2><i class="glyph g-leaf"></i>申请内容 <small>表单版本 v2</small></h2>
+          <dl class="fields">
+            <dt>预算上限</dt><dd class="num">¥13,000.00</dd><dt>期望到货</dt><dd class="num">2026-10-30</dd>
+            <dt>采购事由</dt><dd class="wide">CI 构建机负载长期超过 80%，排队时间从 3 分钟涨到 20 分钟，需要两台测试服务器分担。</dd>
+          </dl>
+        </section>
+      </article>
+    </div>
+  </div>
+  <div class="actionbar"><div><p>轮到你审批：<b>财务审批</b></p><button class="btn danger">驳回</button><button class="btn primary">同意</button></div></div>
+</div>
+
+<p class="label">5　空状态</p>
+<div class="frame" data-on="task">
+  <div class="scenery"></div>
+  <div class="page">
+    <div class="head">
+      <div>
+        <h1>审批</h1>
+        <div class="tabs"><a class="tab" href="#">我的待办</a><a class="tab on" href="#">我的已办</a><a class="tab" href="#">本部门申请</a><a class="tab" href="#">授权范围申请</a></div>
+      </div>
+      <button class="btn paper">刷新</button>
+    </div>
+    <section class="sheet">
+      <div class="empty">
+        <div class="pic"><img src="../frontend/src/assets/illustrations/empty-tray.webp" alt="" /></div>
+        <h3>还没有处理过的单子</h3>
+        <p>你同意或驳回的申请会出现在这里。</p>
+        <button class="btn primary">查看我的待办</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  // 把顶栏插进每一屏（登录页除外），并标出当前栏目
+  const tpl = document.getElementById('top-tpl')
+  document.querySelectorAll('.frame[data-on]').forEach((f) => {
+    const top = tpl.content.cloneNode(true)
+    top.querySelector(`[data-k="${f.dataset.on}"]`).classList.add('on')
+    f.prepend(top)
+  })
+
+  // ── 登录页流转演示：①②③ 各停 2400ms，④ 落「已通过」章停 3200ms，淡出 200ms 回到 ① ──
+  ;(() => {
+    const demo = document.querySelector('.demo')
+    const sign = demo.querySelector('.sign'), seal = demo.querySelector('.seal')
+    const NAMES = ['部门负责人', '财务审批', '企业负责人'], WHO = ['李研', '吴审', '赵总'], AT = ['10-16 15:02', '10-18 10:26', '10-20 14:36']
+    const STEPS = [['current', 'waiting', 'waiting'], ['approved', 'current', 'waiting'], ['approved', 'approved', 'current'], ['approved', 'approved', 'approved']]
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+    let step = reduceMotion ? 2 : 1, prev = null, timer = 0, hovering = false
+    function render() {
+      const states = STEPS[step - 1]
+      sign.innerHTML = states.map((st, i) => {
+        const stamped = st === 'approved'
+        const fresh = stamped && prev && prev[i] !== 'approved' // 刚变成同意的格子才播盖章
+        if (st === 'waiting') return `<div class="cell waiting" data-i="${i}"><small>${NAMES[i]}</small><p>未到</p></div>`
+        return `<div class="cell ${st}" data-i="${i}"><small>${NAMES[i]}</small><div class="who">${WHO[i]}</div>` +
+          `<p class="num">${st === 'current' ? '处理中' : AT[i]}</p>` +
+          (stamped ? `<span class="stamp${fresh ? ' stamp-in' : ''}">同意</span>` : '') + '</div>'
+      }).join('')
+      const final = step === 4
+      if (final && seal.hidden) { seal.hidden = false; seal.classList.remove('stamp-in'); void seal.offsetWidth; seal.classList.add('stamp-in') }
+      if (!final) seal.hidden = true
+      prev = states
+    }
+    function schedule() {
+      clearTimeout(timer)
+      if (reduceMotion || hovering || document.hidden) return
+      timer = setTimeout(() => {
+        if (step === 4) {
+          demo.classList.add('resetting')
+          timer = setTimeout(() => { demo.classList.remove('resetting'); step = 1; prev = null; render(); schedule() }, 200)
+        } else { step++; render(); schedule() }
+      }, step === 4 ? 3200 : 2400)
+    }
+    demo.addEventListener('mouseenter', () => { hovering = true; clearTimeout(timer) })
+    demo.addEventListener('mouseleave', () => { hovering = false; schedule() })
+    sign.addEventListener('mouseover', (e) => {
+      const cell = e.target.closest('.cell')
+      if (!cell) return
+      const want = Number(cell.dataset.i) + 1
+      if (want !== step) { step = want; render() }
+    })
+    document.addEventListener('visibilitychange', schedule)
+    render(); schedule()
+  })()
+
+  // ── 微风 ──
+  // 1) 草地风纹（WebGL）：背景图在着色器里绘制，一阵阵风从左往右扫过草地，被扫到的草微微倒伏、泛亮；
+  //    鼠标移动会从指针处沿移动方向掀起一阵风。不支持 WebGL 时退回 .scenery 的静态背景。
+  // 2) 飘叶（2D canvas）：偶尔一片叶子从左往右飘过，边飘边翻；被鼠标或风推开。
+  const IMG = '../frontend/src/assets/illustrations/'
+  const load = (n) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = IMG + n })
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  Promise.all(['bg-meadow.webp', ...[1, 2, 3, 4, 5, 6].map((k) => `leaf-${k}.webp`)].map(load))
+    .then(([bg, ...leafImgs]) => document.querySelectorAll('.frame').forEach((f) => breeze(f, bg, leafImgs)))
+
+  const VERT = 'attribute vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }'
+  const FRAG = `
+    precision mediump float;
+    uniform sampler2D img;
+    uniform vec2 res, imgSize;
+    uniform float t, veil;
+    uniform vec3 page;
+    uniform vec4 gusts[4]; // x 起点（屏宽为 1），y 方向，z 起始时间，w 强度
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p) {
+      vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+    }
+    void main() {
+      vec2 p = vec2(gl_FragCoord.x / res.x, 1.0 - gl_FragCoord.y / res.y);
+      float s = max(res.x / imgSize.x, res.y / imgSize.y);
+      vec2 shown = imgSize * s;
+      vec2 uv = (p * res - vec2((res.x - shown.x) * 0.5, res.y - shown.y)) / shown; // cover，底边对齐
+      float grass = smoothstep(0.80, 0.90, uv.y);
+      float x = p.x * res.x / res.y;
+      // 风带：低频噪声往右平移，只取峰值，形成一阵一阵的
+      float g = smoothstep(0.58, 0.95, noise(vec2(x * 1.1 - t * 0.32, t * 0.04 + uv.y * 1.5)));
+      for (int i = 0; i < 4; i++) {
+        vec4 q = gusts[i];
+        float age = t - q.z;
+        if (q.w > 0.0 && age > 0.0) {
+          float d = x - (q.x * res.x / res.y + q.y * age * 0.55);
+          g += q.w * exp(-d * d * 14.0) * exp(-age * 0.8);
+        }
+      }
+      float blade = noise(vec2(uv.x * 380.0, uv.y * 26.0)); // 每根草倒伏程度不同
+      float bend = clamp(g, 0.0, 1.4) * grass * (0.5 + 0.9 * blade);
+      vec3 c = texture2D(img, uv + vec2(-bend * 0.0028, bend * 0.0012)).rgb;
+      c = mix(c, c * 1.07 + vec3(0.04, 0.035, 0.0), bend * 0.5); // 草叶翻起的浅色
+      gl_FragColor = vec4(mix(c, page, veil), 1.0);
+    }`
+
+  function meadow(frame, bg) {
+    const cv = document.createElement('canvas')
+    cv.className = 'breeze'
+    const gl = cv.getContext('webgl', { premultipliedAlpha: false })
+    if (!gl) return null
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s }
+    const prog = gl.createProgram()
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG)); gl.linkProgram(prog)
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null
+    gl.useProgram(prog)
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW)
+    const a = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0)
+    gl.bindTexture(gl.TEXTURE_2D, gl.createTexture())
+    for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, bg)
+    const u = (n) => gl.getUniformLocation(prog, n)
+    gl.uniform2f(u('imgSize'), bg.width, bg.height)
+    gl.uniform1f(u('veil'), 0.28)
+    gl.uniform3f(u('page'), 241 / 255, 236 / 255, 225 / 255)
+    const gusts = new Float32Array(16)
+    let gi = 0
+    frame.querySelector('.scenery').after(cv)
+    return {
+      el: cv,
+      resize(W, H, dpr) { cv.width = W * dpr; cv.height = H * dpr; gl.viewport(0, 0, cv.width, cv.height); gl.uniform2f(u('res'), cv.width, cv.height) },
+      gust(x, dir, strength, t) { gusts.set([x, dir, t, strength], gi * 4); gi = (gi + 1) % 4 },
+      draw(t) { gl.uniform1f(u('t'), t); gl.uniform4fv(u('gusts'), gusts); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4) },
+    }
+  }
+
+  function breeze(frame, bg, leafImgs) {
+    const field = meadow(frame, bg)
+    const cv = document.createElement('canvas')
+    cv.className = 'breeze'
+    ;(field ? field.el : frame.querySelector('.scenery')).after(cv)
+    const ctx = cv.getContext('2d')
+    const dpr = Math.min(devicePixelRatio || 1, 2)
+    let W = 0, H = 0
+    const resize = () => {
+      W = frame.clientWidth; H = frame.clientHeight
+      cv.width = W * dpr; cv.height = H * dpr
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      field?.resize(W, H, dpr)
+    }
+    resize(); new ResizeObserver(resize).observe(frame)
+
+    const leaves = []
+    const spawn = (x) => leaves.push({
+      img: leafImgs[(Math.random() * leafImgs.length) | 0],
+      x: x ?? -40, y: H * (0.05 + Math.random() * 0.75),
+      vx: 22 + Math.random() * 18, vy: 5 + Math.random() * 9,
+      size: 20 + Math.random() * 12, rot: Math.random() * 6.28, spin: (Math.random() - 0.5) * 0.9,
+      ph: Math.random() * 6.28, px: 0, py: 0,
+    })
+    let ptr = null, lastGust = 0
+    frame.addEventListener('pointermove', (e) => {
+      const r = frame.getBoundingClientRect()
+      const k = W / r.width // 父级缩放时换算回画布坐标
+      const x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k
+      const vx = ptr ? x - ptr.x : 0
+      ptr = { x, y }
+      const now = performance.now() / 1000
+      if (field && Math.abs(vx) > 4 && now - lastGust > 0.35) {
+        field.gust(x / W, Math.sign(vx), Math.min(1, Math.abs(vx) / 24), now)
+        lastGust = now
+      }
+      for (const l of leaves) {
+        const d = Math.hypot(l.x - x, l.y - y)
+        if (d < 110 && d > 0) { l.px += ((l.x - x) / d) * 40; l.py += ((l.y - y) / d) * 40 }
+      }
+    })
+    frame.addEventListener('pointerleave', () => { ptr = null })
+
+    let last = performance.now(), visible = true, next = 2
+    new IntersectionObserver(([e]) => { visible = e.isIntersecting }).observe(frame)
+    if (!reduce) { spawn(W * 0.25); spawn(W * 0.7) }
+    function step(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now
+      const t = now / 1000
+      if (visible && !document.hidden) {
+        field?.draw(reduce ? 0 : t)
+        ctx.clearRect(0, 0, W, H)
+        if (!reduce) {
+          if ((next -= dt) <= 0 && leaves.length < 4) { spawn(); next = 5 + Math.random() * 5 }
+          for (const l of leaves) {
+            l.x += (l.vx * (0.9 + 0.4 * Math.sin(t * 0.43)) + l.px) * dt
+            l.y += (l.vy + Math.sin(t * 1.3 + l.ph) * 10 + l.py) * dt
+            l.px *= 0.96; l.py *= 0.96
+            l.rot += l.spin * dt
+            const flip = Math.max(0.25, Math.abs(Math.cos(t * 1.4 + l.ph)))
+            ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.rot); ctx.scale(flip, 1); ctx.globalAlpha = 0.9
+            const h = (l.size * l.img.height) / l.img.width
+            ctx.drawImage(l.img, -l.size / 2, -h / 2, l.size, h)
+            ctx.restore()
+          }
+          for (let i = leaves.length - 1; i >= 0; i--) if (leaves[i].x > W + 60 || leaves[i].y > H + 60) leaves.splice(i, 1)
+        }
+      }
+      if (!reduce) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }
+</script>
+</body>
+</html>

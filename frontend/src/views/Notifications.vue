@@ -142,7 +142,8 @@ watch(
 
 <template>
   <div class="notice-page">
-    <h2 class="eas-sr-only">通知中心</h2>
+    <!-- IndexTabs 是页内切换，页面自己渲染展示字标题 -->
+    <h1 class="page-title">通知中心</h1>
     <div ref="tabContainer" class="notice-tabs">
       <IndexTabs :items="tabs" :active="tab" label="通知筛选" @select="tab = $event">
         <template #actions>
@@ -154,7 +155,7 @@ watch(
       </IndexTabs>
     </div>
 
-    <div class="sheet notice-sheet">
+    <div class="sheet">
       <el-result v-if="error" icon="warning" :title="errorText(error, '通知加载失败')">
         <template #extra><el-button type="primary" :loading="loading" @click="list.load()">重新加载</el-button></template>
       </el-result>
@@ -187,8 +188,7 @@ watch(
             <div class="notice-actions" @click.stop @auxclick.stop>
               <el-button
                 v-if="!n.read"
-                link
-                type="primary"
+                size="small"
                 :loading="busyId === n.id"
                 @click.stop="markOne(n)"
               >
@@ -216,19 +216,18 @@ watch(
 </template>
 
 <style scoped>
-/* 页签就是页面标题；选中的页签与下面的单据相接 */
+.notice-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--eas-gap);
+}
 .notice-tabs {
-  position: relative;
-  z-index: 1;
-  margin-bottom: -1px;
+  min-width: 0;
 }
 .notice-tab-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.notice-sheet {
-  border-top-left-radius: 0;
 }
 .notice-state {
   padding: 16px var(--eas-sheet-pad);
@@ -240,7 +239,7 @@ watch(
 }
 .notice-row {
   display: grid;
-  grid-template-columns: 6px 64px minmax(0, 1fr) auto 128px;
+  grid-template-columns: 8px 64px minmax(0, 1fr) auto 128px;
   align-items: start;
   column-gap: 12px;
   padding: 0 var(--eas-sheet-pad);
@@ -253,10 +252,11 @@ watch(
 .notice-row:last-child {
   border-bottom: 0;
 }
+/* 与登记簿行一致：整行暗纸底，左侧 5px 芥黄竖条 */
 .notice-row:hover,
 .notice-row:focus-within {
   background: var(--eas-row-hover);
-  box-shadow: inset 3px 0 0 var(--eas-primary);
+  box-shadow: inset 5px 0 0 var(--eas-mustard);
 }
 .notice-marker {
   display: flex;
@@ -264,22 +264,23 @@ watch(
   height: 22px;
   margin-top: 14px;
 }
+/* 未读：芥黄圆点 */
 .unread-dot {
   flex-shrink: 0;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--eas-primary);
+  background: var(--eas-mustard);
 }
 .notice-type {
   justify-self: start;
   margin-top: 14px;
-  padding: 0 6px;
-  border: 1px solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-tag);
+  padding: 0 10px;
+  border-radius: var(--eas-radius-pill);
+  background: var(--eas-tab);
   color: var(--eas-ink-2);
   font-size: var(--eas-fs-xs);
-  line-height: 20px;
+  line-height: 22px;
   white-space: nowrap;
 }
 .notice-main {
@@ -298,7 +299,7 @@ watch(
   border-radius: var(--eas-radius-control);
 }
 .notice-main:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .notice-title {
@@ -327,12 +328,8 @@ watch(
 }
 .notice-actions {
   min-width: 80px;
-  padding-top: 11px;
+  padding-top: 12px;
   text-align: right;
-}
-.notice-actions .el-button {
-  min-height: 32px;
-  min-width: 32px;
 }
 /* “标为已读”默认透明，行悬停 / 行内聚焦时显示；触屏与窄屏常显 */
 .notice-actions:has(.el-button) {
@@ -366,7 +363,7 @@ watch(
 }
 @media (max-width: 768px) {
   .notice-row {
-    grid-template-columns: 6px auto minmax(0, 1fr);
+    grid-template-columns: 8px auto minmax(0, 1fr);
     grid-template-areas:
       'marker type time'
       'marker main main'
@@ -379,7 +376,7 @@ watch(
   .notice-main { grid-area: main; padding: 6px 0 8px; }
   .notice-actions {
     grid-area: actions;
-    padding: 0 0 8px;
+    padding: 0 0 10px;
     text-align: left;
   }
   .notice-title {

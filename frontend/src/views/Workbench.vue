@@ -1,16 +1,16 @@
 <script setup lang="ts">
-// 工作台：问候直接落在桌面上；左栏待你审批（或我的申请最近 5 条）、发起申请、管理入口，右栏我的申请小账单、最近通知。
+// 工作台：套色横幅插画与问候在顶；左栏待你审批（或我的申请最近 5 条）、发起申请、管理入口；右栏我的申请账单、最近通知。
 // 每张单据独立加载、独立失败
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import { api } from '@/lib/api'
 import { errorText } from '@/lib/errors'
 import { APP_STATUS_LABEL, APP_TYPE_LABEL, APP_TYPE_PATH, ROLE_LABEL } from '@/lib/labels'
-import { fmtDateTime, todayShanghai } from '@/lib/datetime'
+import { todayShanghai } from '@/lib/datetime'
 import { useAuthStore } from '@/stores/auth'
 import { noticeTarget, useNoticeStore } from '@/stores/notice'
+import ApplyEntryCard from '@/components/ApplyEntryCard.vue'
 import MoneyText from '@/components/MoneyText.vue'
-import StatusTag from '@/components/StatusTag.vue'
 import { ago, dateLine, shortDesc } from '@/components/workbench/format'
 import type {
   ApplicationSummary,
@@ -97,20 +97,40 @@ function appTarget(a: ApplicationSummary): RouteLocationRaw {
 
 // ---------- 我的申请：小账单 ----------
 
+type LedgerTone = 'sky' | 'sage' | 'rust' | 'draft' | 'muted'
 const LEDGER_ORDER: AppStatus[] = ['IN_APPROVAL', 'APPROVED', 'REJECTED', 'DRAFT', 'WITHDRAWN']
-const LEDGER_TONE: Record<AppStatus, string> = {
+const STATUS_TAG_TYPE: Record<AppStatus, 'primary' | 'success' | 'danger' | 'info'> = {
   IN_APPROVAL: 'primary',
   APPROVED: 'success',
   REJECTED: 'danger',
-  DRAFT: 'muted',
+  DRAFT: 'info',
+  WITHDRAWN: 'info',
+}
+const LEDGER_TONE: Record<AppStatus, LedgerTone> = {
+  IN_APPROVAL: 'sky',
+  APPROVED: 'sage',
+  REJECTED: 'rust',
+  DRAFT: 'draft',
   WITHDRAWN: 'muted',
 }
 const personal = useCard<PersonalStats>(() => api.stats.personal())
 const hasApplications = computed(() =>
   Object.values(personal.data.value?.statusCounts ?? {}).some((n) => (n ?? 0) > 0),
 )
+const ledgerRows = computed(() => {
+  const counts = personal.data.value?.statusCounts
+  if (!counts) return []
+  return LEDGER_ORDER.map((status) => ({
+    status,
+    label: APP_STATUS_LABEL[status],
+    count: counts[status] ?? 0,
+    tone: LEDGER_TONE[status],
+    inked: status !== 'DRAFT',
+  }))
+})
+const ledgerSegments = computed(() => ledgerRows.value.filter((r) => r.count > 0))
 
-// ---------- 发起申请：最多 5 张空白单据 ----------
+// ---------- 发起申请：最多 5 张入口卡 ----------
 
 const LAUNCHER_MAX = 5
 const templates = useCard<TemplateOption[]>(() => api.templates.available())
@@ -143,11 +163,6 @@ async function openNotice(n: NotificationItem) {
   if (!n.read) await notice.markRead(n.id).catch(() => undefined)
   const target = noticeTarget(n)
   if (target) await router.push(target)
-}
-
-/** 10-17 09:41 */
-function noticeTime(n: NotificationItem): string {
-  return fmtDateTime(n.createdAt).slice(5)
 }
 
 // ---------- 管理端 ----------
@@ -185,16 +200,24 @@ onMounted(() => {
 
 <template>
   <div class="page workbench">
-    <!-- 问候：直接落在桌面上 -->
-    <header class="greet">
-      <div class="greet-main">
-        <h1 class="page-title greet-title">{{ greeting }}，{{ me?.realName }}</h1>
-        <p class="greet-date">{{ todayText }}</p>
+    <!-- 横幅：问候、日期与待审数量压在左侧空白天空上 -->
+    <header class="banner">
+      <div class="banner-body">
+        <h1 class="banner-title">{{ greeting }}，{{ me?.realName }}</h1>
+        <p class="banner-line">
+          <span>{{ todayText }}</span>
+          <span v-if="canTask && pending.data.value">
+            <template v-if="pending.data.value.total > 0">
+              有 <b class="banner-num">{{ pending.data.value.total }}</b> 张单子等你审批
+            </template>
+            <template v-else>暂无待你审批的单子</template>
+          </span>
+        </p>
+        <p class="banner-meta">
+          <span>{{ me?.deptName ?? '未分配部门' }}</span>
+          <span v-for="r in roles" :key="r.code">{{ r.text }}</span>
+        </p>
       </div>
-      <p class="greet-who">
-        <span>{{ me?.deptName ?? '未分配部门' }}</span>
-        <span v-for="r in roles" :key="r.code">{{ r.text }}</span>
-      </p>
     </header>
 
     <div class="wb">
@@ -202,7 +225,10 @@ onMounted(() => {
         <!-- 没有待办或没有审批权限：我的申请最近 5 条作为左栏主单据 -->
         <section v-if="canCreate && (!canTask || pendingIsEmpty)" class="sheet wb-primary" aria-labelledby="wb-mine-recent">
           <div class="sheet-head">
-            <h2 id="wb-mine-recent">最近申请</h2>
+            <h2 id="wb-mine-recent">
+              <i class="ink-glyph ink-glyph--stack" aria-hidden="true" />最近申请
+            </h2>
+            <router-link to="/applications/mine">查看全部申请</router-link>
           </div>
           <div v-if="mineRecent.loading.value && !mineRecent.data.value" class="wb-pad">
             <el-skeleton :rows="3" animated />
@@ -217,28 +243,28 @@ onMounted(() => {
               <router-link :to="appTarget(a)" class="row app-row">
                 <span class="two-line row-main">
                   <span class="cell-main">{{ a.title || a.appNo }}</span>
-                  <span class="cell-sub row-meta">
-                    <span>{{ typeLabel(a) }}</span>
-                    <span>{{ a.appNo }}</span>
-                    <MoneyText v-if="a.amountCents !== null" :cents="a.amountCents" />
-                  </span>
+                  <span class="cell-sub">{{ typeLabel(a) }}{{ '\u3000' }}{{ a.appNo }}</span>
                 </span>
-                <StatusTag class="row-status" :status="a.status" :show-node="false" />
-                <span class="row-time">{{ ago(a.updatedAt) }}</span>
+                <el-tag class="row-status" :type="STATUS_TAG_TYPE[a.status]" size="small">
+                  {{ APP_STATUS_LABEL[a.status] }}
+                </el-tag>
+                <span class="two-line row-amount-col">
+                  <MoneyText v-if="a.amountCents !== null" class="row-amount" :cents="a.amountCents" />
+                  <span v-else class="cell-none row-amount-none">无</span>
+                  <span class="cell-sub">{{ ago(a.updatedAt) }}</span>
+                </span>
               </router-link>
             </li>
           </ul>
-          <div class="sheet-foot">
-            <router-link to="/applications/mine" class="wb-link">查看全部申请</router-link>
-          </div>
         </section>
 
         <!-- 待你审批 -->
         <section v-if="canTask && !pendingIsEmpty" class="sheet wb-primary" aria-labelledby="wb-pending">
           <div class="sheet-head">
             <h2 id="wb-pending">
-              待你审批<span v-if="pending.data.value" class="head-count">{{ pending.data.value.total }}</span>
+              <i class="ink-glyph ink-glyph--sun" aria-hidden="true" />待你审批
             </h2>
+            <router-link to="/tasks/pending">查看全部待办</router-link>
           </div>
           <div v-if="pending.loading.value && !pending.data.value" class="wb-pad">
             <el-skeleton :rows="3" animated />
@@ -255,34 +281,38 @@ onMounted(() => {
                   <span class="cell-main">
                     {{ t.title || t.appNo }}<span v-if="t.overdue" class="tag-overdue">已超时</span>
                   </span>
-                  <span class="cell-sub row-meta">
-                    <span>{{ typeLabel(t) }}</span>
-                    <span>{{ t.appNo }}</span>
-                    <MoneyText v-if="t.amountCents !== null" :cents="t.amountCents" />
-                  </span>
+                  <span class="cell-sub">{{ typeLabel(t) }}{{ '\u3000' }}{{ t.appNo }}</span>
                 </span>
-                <span class="row-who">{{ t.applicant.realName }}</span>
-                <span class="row-time">{{ ago(t.createdAt) }}</span>
-                <span class="row-go" aria-hidden="true">处理</span>
+                <span class="two-line row-who">
+                  <span class="row-who-name">{{ t.applicant.realName }}</span>
+                  <span v-if="t.deptName ?? t.applicant.deptName" class="cell-sub">{{ t.deptName ?? t.applicant.deptName }}</span>
+                </span>
+                <span class="two-line row-amount-col">
+                  <MoneyText v-if="t.amountCents !== null" class="row-amount" :cents="t.amountCents" />
+                  <span v-else class="cell-none row-amount-none">无</span>
+                  <span class="cell-sub">{{ ago(t.createdAt) }}</span>
+                </span>
+                <span class="row-go inked" aria-hidden="true">处理</span>
               </router-link>
             </li>
           </ul>
-          <div class="sheet-foot">
-            <router-link to="/tasks/pending" class="wb-link">查看全部待办</router-link>
-          </div>
         </section>
 
         <section v-if="canTask && pendingIsEmpty" class="sheet pending-quiet wb-primary" aria-label="待你审批">
-          <p>没有待你审批的申请</p>
+          <div class="sheet-head">
+            <h2><i class="ink-glyph ink-glyph--sun" aria-hidden="true" />待你审批</h2>
+            <router-link to="/tasks/pending">查看全部待办</router-link>
+          </div>
+          <p class="wb-pad wb-empty">没有待你审批的申请</p>
         </section>
 
-        <!-- 发起申请：空白单据 -->
+        <!-- 发起申请 -->
         <section v-if="canCreate" class="sheet wb-launch" aria-labelledby="wb-apply">
           <div class="sheet-head">
-            <h2 id="wb-apply">发起申请</h2>
-            <router-link v-if="(templates.data.value?.length ?? 0) > LAUNCHER_MAX" to="/apply" class="wb-link">
-              全部申请类型
-            </router-link>
+            <h2 id="wb-apply">
+              <i class="ink-glyph ink-glyph--leaf" aria-hidden="true" />发起申请
+            </h2>
+            <router-link to="/apply">全部类型</router-link>
           </div>
           <div v-if="templates.loading.value && !templates.data.value" class="wb-pad">
             <el-skeleton :rows="2" animated />
@@ -292,17 +322,9 @@ onMounted(() => {
             <el-button link type="primary" @click="templates.load()">重试</el-button>
           </div>
           <p v-else-if="!launchers.length" class="wb-pad wb-empty">暂无可发起的申请类型</p>
-          <ul v-else class="blanks">
+          <ul v-else class="starts">
             <li v-for="t in launchers" :key="t.id">
-              <router-link :to="templatePath(t)" class="blank">
-                <span class="blank-name">{{ t.name }}</span>
-                <span class="blank-lines" aria-hidden="true">
-                  <i />
-                  <i v-if="t.category === 'BUILTIN'" />
-                  <i class="short" />
-                </span>
-                <span v-if="shortDesc(t)" class="blank-desc">{{ shortDesc(t) }}</span>
-              </router-link>
+              <ApplyEntryCard :template="t" :to="templatePath(t)" :description="shortDesc(t)" />
             </li>
           </ul>
         </section>
@@ -312,9 +334,12 @@ onMounted(() => {
           <section v-if="auth.can('ADMIN_USER')" class="sheet wb-admin-card" aria-labelledby="wb-regs">
             <div class="sheet-head">
               <h2 id="wb-regs">
-                待审核注册<span v-if="pendingRegs.data.value !== null" class="head-count">{{ pendingRegs.data.value }}</span>
+                <i class="ink-glyph ink-glyph--sun" aria-hidden="true" />待审核注册<span
+                  v-if="pendingRegs.data.value !== null"
+                  class="head-count"
+                >{{ pendingRegs.data.value }}</span>
               </h2>
-              <router-link to="/admin/registrations" class="wb-link">注册审核</router-link>
+              <router-link to="/admin/registrations">注册审核</router-link>
             </div>
             <div v-if="pendingRegs.loading.value && pendingRegs.data.value === null" class="wb-pad">
               <el-skeleton :rows="1" animated />
@@ -329,7 +354,9 @@ onMounted(() => {
           </section>
           <section v-if="shortcuts.length" class="sheet wb-admin-card" aria-labelledby="wb-admin">
             <div class="sheet-head">
-              <h2 id="wb-admin">管理入口</h2>
+              <h2 id="wb-admin">
+                <i class="ink-glyph ink-glyph--stack" aria-hidden="true" />管理入口
+              </h2>
             </div>
             <ul class="rows">
               <li v-for="s in shortcuts" :key="s.path">
@@ -349,8 +376,10 @@ onMounted(() => {
         <!-- 我的申请：小账单 -->
         <section v-if="canCreate" class="sheet wb-ledger" aria-labelledby="wb-mine">
           <div class="sheet-head">
-            <h2 id="wb-mine">我的申请</h2>
-            <router-link to="/applications/mine" class="wb-link">全部</router-link>
+            <h2 id="wb-mine">
+              <i class="ink-glyph ink-glyph--hill" aria-hidden="true" />我的申请
+            </h2>
+            <router-link to="/applications/mine">全部</router-link>
           </div>
           <div v-if="personal.loading.value && !personal.data.value" class="wb-pad">
             <el-skeleton :rows="3" animated />
@@ -360,24 +389,40 @@ onMounted(() => {
             <el-button link type="primary" @click="personal.load()">重试</el-button>
           </div>
           <template v-else-if="personal.data.value">
-            <ul v-if="hasApplications" class="ledger">
-              <li v-for="s in LEDGER_ORDER" :key="s">
-                <router-link :to="{ path: '/applications/mine', query: { status: s } }" class="ledger-line">
-                  <span class="status-dot" :class="`status-dot--${LEDGER_TONE[s]}`">{{ APP_STATUS_LABEL[s] }}</span>
-                  <span class="ledger-count">{{ personal.data.value.statusCounts[s] ?? 0 }}</span>
-                </router-link>
-              </li>
-            </ul>
+            <div v-if="hasApplications" class="ledger-wrap">
+              <div class="ledger-bar" aria-hidden="true">
+                <i
+                  v-for="seg in ledgerSegments"
+                  :key="seg.status"
+                  class="ledger-seg"
+                  :class="[`ledger-swatch--${seg.tone}`, { inked: seg.inked }]"
+                  :style="{ flexGrow: seg.count }"
+                />
+              </div>
+              <ul class="ledger">
+                <li v-for="item in ledgerRows" :key="item.status">
+                  <router-link :to="{ path: '/applications/mine', query: { status: item.status } }" class="ledger-line">
+                    <span
+                      class="ledger-swatch"
+                      :class="[`ledger-swatch--${item.tone}`, { inked: item.inked }]"
+                      aria-hidden="true"
+                    />
+                    <span class="ledger-label">{{ item.label }}</span>
+                    <span class="ledger-count">{{ item.count }}</span>
+                  </router-link>
+                </li>
+              </ul>
+              <div class="ledger-total inked">
+                <div class="ledger-total-label">
+                  <span>已通过金额</span>
+                  <span v-if="personal.data.value.approvedCount > 0">共 {{ personal.data.value.approvedCount }} 单</span>
+                </div>
+                <MoneyText class="ledger-total-amount" :cents="personal.data.value.approvedAmountCents" />
+              </div>
+            </div>
             <div v-else class="ledger-empty">
               <p>还没有提交过申请</p>
               <el-button type="primary" @click="router.push('/apply')">填写申请</el-button>
-            </div>
-            <div v-if="hasApplications" class="ledger-total">
-              <div class="ledger-total-label">
-                <span>已通过金额</span>
-                <span>共 {{ personal.data.value.approvedCount }} 单</span>
-              </div>
-              <MoneyText class="ledger-total-amount" :cents="personal.data.value.approvedAmountCents" />
             </div>
           </template>
         </section>
@@ -386,9 +431,12 @@ onMounted(() => {
         <section class="sheet wb-notice" aria-labelledby="wb-notice">
           <div class="sheet-head">
             <h2 id="wb-notice">
-              最近通知<span v-if="notice.unread > 0" class="head-sub">{{ notice.unread }} 条未读</span>
+              <i class="ink-glyph ink-glyph--bell" aria-hidden="true" />最近通知<span
+                v-if="notice.unread > 0"
+                class="head-sub"
+              >{{ notice.unread }} 条未读</span>
             </h2>
-            <router-link to="/notifications" class="wb-link">通知中心</router-link>
+            <router-link to="/notifications">通知中心</router-link>
           </div>
           <div v-if="recentLoading && !notice.recentLoaded" class="wb-pad">
             <el-skeleton :rows="3" animated />
@@ -398,14 +446,14 @@ onMounted(() => {
             <el-button link type="primary" @click="loadRecent">重试</el-button>
           </div>
           <p v-else-if="!recent.length" class="wb-pad wb-empty">暂无通知</p>
-          <ul v-else class="rows notices">
+          <ul v-else class="notices">
             <li v-for="n in recent" :key="n.id">
-              <button type="button" class="row notice-row" :class="{ unread: !n.read }" @click="openNotice(n)">
-                <span class="notice-dot" aria-hidden="true" />
+              <button type="button" class="notice-row" :class="{ unread: !n.read }" @click="openNotice(n)">
+                <span class="notice-dot" :class="{ inked: !n.read }" aria-hidden="true" />
                 <span class="notice-title">
                   <span v-if="!n.read" class="visually-hidden">未读</span>{{ n.title }}
                 </span>
-                <span class="notice-time">{{ noticeTime(n) }}</span>
+                <span class="notice-time">{{ ago(n.createdAt) }}</span>
               </button>
             </li>
           </ul>
@@ -416,34 +464,56 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* ---------- 问候 ---------- */
-.greet {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px 24px;
-  margin-bottom: 4px;
+/* ---------- 横幅 ---------- */
+.banner {
+  box-sizing: border-box;
+  min-height: 236px;
+  padding: 46px 48px 32px;
+  border-radius: 20px;
+  background: var(--eas-tab) url('@/assets/illustrations/workbench-banner.webp') right 28% / cover no-repeat;
+  box-shadow: var(--eas-shadow-sheet);
 }
-.greet-main {
-  min-width: 0;
+.banner-body {
+  max-width: 580px;
 }
-.greet-date {
-  margin: 4px 0 0;
-  color: var(--eas-ink-2);
-}
-.greet-who {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
+.banner-title {
   margin: 0;
+  font-family: var(--eas-font-display);
+  font-size: 50px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
+}
+.banner-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  font-size: var(--eas-fs-nav);
   color: var(--eas-ink-2);
+}
+.banner-num {
+  font-family: var(--eas-font-display);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--eas-ink);
+}
+.banner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  font-size: var(--eas-fs-note);
+  color: var(--eas-ink-3);
 }
 
-/* ---------- 两栏：左自适应，右 360 ---------- */
+/* ---------- 两栏：左自适应，右 340 ---------- */
 .wb {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   align-items: start;
   gap: var(--eas-gap);
 }
@@ -454,43 +524,38 @@ onMounted(() => {
 }
 
 /* ---------- 单据通用 ---------- */
-.sheet-head > h2 {
-  display: flex;
-  align-items: baseline;
+.workbench .sheet-head {
+  flex-wrap: wrap;
 }
-/* 单据头下面直接是带上边线的行 / 无线的区块时，单据头本身不画线 */
-.sheet-head {
-  border-bottom: 0;
+.workbench .sheet-head h2 {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.workbench .sheet-head a {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 32px;
 }
 .head-count {
-  margin-left: 6px;
-  font-size: var(--eas-fs-14);
+  margin-left: 4px;
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-16);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--eas-primary);
+  color: var(--eas-ink);
 }
 .head-sub {
-  margin-left: 8px;
+  margin-left: 4px;
+  font-family: var(--eas-font-sans);
   font-size: var(--eas-fs-12);
   font-weight: 400;
+  letter-spacing: 0;
   color: var(--eas-ink-3);
-}
-.wb-link {
-  flex: none;
-  color: var(--eas-primary);
-  text-decoration: none;
-  border-radius: var(--eas-radius-tag);
-}
-.wb-link:hover {
-  text-decoration: underline;
-}
-.wb-link:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
 }
 .wb-pad {
   margin: 0;
-  padding: 4px var(--eas-sheet-inset) 20px;
+  padding: 6px var(--eas-sheet-inset) 20px;
 }
 .wb-error {
   display: flex;
@@ -502,21 +567,18 @@ onMounted(() => {
 .wb-empty {
   color: var(--eas-ink-2);
 }
-.pending-quiet p {
-  margin: 0;
-  padding: 14px var(--eas-sheet-inset);
-  color: var(--eas-ink-2);
-}
-.sheet-foot {
-  padding: 12px var(--eas-sheet-inset) 16px;
-  border-top: 1px solid var(--eas-rule);
-}
 
-/* ---------- 行（待办、我的申请、管理入口、通知）：整行可点，悬停浅底 + 左侧 3px 竖线 ---------- */
+/* ---------- 登记簿式列表行（待你审批、最近申请、管理入口） ---------- */
 .rows {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.rows li + li .row {
+  border-top: 1px solid var(--eas-rule);
+}
+.rows li:last-child .row {
+  border-radius: 0 0 var(--eas-radius-panel) var(--eas-radius-panel);
 }
 .row {
   display: grid;
@@ -524,24 +586,25 @@ onMounted(() => {
   gap: 16px;
   width: 100%;
   box-sizing: border-box;
-  padding: 14px var(--eas-sheet-inset);
+  padding: 13px var(--eas-sheet-inset);
   border: 0;
-  border-top: 1px solid var(--eas-rule);
   background: transparent;
   font: inherit;
   text-align: left;
   text-decoration: none;
   color: var(--eas-ink);
   cursor: pointer;
-  transition: background var(--eas-dur-fast) var(--eas-ease);
+  transition:
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 .row:hover,
 .row:focus-visible {
   background: var(--eas-row-hover);
-  box-shadow: inset 3px 0 0 var(--eas-primary);
+  box-shadow: inset 5px 0 0 var(--eas-mustard);
 }
 .row:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: -2px;
 }
 .row:active {
@@ -550,36 +613,54 @@ onMounted(() => {
 .row-main {
   min-width: 0;
 }
-.row-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 1em;
-}
 .row-who {
+  min-width: 0;
+}
+.row-who-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.row-time {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  color: var(--eas-ink-2);
+.row-amount-col {
+  text-align: right;
+  align-items: flex-end;
+}
+.row-main .cell-sub,
+.row-who .cell-sub {
+  overflow-wrap: anywhere;
+}
+.row-status {
+  justify-self: start;
+}
+.row-amount {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-16);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--eas-ink);
+}
+.row-amount-none {
+  font-size: var(--eas-fs-sm);
+  line-height: 1.4;
 }
 
-/* 待办行：标题两行 / 申请人 / 时间 / 处理 */
+/* 待办行：申请两行 / 申请人两行 / 金额与时间两行 / 芥黄处理按钮 */
 .task-row {
-  grid-template-columns: minmax(0, 1fr) 72px 92px 56px;
+  grid-template-columns: minmax(0, 1fr) 96px 116px 68px;
 }
 .row-go {
   justify-self: end;
   display: inline-flex;
   align-items: center;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: var(--eas-radius-control);
-  background: var(--eas-primary);
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: var(--eas-radius-pill);
+  background-color: var(--eas-mustard);
   font-size: var(--eas-fs-note);
-  color: var(--eas-sheet);
+  font-weight: 600;
+  color: var(--eas-ink);
+  box-shadow: 3px 3px 0 var(--eas-mustard-deep);
   white-space: nowrap;
   visibility: hidden;
 }
@@ -588,16 +669,10 @@ onMounted(() => {
 .row:focus-within .row-go {
   visibility: visible;
 }
-.row:hover .row-go {
-  background: var(--eas-primary-hover);
-}
 
-/* 我的申请（最近 5 条）：标题两行 / 状态 / 时间 */
+/* 最近申请（无审批权限时）：申请两行 / 状态胶囊 / 金额与时间两行 */
 .app-row {
-  grid-template-columns: minmax(0, 1fr) auto 92px;
-}
-.app-row .row-time {
-  text-align: right;
+  grid-template-columns: minmax(0, 1fr) auto 116px;
 }
 
 /* 管理入口 */
@@ -605,120 +680,121 @@ onMounted(() => {
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* ---------- 发起申请：空白单据 ---------- */
-.blanks {
+/* ---------- 发起申请：套色插画入口卡 ---------- */
+.starts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
   margin: 0;
-  padding: 4px var(--eas-sheet-inset) var(--eas-sheet-inset);
+  padding: 8px var(--eas-sheet-inset) var(--eas-sheet-inset);
   list-style: none;
 }
-.blanks li {
+.starts li {
   display: flex;
-}
-.blank {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
   min-width: 0;
-  padding: 14px 14px 12px;
-  border: 1px solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
-  background: var(--eas-sheet);
-  text-decoration: none;
-  color: var(--eas-ink);
-  transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
-    transform var(--eas-dur-fast) var(--eas-ease);
 }
-.blank:hover {
-  border-color: var(--eas-primary);
-}
-.blank:focus-visible {
-  border-color: var(--eas-primary);
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
-}
-.blank:active {
-  transform: translateY(1px);
-}
-.blank-name {
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-16);
-  font-weight: 600;
-  line-height: 1.4;
-}
-.blank-lines {
-  display: grid;
-  gap: 7px;
-  margin: 12px 0 10px;
-}
-.blank-lines i {
-  display: block;
-  height: 1px;
-  background: var(--eas-rule);
-}
-.blank-lines i.short {
-  width: 60%;
-}
-.blank-desc {
-  font-size: var(--eas-fs-12);
-  line-height: 1.5;
-  color: var(--eas-ink-3);
-  white-space: nowrap;
+.starts :deep(.apply-entry) {
+  flex: 1;
 }
 
 /* ---------- 我的申请：小账单 ---------- */
+.ledger-wrap {
+  padding: 2px var(--eas-sheet-inset) 22px;
+}
+.ledger-bar {
+  display: flex;
+  gap: 3px;
+  height: 18px;
+  margin: 4px 0 12px;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.ledger-seg {
+  display: block;
+  flex-basis: 0;
+  min-width: 0;
+  height: 100%;
+}
 .ledger {
   margin: 0;
-  padding: 4px var(--eas-sheet-inset) 8px;
+  padding: 0;
   list-style: none;
 }
-.ledger li + li {
-  border-top: 1px solid var(--eas-rule);
+.ledger li {
+  border-bottom: 1px solid var(--eas-rule);
 }
 .ledger-line {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 -8px;
-  padding: 9px 8px;
-  border-radius: var(--eas-radius-control);
+  gap: 10px;
+  margin: 0 -6px;
+  padding: 7px 6px;
+  border-radius: 8px;
   text-decoration: none;
   color: var(--eas-ink);
-  transition: background var(--eas-dur-fast) var(--eas-ease);
+  transition: background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .ledger-line:hover {
   background: var(--eas-row-hover);
 }
 .ledger-line:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: -2px;
 }
+.ledger-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
+.ledger-swatch--sky {
+  background-color: var(--eas-sky);
+}
+.ledger-swatch--sage {
+  background-color: var(--eas-sage);
+}
+.ledger-swatch--rust {
+  background-color: var(--eas-rust);
+}
+.ledger-swatch--draft {
+  background-color: var(--eas-tab);
+  box-shadow: inset 0 0 0 1px var(--eas-shade);
+}
+.ledger-swatch--muted {
+  background-color: var(--eas-muted);
+}
 .ledger-count {
-  font-size: var(--eas-fs-16);
+  margin-left: auto;
+  font-family: var(--eas-font-display);
+  font-size: 17px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .ledger-total {
-  padding: 14px var(--eas-sheet-inset) 18px;
-  border-top: 1px solid var(--eas-rule);
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background-color: var(--eas-ink);
+  color: var(--eas-sheet);
+  box-shadow: 4px 4px 0 var(--eas-mustard);
 }
 .ledger-total-label {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   font-size: var(--eas-fs-12);
-  color: var(--eas-ink-3);
+  color: var(--eas-sky);
 }
 .ledger-total-amount {
   display: block;
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-26);
+  margin-top: 2px;
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-32);
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.2;
+  text-align: right;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .ledger-empty {
   display: flex;
@@ -734,42 +810,66 @@ onMounted(() => {
 }
 
 /* ---------- 最近通知 ---------- */
+.notices {
+  margin: 0;
+  padding: 0 var(--eas-sheet-inset) 16px;
+  list-style: none;
+}
+.notices li + li {
+  border-top: 1px solid var(--eas-rule);
+}
 .notice-row {
-  grid-template-columns: 6px minmax(0, 1fr);
-  grid-template-areas:
-    'dot title'
-    '. time';
-  gap: 0 8px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: calc(100% + 12px);
+  box-sizing: border-box;
+  margin: 0 -6px;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
   font-size: var(--eas-fs-note);
+  text-align: left;
   color: var(--eas-ink-2);
+  cursor: pointer;
+  transition: background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .notice-row.unread {
   color: var(--eas-ink);
 }
+.notice-row:hover,
+.notice-row:focus-visible {
+  background: var(--eas-row-hover);
+}
+.notice-row:focus-visible {
+  outline: 2px solid var(--eas-ink);
+  outline-offset: -2px;
+}
 .notice-dot {
-  grid-area: dot;
-  align-self: start;
-  /* 与标题第一行居中：(13px × 1.65 − 6px) / 2 */
-  margin-top: calc((var(--eas-fs-note) * 1.65 - 6px) / 2);
-  width: 6px;
-  height: 6px;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
   border-radius: 50%;
+  background: transparent;
 }
 .notice-row.unread .notice-dot {
-  background: var(--eas-primary);
+  background-color: var(--eas-mustard);
 }
 .notice-title {
-  grid-area: title;
+  flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .notice-time {
-  grid-area: time;
+  flex: none;
+  margin-left: auto;
   font-size: var(--eas-fs-12);
   font-variant-numeric: tabular-nums;
   color: var(--eas-ink-3);
+  white-space: nowrap;
 }
 .visually-hidden {
   position: absolute;
@@ -785,53 +885,52 @@ onMounted(() => {
   .wb {
     grid-template-columns: minmax(0, 1fr);
   }
-  .wb-col {
-    display: contents;
-  }
-  .wb-primary { order: 1; }
-  .wb-ledger { order: 2; }
-  .wb-launch { order: 3; }
-  .wb-admin-card { order: 4; }
-  .wb-notice { order: 5; }
 }
 @media (max-width: 768px) {
   .workbench .sheet {
     --eas-sheet-inset: 16px;
   }
-  .greet {
-    align-items: flex-start;
-    flex-direction: column;
+  .banner {
+    padding: 24px 20px;
+    background-position: left top;
+    background-size: auto 140%;
+  }
+  .banner-title {
+    font-size: var(--eas-fs-32);
+    overflow-wrap: anywhere;
+  }
+  .starts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
   .task-row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      'main main main'
-      'who time go';
-    gap: 6px 12px;
+      'main amount'
+      'who go';
+    gap: 8px 12px;
   }
   .task-row .row-main {
     grid-area: main;
   }
+  .task-row .row-amount-col {
+    grid-area: amount;
+  }
   .task-row .row-who {
     grid-area: who;
-  }
-  .task-row .row-time {
-    grid-area: time;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
   }
   .task-row .row-go {
     grid-area: go;
     visibility: visible;
   }
-  .row-who,
-  .row-time {
-    font-size: var(--eas-fs-12);
-    color: var(--eas-ink-2);
-  }
   .app-row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      'main main'
-      'status time';
+      'main amount'
+      'status amount';
     gap: 6px 12px;
   }
   .app-row .row-main {
@@ -839,25 +938,23 @@ onMounted(() => {
   }
   .app-row .row-status {
     grid-area: status;
+    justify-self: start;
   }
-  .app-row .row-time {
-    grid-area: time;
+  .app-row .row-amount-col {
+    grid-area: amount;
   }
 }
-/* 触屏没有悬停：处理按钮常显（窄屏同样常显） */
+/* 触屏没有悬停：处理按钮常显 */
 @media (hover: none) {
   .row-go {
     visibility: visible;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .blank,
   .row,
-  .ledger-line {
+  .ledger-line,
+  .notice-row {
     transition: none;
-  }
-  .blank:active {
-    transform: none;
   }
 }
 </style>

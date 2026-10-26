@@ -167,7 +167,7 @@ function fillDemo(a: DemoAccount) {
     </el-form>
 
     <div class="switch-line">
-      还没有账号？<router-link to="/register" class="link">注册新账号</router-link>
+      还没有账号？<router-link to="/register" class="text-link">注册新账号</router-link>
     </div>
 
     <!-- 演示账号：直接平铺，不折叠，10 个账号两列放完 -->
@@ -193,11 +193,12 @@ function fillDemo(a: DemoAccount) {
 
 <style scoped>
 .auth-title {
-  margin: 0 0 28px;
-  font-family: var(--eas-font-serif);
-  font-size: 28px;
+  margin: 0 0 24px;
+  font-family: var(--eas-font-display);
+  font-size: calc(var(--eas-fs-40) + var(--eas-fs-xs));
   font-weight: 600;
   line-height: var(--eas-lh-title);
+  letter-spacing: var(--eas-display-tracking);
 }
 .auth-form :deep(.el-form-item) {
   margin-bottom: 18px;
@@ -210,14 +211,15 @@ function fillDemo(a: DemoAccount) {
   line-height: 1.5;
 }
 .auth-form :deep(.el-input__wrapper) {
-  min-height: 40px;
+  box-sizing: border-box;
+  min-height: 44px;
 }
 .form-alert {
   margin-bottom: 18px;
 }
 .submit {
   width: 100%;
-  height: 42px;
+  height: 46px;
   font-size: var(--eas-fs-nav);
 }
 .switch-line {
@@ -225,21 +227,9 @@ function fillDemo(a: DemoAccount) {
   font-size: var(--eas-fs-sm);
   color: var(--eas-ink-2);
 }
-.link {
-  color: var(--eas-primary);
-  text-decoration: none;
-}
-.link:hover {
-  text-decoration: underline;
-}
-.link:focus-visible {
-  border-radius: var(--eas-radius-tag);
-}
 
 .demo {
-  margin-top: 28px;
-  padding-top: 16px;
-  border-top: 1px solid var(--eas-rule);
+  margin-top: 24px;
 }
 .demo-head {
   display: flex;
@@ -258,32 +248,18 @@ function fillDemo(a: DemoAccount) {
 .demo-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  overflow: hidden;
+  gap: 10px 12px;
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-control);
 }
 .demo-list li {
+  display: flex;
   min-width: 0;
-  border-bottom: 1px solid var(--eas-rule);
-}
-.demo-list li:nth-child(odd) {
-  border-right: 1px solid var(--eas-rule);
-}
-.demo-list li:nth-last-child(-n + 2) {
-  border-bottom: 0;
 }
 @container auth-main (max-width: 399px) {
   .demo-list {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .demo-list li:nth-child(odd) {
-    border-right: 0;
-  }
-  .demo-list li:nth-last-child(2) {
-    border-bottom: 1px solid var(--eas-rule);
   }
 }
 .demo-item {
@@ -292,10 +268,12 @@ function fillDemo(a: DemoAccount) {
   gap: 2px;
   width: 100%;
   box-sizing: border-box;
-  min-height: 52px;
-  padding: 7px 10px;
+  min-height: 54px;
+  padding: 7px 12px;
   border: 0;
+  border-radius: var(--eas-radius-control);
   background: var(--eas-sheet);
+  box-shadow: 3px 3px 0 var(--eas-shade);
   text-align: left;
   cursor: pointer;
   font: inherit;
@@ -303,21 +281,25 @@ function fillDemo(a: DemoAccount) {
   line-height: 1.5;
   transition:
     background-color var(--eas-dur-fast) var(--eas-ease),
-    transform var(--eas-dur-fast) var(--eas-ease);
+    transform var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 .demo-item:hover {
   background: var(--eas-row-hover);
+  box-shadow: 4px 4px 0 var(--eas-shade);
+  transform: translate(-1px, -1px);
 }
 /* 悬停底色上账号名提到 ink-2，保持 4.5:1 以上 */
 .demo-item:is(:hover, :focus-visible) .demo-user {
   color: var(--eas-ink-2);
 }
 .demo-item:active {
-  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--eas-shade);
+  transform: translate(2px, 2px);
 }
 .demo-item:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: -2px;
+  outline: 2px solid var(--eas-ink);
+  outline-offset: 2px;
 }
 .demo-line {
   display: flex;
@@ -333,6 +315,7 @@ function fillDemo(a: DemoAccount) {
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-3);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .demo-role {
   font-size: var(--eas-fs-xs);

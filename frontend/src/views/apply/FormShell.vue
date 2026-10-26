@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 申请表单外壳：标题、错误汇总、底部操作栏（删除草稿 / 保存草稿 / 提交）
+// 申请表单外壳：单据头（类型名展示字 + 说明；草稿时右上「草稿」暗纸胶囊和单号）、错误汇总、底部操作栏（删除草稿 / 保存草稿 / 提交）
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -63,17 +63,17 @@ function back() {
 <template>
   <div class="form-shell">
     <div class="sheet">
-      <header class="sheet-head">
-        <div class="sheet-main">
-          <h2 class="sheet-title">{{ title }}</h2>
-          <p v-if="description" class="sheet-desc">{{ description }}</p>
+      <header class="form-head">
+        <div class="form-head-main">
+          <h2 class="form-title">{{ title }}</h2>
+          <p v-if="description" class="form-desc">{{ description }}</p>
         </div>
-        <div class="sheet-extra">
-          <div v-if="appNo" class="sheet-meta">
-            <span class="draft-mark">草稿</span><span class="sheet-no">{{ appNo }}</span>
+        <div class="form-head-extra">
+          <div v-if="appNo" class="form-meta">
+            <span class="draft-mark inked">草稿</span><span class="form-no">{{ appNo }}</span>
           </div>
-          <span v-if="dirty" class="sheet-state is-dirty">有未保存的修改</span>
-          <span v-else-if="appNo" class="sheet-state is-saved">已保存</span>
+          <span v-if="dirty" class="form-state is-dirty">有未保存的修改</span>
+          <span v-else-if="appNo" class="form-state is-saved">已保存</span>
           <slot name="header-extra" />
         </div>
       </header>
@@ -98,7 +98,7 @@ function back() {
         </div>
 
         <div class="form-actions">
-          <el-button text :disabled="busy" @click="back">返回</el-button>
+          <el-button :disabled="busy" @click="back">返回</el-button>
           <el-button v-if="canDelete" type="danger" plain :loading="deleting" :disabled="busy" @click="$emit('delete')">
             删除草稿
           </el-button>
@@ -113,55 +113,60 @@ function back() {
 </template>
 
 <style scoped>
+/* 表单整体是一张单据：纸色 + 硬投影（全局 .sheet），段间虚线分段（全局 .sheet-section） */
 .form-shell { min-width: 0; }
 .sheet { min-width: 0; }
-.sheet-head {
+/* 单据头：类型名展示字 28 + 一行说明 */
+.form-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px 24px;
-  padding: 28px 24px 24px;
+  gap: 12px 24px;
+  padding: 28px var(--eas-sheet-pad) 22px;
 }
-.sheet-main { min-width: 0; flex: 1 1 280px; }
-.sheet-title {
+.form-head-main { min-width: 0; flex: 1 1 280px; }
+.form-title {
   margin: 0;
-  font-family: var(--eas-font-serif);
+  font-family: var(--eas-font-display);
   font-size: var(--eas-fs-26);
   font-weight: 600;
   line-height: var(--eas-lh-title);
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
   overflow-wrap: anywhere;
 }
-.sheet-desc { margin: 8px 0 0; color: var(--eas-ink-2); font-size: var(--eas-fs-14); }
-.sheet-extra { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; }
-.sheet-extra:empty { display: none; }
-.sheet-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: var(--eas-fs-12); color: var(--eas-ink-2); }
-.sheet-no { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.draft-mark { padding: 1px 7px; border: 1px solid var(--eas-muted); border-radius: var(--eas-radius-tag); }
-.sheet-state { font-size: var(--eas-fs-12); }
+.form-desc { margin: 8px 0 0; color: var(--eas-ink-2); font-size: var(--eas-fs-note); }
+.form-head-extra { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; }
+.form-head-extra:empty { display: none; }
+.form-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: var(--eas-fs-12); color: var(--eas-ink-2); }
+.form-no { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* 草稿：暗纸实色胶囊 */
+.draft-mark {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: var(--eas-radius-pill);
+  background-color: var(--eas-tab);
+  font-size: var(--eas-fs-12);
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--eas-ink-2);
+}
+.form-state { font-size: var(--eas-fs-12); }
 .is-dirty { color: var(--eas-warning-text); }
 .is-saved { color: var(--eas-ink-3); }
-.sheet-pad { padding: 24px; box-sizing: border-box; }
+.sheet-pad { padding: var(--eas-sheet-pad); box-sizing: border-box; }
 .sheet-body { min-width: 0; }
-.error-summary, .sheet-body > :deep(.el-alert) { margin: 20px 24px; width: auto; }
+/* 单据头（form-head）不是全局 sheet-head，第一段也应有虚线裁切线；全局 :first-child 规则会去掉，这里补回 */
+.sheet-body :deep(.sheet-section:first-child) { border-top: 2px dashed var(--eas-rule); }
+.error-summary, .sheet-body > :deep(.el-alert) { margin: 20px var(--eas-sheet-pad); width: auto; }
 .error-list { margin: 4px 0 0; padding-left: 18px; }
 .error-path { font-weight: 600; }
-.sheet-body :deep(.form-section) {
-  min-width: 0;
-  padding: 24px;
-  border-top: 1px solid var(--eas-rule);
-}
-.sheet-body :deep(.form-section:first-child) { border-top: 0; }
-.sheet-body :deep(.section-title) { margin: 0 0 18px; font-size: var(--eas-fs-16); font-weight: 600; }
+/* 标签在上、输入框在下；两列网格由各表单用 el-row / FormRenderer 的网格排 */
 .sheet-body :deep(.el-form-item) { margin-bottom: 22px; min-width: 0; }
 .sheet-body :deep(.el-form-item:last-child) { margin-bottom: 0; }
-.sheet-body :deep(.el-form-item__label) {
-  padding: 0;
-  margin-bottom: 8px;
-  color: var(--eas-ink-2);
-  line-height: 1.5;
-}
-.sheet-body :deep(.el-form-item.is-required .el-form-item__label::before) { color: var(--eas-danger); }
+.sheet-body :deep(.el-form-item__label) { padding: 0; margin-bottom: 8px; line-height: 1.5; }
 .sheet-body :deep(.el-form-item__content) { min-width: 0; }
 .sheet-body :deep(.el-form-item__error) { position: static; width: 100%; padding-top: 4px; }
 .sheet-body :deep(.form-renderer .el-form-item) { margin-bottom: 0; }
@@ -170,6 +175,7 @@ function back() {
 .sheet-body :deep(.el-form-item__content > .el-date-editor),
 .sheet-body :deep(.el-form-item__content > .uploader) { width: 100%; min-width: 0; }
 .sheet-body :deep(.el-row) { row-gap: 22px; margin-bottom: 22px; }
+.sheet-body :deep(.el-row:last-child) { margin-bottom: 0; }
 .sheet-body :deep(.el-col) { min-width: 0; }
 .sheet-body :deep(.el-col .el-form-item) { margin-bottom: 0; }
 .sheet-body :deep(.el-button--small),
@@ -177,21 +183,21 @@ function back() {
 .sheet-body :deep(.el-radio-group) { flex-wrap: wrap; gap: 4px 20px; }
 .sheet-body :deep(.el-radio) { margin-right: 0; white-space: normal; height: auto; min-height: 32px; }
 .sheet-body :deep(.el-radio__label) { white-space: normal; }
+/* 底部操作栏（全局 .form-actions）：纸底 + 上沿硬投影；贴住单据底部圆角 */
 .form-actions {
   flex-wrap: wrap;
-  padding: 12px 24px;
+  padding: 12px var(--eas-sheet-pad);
   border-radius: 0 0 var(--eas-radius-panel) var(--eas-radius-panel);
 }
 .form-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .actions-note { font-size: var(--eas-fs-12); color: var(--eas-ink-3); }
 @media (max-width: 767px) {
-  .sheet-head { padding: 24px 16px 20px; }
-  .sheet-main { flex-basis: 100%; }
-  .sheet-extra { align-items: flex-start; }
-  .sheet-body :deep(.form-section) { padding: 20px 16px; }
+  .form-head { padding: 24px 16px 18px; }
+  .form-head-main { flex-basis: 100%; }
+  .form-head-extra { align-items: flex-start; }
   .error-summary, .sheet-body > :deep(.el-alert) { margin: 16px; }
   .form-actions { padding: 12px 16px; gap: 8px; }
-  .form-actions :deep(.el-button) { padding-left: 10px; padding-right: 10px; }
+  .form-actions :deep(.el-button) { padding-left: 12px; padding-right: 12px; }
   .actions-note { flex-basis: 100%; order: -1; }
 }
 </style>

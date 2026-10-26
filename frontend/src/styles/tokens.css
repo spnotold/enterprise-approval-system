@@ -1,71 +1,98 @@
-/* 设计 token（见 docs/ui_design.md 第二版「案卷」）：组件里只用这些变量，不写死色值 */
+/* 设计 token（见 docs/ui_design.md 第三版「套色」）：组件里只用这些变量，不写死色值 */
 :root {
-  /* 桌面与单据 */
-  --eas-desk: #e6e9e5;
-  --eas-desk-dot: #bfc6bf;
-  --eas-sheet: #ffffff;
-  --eas-tab: #d9ded9;
-  --eas-row-hover: #f3f5f2;
+  /* 纸：页面底（铺着风景）、单据纸、暗纸（未选中的胶囊 / 草稿 / 未到）、单据的硬投影 */
+  --eas-desk: #f1ece1;
+  --eas-sheet: #fbf6ea;
+  --eas-tab: #efe5cf;
+  --eas-row-hover: #f4ecdb;
+  --eas-shade: #d8caab;
+  /* 输入框的底比纸再亮一点，像纸上留的空格 */
+  --eas-field: #fffcf4;
 
   /* 文字与线 */
-  --eas-ink: #1e2b36;
-  --eas-ink-2: #55636d;
-  --eas-ink-3: #69757d;
-  --eas-rule: #dde1dc;
-  --eas-rule-strong: #bec5be;
+  --eas-ink: #22313f;
+  --eas-ink-deep: #111c26;
+  --eas-ink-2: #5b6670;
+  --eas-ink-3: #5c646b;
+  --eas-rule: #e7dcc4;
+  --eas-rule-strong: #cfc2a4;
 
-  /* 语义色 */
-  --eas-primary: #2f4e6b;
-  --eas-primary-hover: #263f57;
-  --eas-primary-tint: #e8eef3;
-  --eas-success: #3f6e4e;
-  --eas-success-tint: #e9f1eb;
-  --eas-danger: #9a4337;
-  --eas-danger-tint: #f6ebe9;
-  --eas-warning: #94702a;
-  --eas-warning-text: #775a1e;
-  --eas-warning-border: #d8c59a;
-  --eas-warning-tint: #f5f0e4;
-  --eas-muted: #78838a;
+  /* 五色墨：只以小块实色出现，各有固定用途 */
+  --eas-mustard: #d9a441;      /* 注意 / 当前 / 选中的错版 */
+  --eas-mustard-deep: #a97a22; /* 芥黄色块的投影 */
+  --eas-mustard-tint: #f4e2b3;
+  --eas-rust: #a94a2c;         /* 驳回 / 危险 / 印章 */
+  --eas-rust-deep: #7a3320;
+  --eas-sage: #a3b590;         /* 已通过（色块） */
+  --eas-sage-tint: #e2e9d6;
+  --eas-sky: #b3cbd5;          /* 审批中（色块） */
+  --eas-sky-tint: #dce7ea;
+  --eas-link: #3b6684;
 
-  /* 字体 */
+  /* 语义色（名字沿用 v2，值换成套色墨） */
+  --eas-primary: #27425a;
+  --eas-primary-hover: #1f3549;
+  --eas-primary-tint: #e3e3da;
+  --eas-success: #3f5a38;
+  --eas-success-tint: var(--eas-sage-tint);
+  --eas-danger: #a94a2c;
+  --eas-danger-tint: #f2dfd3;
+  --eas-warning: #a97a22;
+  --eas-warning-text: #7a5718;
+  --eas-warning-border: var(--eas-mustard);
+  --eas-warning-tint: var(--eas-mustard-tint);
+  --eas-muted: #7d8389;
+
+  /* 套色颗粒：multiply 叠在有颜色的墨块上；纸面和文字保持干净 */
+  --eas-grain: url('../assets/textures/grain.png');
+  /* 印章残缺：噪声遮罩 */
+  --eas-stamp-mask: url('../assets/textures/stamp-mask.png');
+
+  /* 字体：标题与大数字用展示字（数字取 Fraunces 柔角，中文落到思源宋体粗体），其余系统无衬线。
+     站酷小薇已弃用：它把「回」画成实心方块，「驳回」「返回」都看不清。 */
   --eas-font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', system-ui, sans-serif;
-  --eas-font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'Songti SC', serif;
+  --eas-font-display: 'Fraunces Variable', 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'Songti SC', serif;
+  /* 旧名：v2 的宋体位置一律换成展示字 */
+  --eas-font-serif: var(--eas-font-display);
+  --eas-display-tracking: 0.01em;
 
-  /* 字号阶：12 辅助 / 14 正文 / 16 小节标题 / 20 / 26 单据标题 / 32 页面标题 */
+  /* 字号阶：12 辅助 / 14 正文 / 16 小节 / 20 / 26 单据标题 / 32 / 40 页面标题 */
   --eas-fs-12: 12px;
   --eas-fs-14: 14px;
   --eas-fs-16: 16px;
   --eas-fs-20: 20px;
-  --eas-fs-26: 26px;
+  --eas-fs-26: 28px;
   --eas-fs-32: 32px;
+  --eas-fs-40: 40px;
   --eas-fs-xs: var(--eas-fs-12);
   --eas-fs-sm: var(--eas-fs-14);
   --eas-fs-md: var(--eas-fs-16);
   --eas-fs-lg: var(--eas-fs-20);
   --eas-fs-doc: var(--eas-fs-26);
-  --eas-fs-xl: var(--eas-fs-32);
-  /* 阶外的两个固定字号：分页 / 意见 13，顶栏栏目 15 */
+  --eas-fs-xl: var(--eas-fs-40);
   --eas-fs-note: 13px;
   --eas-fs-nav: 15px;
   --eas-lh-body: 1.65;
-  --eas-lh-title: 1.3;
+  --eas-lh-title: 1.2;
 
-  /* 形状 */
-  --eas-radius-panel: 6px;
-  --eas-radius-control: 4px;
-  --eas-radius-tag: 2px;
-  --eas-radius-nav: 8px;
-  /* 单据：纸的厚度，不用模糊阴影；浮层才用大阴影 */
-  --eas-shadow-sheet: 0 1px 0 rgba(30, 43, 54, 0.05);
-  --eas-shadow-float: 0 8px 24px rgba(30, 43, 54, 0.14);
+  /* 形状：单据 16、输入框 12、按钮 / 标签 / 页签都是胶囊 */
+  --eas-radius-panel: 16px;
+  --eas-radius-control: 12px;
+  --eas-radius-tag: 999px;
+  --eas-radius-nav: 999px;
+  --eas-radius-pill: 999px;
+  /* 硬投影：0 模糊，往右下错开；单据用纸影，按钮用深一档的同色 */
+  --eas-shadow-sheet: 6px 6px 0 var(--eas-shade);
+  --eas-shadow-float: 0 0 0 1px var(--eas-rule-strong), 6px 6px 0 rgba(34, 49, 63, 0.16);
+  /* 选中 / 聚焦的「错版」：一块芥黄错开垫在后面 */
+  --eas-offset-mark: 3px 3px 0 var(--eas-mustard);
 
   /* 尺寸与间距 */
-  --eas-control-height: 36px;
-  --eas-header-height: 56px;
-  --eas-gap: 24px;
+  --eas-control-height: 38px;
+  --eas-header-height: 72px;
+  --eas-gap: 28px;
   --eas-sheet-pad: 24px;
-  --eas-sheet-pad-wide: 32px;
+  --eas-sheet-pad-wide: 36px;
   --eas-content-max: 1280px;
 
   /* 动效 */
@@ -74,26 +101,19 @@
   --eas-dur: 200ms;
   --eas-dur-stamp: 240ms;
 
-  /* 文本选中、输入框聚焦外发光 */
-  --eas-selection: rgba(47, 78, 107, 0.16);
-  --eas-focus-glow: rgba(47, 78, 107, 0.15);
+  /* 文本选中、输入框聚焦 */
+  --eas-selection: rgba(217, 164, 65, 0.35);
+  --eas-focus-glow: var(--eas-mustard);
 
-  /* 图表序列色；状态分布图里已撤回用 chart-6，免得和草稿连成一片灰 */
-  --eas-chart-1: #2f4e6b;
-  --eas-chart-2: #3f6e4e;
-  --eas-chart-3: #94702a;
-  --eas-chart-4: #9a4337;
-  --eas-chart-5: #78838a;
-  --eas-chart-6: #8a9fb3;
+  /* 图表序列色：藏青、鼠尾草、芥黄、铁锈、灰、天青 */
+  --eas-chart-1: #27425a;
+  --eas-chart-2: #7f9a6e;
+  --eas-chart-3: #d9a441;
+  --eas-chart-4: #a94a2c;
+  --eas-chart-5: #9a9488;
+  --eas-chart-6: #8fb0bf;
 
-  /* ---------- 第一版 token 的兼容别名（已按 grep 的实际用法映射，页面改完后逐个删除） ----------
-     --eas-paper       行悬停 / 按下的浅底、条目底           -> --eas-row-hover
-     --eas-paper-deep  头像 / 进度条底、悬停再深一档、分隔线 -> --eas-tab
-     --eas-surface     单据与顶栏的白                       -> --eas-sheet
-     --eas-muted-tint  无引用，保留以免漏网                 -> info 的 light-9
-     --eas-skeleton-to 骨架屏渐变终点                       -> --eas-row-hover
-     --eas-shadow-lift 可点卡片悬停的薄影；v2 不做悬停浮起   -> --eas-shadow-sheet
-     另：--eas-fs-lg 21px -> 20px，--eas-fs-xl 28px -> 32px（页面标题 / 问候），数值随 v2 字号阶变化，名字不变 */
+  /* ---------- 旧 token 的兼容别名 ---------- */
   --eas-paper: var(--eas-row-hover);
   --eas-paper-deep: var(--eas-tab);
   --eas-surface: var(--eas-sheet);
@@ -105,60 +125,60 @@
   /* 各色阶由 scripts/generate-theme-colors.mjs 从上面的基础色算出：
      light-N = 与白按 N×10% 混合，dark-2 = 与黑按 20% 混合；改了基础色后运行 --write 更新 */
   /* >>> generated by scripts/generate-theme-colors.mjs, do not edit by hand >>> */
-  --el-color-primary: #2f4e6b;
-  --el-color-primary-rgb: 47, 78, 107;
-  --el-color-primary-light-3: #6d8397;
-  --el-color-primary-light-5: #97a7b5;
-  --el-color-primary-light-7: #c1cad3;
-  --el-color-primary-light-8: #d5dce1;
-  --el-color-primary-light-9: #eaedf0;
-  --el-color-primary-dark-2: #263e56;
-  --el-color-success: #3f6e4e;
-  --el-color-success-rgb: 63, 110, 78;
-  --el-color-success-light-3: #799a83;
-  --el-color-success-light-5: #9fb7a7;
-  --el-color-success-light-7: #c5d4ca;
-  --el-color-success-light-8: #d9e2dc;
-  --el-color-success-light-9: #ecf1ed;
-  --el-color-success-dark-2: #32583e;
-  --el-color-warning: #94702a;
-  --el-color-warning-rgb: 148, 112, 42;
-  --el-color-warning-light-3: #b49b6a;
-  --el-color-warning-light-5: #cab895;
-  --el-color-warning-light-7: #dfd4bf;
-  --el-color-warning-light-8: #eae2d4;
-  --el-color-warning-light-9: #f4f1ea;
-  --el-color-warning-dark-2: #765a22;
-  --el-color-danger: #9a4337;
-  --el-color-danger-rgb: 154, 67, 55;
-  --el-color-danger-light-3: #b87b73;
-  --el-color-danger-light-5: #cda19b;
-  --el-color-danger-light-7: #e1c7c3;
-  --el-color-danger-light-8: #ebd9d7;
-  --el-color-danger-light-9: #f5eceb;
-  --el-color-danger-dark-2: #7b362c;
-  --el-color-error: #9a4337;
-  --el-color-error-rgb: 154, 67, 55;
-  --el-color-error-light-3: #b87b73;
-  --el-color-error-light-5: #cda19b;
-  --el-color-error-light-7: #e1c7c3;
-  --el-color-error-light-8: #ebd9d7;
-  --el-color-error-light-9: #f5eceb;
-  --el-color-error-dark-2: #7b362c;
-  --el-color-info: #78838a;
-  --el-color-info-rgb: 120, 131, 138;
-  --el-color-info-light-3: #a1a8ad;
-  --el-color-info-light-5: #bcc1c5;
-  --el-color-info-light-7: #d7dadc;
-  --el-color-info-light-8: #e4e6e8;
-  --el-color-info-light-9: #f2f3f3;
-  --el-color-info-dark-2: #60696e;
-  --el-text-color-disabled: #a5acb1;
-  --el-border-color-dark: #abb1ab;
-  --el-border-color-darker: #989e98;
-  --el-fill-color-lighter: #f9faf9;
-  --el-fill-color-extra-light: #fcfdfc;
-  --el-mask-color: rgba(230, 233, 229, 0.8);
+  --el-color-primary: #27425a;
+  --el-color-primary-rgb: 39, 66, 90;
+  --el-color-primary-light-3: #677885;
+  --el-color-primary-light-5: #919ca2;
+  --el-color-primary-light-7: #bbc0bf;
+  --el-color-primary-light-8: #d1d2cd;
+  --el-color-primary-light-9: #e6e4dc;
+  --el-color-primary-dark-2: #1f3548;
+  --el-color-success: #3f5a38;
+  --el-color-success-rgb: 63, 90, 56;
+  --el-color-success-light-3: #77896d;
+  --el-color-success-light-5: #9da891;
+  --el-color-success-light-7: #c3c7b5;
+  --el-color-success-light-8: #d5d7c6;
+  --el-color-success-light-9: #e8e6d8;
+  --el-color-success-dark-2: #32482d;
+  --el-color-warning: #a97a22;
+  --el-color-warning-rgb: 169, 122, 34;
+  --el-color-warning-light-3: #c29f5e;
+  --el-color-warning-light-5: #d2b886;
+  --el-color-warning-light-7: #e2d1ae;
+  --el-color-warning-light-8: #ebddc2;
+  --el-color-warning-light-9: #f3ead6;
+  --el-color-warning-dark-2: #87621b;
+  --el-color-danger: #a94a2c;
+  --el-color-danger-rgb: 169, 74, 44;
+  --el-color-danger-light-3: #c27e65;
+  --el-color-danger-light-5: #d2a08b;
+  --el-color-danger-light-7: #e2c2b1;
+  --el-color-danger-light-8: #ebd4c4;
+  --el-color-danger-light-9: #f3e5d7;
+  --el-color-danger-dark-2: #873b23;
+  --el-color-error: #a94a2c;
+  --el-color-error-rgb: 169, 74, 44;
+  --el-color-error-light-3: #c27e65;
+  --el-color-error-light-5: #d2a08b;
+  --el-color-error-light-7: #e2c2b1;
+  --el-color-error-light-8: #ebd4c4;
+  --el-color-error-light-9: #f3e5d7;
+  --el-color-error-dark-2: #873b23;
+  --el-color-info: #7d8389;
+  --el-color-info-rgb: 125, 131, 137;
+  --el-color-info-light-3: #a3a6a6;
+  --el-color-info-light-5: #bcbdba;
+  --el-color-info-light-7: #d5d4cd;
+  --el-color-info-light-8: #e2dfd7;
+  --el-color-info-light-9: #eeebe0;
+  --el-color-info-dark-2: #64696e;
+  --el-text-color-disabled: #9c9e9e;
+  --el-border-color-dark: #baaf94;
+  --el-border-color-darker: #a69b83;
+  --el-fill-color-lighter: #f8f1e3;
+  --el-fill-color-extra-light: #f9f4e6;
+  --el-mask-color: rgba(241, 236, 225, 0.8);
   /* <<< generated <<< */
 
   --el-bg-color: var(--eas-sheet);
@@ -179,16 +199,16 @@
 
   --el-font-family: var(--eas-font-sans);
   --el-font-size-base: 14px;
-  --el-border-radius-base: 4px;
-  --el-border-radius-small: 2px;
-  --el-border-radius-round: 20px;
+  --el-border-radius-base: var(--eas-radius-control);
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 999px;
   --el-box-shadow: var(--eas-shadow-float);
   --el-box-shadow-light: var(--eas-shadow-float);
   --el-box-shadow-lighter: var(--eas-shadow-float);
   --el-box-shadow-dark: var(--eas-shadow-float);
-  /* 输入框 / 选择器 / 日期框 / 按钮统一 36px；small 24px、large 40px 保持组件库默认 */
+  /* 输入框 / 选择器 / 日期框 / 按钮统一 38px；small、large 保持组件库默认 */
   --el-component-size: var(--eas-control-height);
-  /* 骨架屏用桌面色系，避免默认灰蓝在白纸上显脏 */
+  /* 骨架屏用纸色系，避免默认灰蓝在纸上显脏 */
   --el-skeleton-color: var(--eas-tab);
   --el-skeleton-to-color: var(--eas-row-hover);
   --el-transition-duration: 0.2s;

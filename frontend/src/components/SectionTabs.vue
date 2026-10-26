@@ -16,26 +16,40 @@ const tabs = computed(() => props.section.items.map((item) => ({
 </script>
 
 <template>
-  <IndexTabs :items="tabs" :active="activePath" :label="section.label" :hide-tabs="hideTabs" class="section-tabs" :class="{ 'is-compact': hideTabs }">
-    <template #actions>
-      <!-- 页面使用 <Teleport to="#section-actions" defer> 放置操作；窄屏只隐藏导航，保留同一目标节点。 -->
-      <div id="section-actions" />
-    </template>
-  </IndexTabs>
+  <header class="section-head">
+    <h1 class="section-title-lg">{{ section.label }}</h1>
+    <IndexTabs :items="tabs" :active="activePath" :label="section.label" :hide-tabs="hideTabs" class="section-tabs" :class="{ 'is-compact': hideTabs }">
+      <template #actions>
+        <!-- 页面使用 <Teleport to="#section-actions" defer> 放置操作；窄屏只隐藏导航，保留同一目标节点。 -->
+        <div id="section-actions" />
+      </template>
+    </IndexTabs>
+  </header>
 </template>
 
 <style scoped>
-.section-tabs {
+.section-head {
   position: relative;
   z-index: 1;
-  margin-bottom: -1px;
+  margin-bottom: 24px;
+}
+.section-title-lg {
+  margin: 0 0 16px;
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-xl);
+  font-weight: 600;
+  line-height: var(--eas-lh-title);
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
 }
 #section-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
 }
-.section-tabs.is-compact { justify-content: flex-end; margin-bottom: 24px; }
+.section-tabs.is-compact { justify-content: flex-end; }
 .section-tabs.is-compact:has(#section-actions:empty) { display: none; }
-.section-tabs.is-compact :deep(.index-tab-actions) { padding-bottom: 0; }
+@media (max-width: 767px) {
+  .section-title-lg { margin-bottom: 12px; font-size: var(--eas-fs-32); }
+}
 </style>

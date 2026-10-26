@@ -23,23 +23,37 @@ const groups = computed(() => adminMenuGroups(props.items))
 </template>
 
 <style scoped>
-.admin-index { width: 200px; min-width: 0; padding-top: 8px; }
-.admin-index-group + .admin-index-group { margin-top: 20px; }
-.admin-index-label { padding: 0 20px 6px; font-size: var(--eas-fs-xs); color: var(--eas-ink-2); }
+.admin-index { width: 200px; min-width: 0; padding-top: 4px; }
+.admin-index-group + .admin-index-group { margin-top: 22px; }
+.admin-index-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 8px;
+  font-family: var(--eas-font-display);
+  font-size: 17px;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
+}
 .admin-index-item {
-  position: relative;
   display: flex;
   align-items: center;
   box-sizing: border-box;
-  min-height: 40px;
-  margin-right: -1px;
-  padding: 8px 20px;
-  border: 1px solid transparent;
-  border-right: 0;
-  border-radius: var(--eas-radius-panel) 0 0 var(--eas-radius-panel);
+  min-height: 38px;
+  margin: 0 6px 6px 0;
+  padding: 0 16px;
+  border-radius: var(--eas-radius-pill);
   color: var(--eas-ink-2);
   text-decoration: none;
+  transition: color var(--eas-dur-fast) var(--eas-ease);
 }
-.admin-index-item:hover { color: var(--eas-ink); background: var(--eas-row-hover); }
-.admin-index-item.is-active { z-index: 1; background: var(--eas-sheet); color: var(--eas-ink); border-color: var(--eas-rule); font-weight: 600; }
+.admin-index-item:hover { color: var(--eas-ink); background: color-mix(in srgb, var(--eas-tab) 70%, transparent); }
+.admin-index-item.is-active {
+  background-color: var(--eas-ink);
+  background-image: var(--eas-grain);
+  background-blend-mode: multiply;
+  color: var(--eas-sheet);
+  font-weight: 600;
+  box-shadow: var(--eas-offset-mark);
+}
 </style>

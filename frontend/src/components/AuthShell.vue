@@ -1,8 +1,9 @@
 <script setup lang="ts">
-// 登录 / 注册共用外壳：左侧桌面承载样例单据，右侧是白底表单。
+// 登录 / 注册共用外壳：插画上悬浮样例单据，表单直接放在风景背景上。
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import PaperField from '@/components/PaperField.vue'
+import SceneryField from '@/components/SceneryField.vue'
 import SlipDemo from '@/components/SlipDemo.vue'
+import loginIllustration from '@/assets/illustrations/login.webp'
 import {
   AUTH_FORM_WIDTH_DEFAULT,
   AUTH_FORM_WIDTH_MIN,
@@ -98,13 +99,16 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
     :class="{ 'is-dragging': dragging }"
     :style="{ '--auth-form-w': `${widthValue}px` }"
   >
+    <SceneryField />
     <aside class="auth-aside">
-      <PaperField class="auth-paper" base="--eas-desk" />
       <div class="aside-inner">
-        <div class="auth-brand">
-          <span class="brand-mark" aria-hidden="true">审</span>
-          <span class="brand-name">企业审批</span>
-        </div>
+        <img
+          class="auth-illustration"
+          :src="loginIllustration"
+          alt=""
+          width="1536"
+          height="1024"
+        />
         <SlipDemo />
       </div>
     </aside>
@@ -112,7 +116,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
     <main id="auth-form-column" class="auth-main">
       <div class="auth-box">
         <div class="brand-compact">
-          <span class="brand-mark" aria-hidden="true">审</span>
+          <span class="brand-mark inked" aria-hidden="true">审</span>
           <span class="brand-name">企业审批</span>
         </div>
         <slot />
@@ -146,10 +150,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
 
 <style scoped>
 .auth-page {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--auth-form-w, 540px);
   min-height: 100%;
-  background: var(--eas-sheet);
   transition: grid-template-columns var(--eas-dur) var(--eas-ease);
 }
 .auth-page.is-dragging {
@@ -160,78 +165,81 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
 
 .auth-aside {
   position: relative;
-  overflow: hidden;
+  z-index: 1;
   min-width: 0;
-  background: var(--eas-desk);
-  container-name: auth-aside;
-  container-type: inline-size;
-}
-.auth-paper {
-  z-index: 0;
+  padding: 24px 24px 30px;
+  container: auth-aside / inline-size;
 }
 .aside-inner {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
+  position: sticky;
+  top: 24px;
   box-sizing: border-box;
-  min-width: 0;
-  /* Share the specimen's 540px content width so the brand and paper align. */
-  width: min(652px, 100%);
-  margin-inline: auto;
-  padding: 40px 56px;
-  pointer-events: none;
+  min-height: 640px;
+  height: calc(100vh - 54px);
+  padding: 60px 56px;
+  border-radius: calc(var(--eas-radius-panel) + 4px);
+  background: var(--eas-tab);
+  box-shadow: 8px 8px 0 var(--eas-shade);
 }
-.auth-brand,
+.auth-illustration {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.aside-inner :deep(.slip-demo) {
+  position: relative;
+  width: min(480px, 100%);
+}
 .brand-compact {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 .brand-mark {
   display: inline-grid;
   place-items: center;
-  box-sizing: border-box;
-  width: 28px;
-  height: 28px;
-  border: 1.5px solid var(--eas-primary);
-  border-radius: var(--eas-radius-control);
-  color: var(--eas-primary);
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-md);
-  font-weight: 600;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: var(--eas-rust);
+  box-shadow: var(--eas-offset-mark);
+  color: var(--eas-sheet);
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-lg);
+  font-weight: 400;
   line-height: 1;
 }
 .brand-name {
   color: var(--eas-ink);
-  font-family: var(--eas-font-serif);
-  font-size: 17px;
+  font-family: var(--eas-font-display);
+  font-size: calc(var(--eas-fs-lg) + 1px);
   font-weight: 600;
-  letter-spacing: 0.04em;
-}
-.aside-inner :deep(.slip-demo) {
-  margin: auto;
+  letter-spacing: var(--eas-display-tracking);
 }
 
 .auth-main {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: safe center;
   justify-content: center;
   min-width: 0;
-  background: var(--eas-sheet);
-  container-name: auth-main;
-  container-type: inline-size;
+  container: auth-main / inline-size;
 }
+/* 表单垫一张单据：背后的风景不会透到说明和校验文字下面 */
 .auth-box {
   box-sizing: border-box;
-  width: min(540px, 100%);
-  padding: 48px 72px;
-}
-.brand-compact {
-  display: none;
-  margin-bottom: 32px;
+  width: min(540px, calc(100% - 48px));
+  margin: 24px 24px 24px 18px;
+  padding: 36px 48px 40px;
+  border-radius: 20px;
+  background: var(--eas-sheet);
+  box-shadow: var(--eas-shadow-sheet);
 }
 
 .auth-split {
@@ -255,18 +263,20 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 1px;
-  background: var(--eas-rule);
+  width: 2px;
+  background: var(--eas-primary);
+  opacity: 0;
   transform: translateX(-50%);
-  transition:
-    width var(--eas-dur-fast) var(--eas-ease),
-    background-color var(--eas-dur-fast) var(--eas-ease);
+  transition: opacity var(--eas-dur-fast) var(--eas-ease);
 }
 .auth-split:hover::before,
 .auth-split:focus-visible::before,
 .auth-split[data-dragging]::before {
-  width: 2px;
-  background: var(--eas-primary);
+  opacity: 1;
+}
+.auth-split:focus-visible {
+  outline: 2px solid var(--eas-ink);
+  outline-offset: 2px;
 }
 .auth-split-grip {
   position: absolute;
@@ -289,24 +299,25 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
 
 @container auth-aside (inline-size < 640px) {
   .aside-inner {
-    width: min(604px, 100%);
-    padding: 32px;
+    padding: 40px 28px;
   }
 }
 @container auth-aside (inline-size < 430px) {
   .aside-inner {
-    padding: 24px 20px;
+    padding: 28px 16px;
   }
 }
 @container auth-main (inline-size < 500px) {
   .auth-box {
-    padding-right: 40px;
-    padding-left: 40px;
+    padding-right: 32px;
+    padding-left: 32px;
   }
 }
 @container auth-main (inline-size < 440px) {
   .auth-box {
-    padding: 32px 24px;
+    width: calc(100% - 28px);
+    margin: 16px 14px 20px 10px;
+    padding: 28px 20px 32px;
   }
 }
 
@@ -322,10 +333,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
     align-items: flex-start;
   }
   .auth-box {
-    padding: 32px 20px;
-  }
-  .brand-compact {
-    display: flex;
+    width: calc(100% - 32px);
+    margin: 16px 16px 24px 12px;
+    padding: 28px 20px 32px;
   }
 }
 </style>

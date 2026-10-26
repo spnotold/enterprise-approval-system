@@ -256,9 +256,6 @@ async function submit() {
         <h2 class="sheet-title">授权管理</h2>
         <p class="sheet-sub">按权限点和范围授权，可设有效期；回收只记录回收时间，授权记录保留。</p>
       </div>
-      <div class="head-actions">
-        <el-button type="primary" :icon="Plus" @click="openCreate">新建授权</el-button>
-      </div>
     </header>
 
     <p class="page-note">
@@ -278,6 +275,9 @@ async function submit() {
       </div>
       <el-switch v-model="filters.activeOnly" active-text="仅显示有效授权" @change="search" />
       <el-button link type="primary" @click="reset">重置</el-button>
+      <div class="list-actions">
+        <el-button type="primary" :icon="Plus" @click="openCreate">新建授权</el-button>
+      </div>
     </div>
 
     <el-table v-loading="loading" :data="records" row-key="id" class="grants-table eas-row-table">

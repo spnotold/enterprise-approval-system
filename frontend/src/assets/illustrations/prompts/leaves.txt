@@ -1,0 +1,8 @@
+Use case: small drifting leaves for a website background animation; each leaf will be cut out separately.
+Asset type: sprite sheet, 1536x1024, on a chroma-key background.
+Input images: style, palette and texture references only.
+Primary request: six single small leaves arranged in a neat grid of 3 columns and 2 rows, each leaf centered in its own cell with wide empty space around it: a sage willow leaf, an olive oval leaf, a mustard-yellow birch leaf, a rust elm leaf, a pale slate-blue eucalyptus leaf, and a small pale mustard ginkgo leaf. Each leaf fills about 40% of its cell.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified forms, fine paper grain and slightly faded screen-print ink.
+Palette: sage, olive, mustard, rust, slate blue. Muted.
+Background: perfectly flat solid magenta #FF00FF everywhere, with no gradient, no shadow, no grain on the background.
+Constraints: no text, letters, numbers, logos, watermark or border; not photorealistic, not 3D. Do not use magenta or pink in the leaves. Leaves must not touch or overlap each other or the edges.

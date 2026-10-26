@@ -44,14 +44,14 @@ async function copyNo() {
 </script>
 
 <template>
-  <header class="slip-header" :class="{ sealed: stamp }">
+  <header class="slip-header" :class="{ sealed: stamp, 'has-aside': stamp || detail.amountCents != null }">
     <div class="slip-header-main">
       <div class="slip-kind">
         <span>{{ typeName }}</span>
         <el-tooltip content="复制" placement="top" :show-after="200">
           <button type="button" class="slip-no" :aria-label="`复制单号 ${detail.appNo}`" @click="copyNo">{{ detail.appNo }}</button>
         </el-tooltip>
-        <StatusTag v-if="!stamp" :status="detail.status" :show-node="false" size="small" />
+        <StatusTag class="slip-status" :status="detail.status" :show-node="false" size="small" />
       </div>
       <h1 class="slip-title pre-wrap">{{ detail.title || detail.templateName }}</h1>
       <dl class="slip-meta">
@@ -62,7 +62,7 @@ async function copyNo() {
       </dl>
     </div>
     <div v-if="stamp || detail.amountCents != null" class="slip-header-aside">
-      <Stamp v-if="stamp" :tone="stamp.tone" :text="stamp.text" size="lg" class="slip-stamp" />
+      <Stamp v-if="stamp" :tone="stamp.tone" :text="stamp.text" size="lg" :animate="true" class="slip-stamp" />
       <div v-if="detail.amountCents != null" class="slip-amount"><span class="amount-label">金额</span><MoneyText :cents="detail.amountCents" strong /></div>
     </div>
   </header>
@@ -71,22 +71,23 @@ async function copyNo() {
 <style scoped>
 .slip-header {
   position: relative;
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
   gap: 24px;
-  padding: 28px var(--eas-sheet-inset) 24px;
+  padding: 28px var(--eas-sheet-inset) 22px;
 }
+.slip-header.has-aside { grid-template-columns: minmax(0, 1fr) auto; }
 .slip-header-main {
-  flex: 1;
   min-width: 0;
 }
 .slip-kind {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  color: var(--eas-ink-2);
-  font-size: var(--eas-fs-sm);
+  gap: 8px 12px;
+  color: var(--eas-ink-3);
+  font-size: var(--eas-fs-note);
 }
 .slip-no {
   position: relative;
@@ -108,30 +109,32 @@ async function copyNo() {
   color: var(--eas-ink);
 }
 .slip-no:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .slip-title {
-  margin: 8px 0 12px;
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-26);
+  margin: 6px 0 10px;
+  font-family: var(--eas-font-display);
+  font-size: 38px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.2;
+  letter-spacing: var(--eas-display-tracking);
   color: var(--eas-ink);
 }
 .slip-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 28px;
+  gap: 4px 18px;
   margin: 0;
-  font-size: var(--eas-fs-sm);
+  color: var(--eas-ink-2);
+  font-size: var(--eas-fs-note);
 }
 .slip-meta > div {
   display: flex;
   gap: 6px;
 }
 .slip-meta dt {
-  color: var(--eas-ink-2);
+  color: var(--eas-ink-3);
 }
 .slip-meta dd {
   margin: 0;
@@ -142,24 +145,27 @@ async function copyNo() {
 }
 .slip-header-aside {
   display: flex;
-  flex: none;
   flex-direction: column;
   align-items: flex-end;
-  gap: 16px;
-  padding-top: 4px;
-  align-self: stretch;
   justify-content: flex-end;
+  min-width: 0;
+  min-height: 126px;
+  padding-top: 74px;
   max-width: 100%;
 }
-.slip-stamp { margin: 2px 6px auto 0; }
+.slip-stamp { position: absolute; top: 22px; right: var(--eas-sheet-inset); }
+/* 只有章、没有金额时不用给金额留位置 */
+.slip-header-aside:not(:has(.slip-amount)) { min-height: 96px; padding-top: 0; }
 .slip-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .amount-label { color: var(--eas-ink-3); font-size: var(--eas-fs-12); }
 .slip-amount :deep(.money) {
-  font-family: var(--eas-font-serif);
-  font-size: calc(var(--eas-fs-26) + 4px);
+  font-family: var(--eas-font-display);
+  font-size: clamp(30px, 3.4vw, 44px);
+  white-space: nowrap;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.3;
+  line-height: 1.05;
+  letter-spacing: var(--eas-display-tracking);
 }
 
 .sr-only {
@@ -171,15 +177,17 @@ async function copyNo() {
   white-space: nowrap;
 }
 @media (max-width: 768px) {
-  .slip-header {
-    gap: 16px;
-    flex-wrap: wrap;
+  .slip-header,
+  .slip-header.has-aside {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-top: 20px;
   }
-  .slip-header-main { flex-basis: 100%; }
-  .sealed .slip-kind { padding-right: 112px; gap: 4px 12px; }
-  .sealed .slip-stamp { position: absolute; top: 28px; right: var(--eas-sheet-inset); margin: 0; }
-  .slip-header-aside { flex: 1; flex-direction: row; align-items: center; justify-content: flex-end; }
-  .slip-amount { margin-left: auto; }
-  .slip-title { overflow-wrap: anywhere; }
+  .slip-header-aside { min-height: 0; padding-top: 12px; flex-direction: row; align-items: flex-end; }
+  .slip-stamp { top: 16px; }
+  .sealed .slip-kind { padding-right: 82px; gap: 4px 8px; }
+  .slip-title { max-width: 100%; font-size: 30px; overflow-wrap: anywhere; }
+  .sealed .slip-title { padding-right: 82px; }
+  .slip-amount :deep(.money) { font-size: clamp(24px, 9vw, 36px); }
 }
 </style>

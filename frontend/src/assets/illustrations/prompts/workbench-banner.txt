@@ -1,0 +1,9 @@
+Use case: website illustration for the header banner of the workbench (home) page of an enterprise approval system
+Asset type: very wide banner illustration, 2048x768. It is shown about 1200x240 px with rounded corners; a greeting heading in dark navy text is placed over the left half in HTML.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: a calm morning landscape seen from a modernist office terrace. On the right third, a person in an orange sweater sits at a small round table reading a sheet of paper, a folder and a cup beside them, a potted plant nearby. Behind, a lake, pine trees and soft blue mountains.
+Scene: the terrace floor is a thin band along the bottom; the landscape stretches across the whole width.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified geometric forms, minimal facial detail, one hard-edged shadow tone per shape, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream paper, mustard yellow, burnt orange / rust, navy and slate blue, sage green, pale sky blue. Keep it muted.
+Composition: keep the left 50% very quiet: flat pale cream sky over low distant hills, with a small mustard sun near the middle, nothing busy behind where the heading goes. All detail sits in the right third. Calm, poster-like, large shapes, generous negative space.
+Constraints: no text, letters, numbers, logos, watermark or border; no writing on any paper (only plain lines); natural hands and anatomy; not photorealistic, not 3D.

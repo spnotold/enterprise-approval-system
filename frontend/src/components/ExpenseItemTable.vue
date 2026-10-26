@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 报销明细表：费用类型、发生日期、用途、金额、票据（或无票 + 原因）；即时合计（整数分相加）。
-// 只读模式下无票行整行橙色高亮，跨单疑似重复票据显示红色标签。
+// 无票行在编辑 / 只读模式下均整行芥末黄高亮，跨单疑似重复票据显示红色标签。
 import { computed, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { Plus, WarningFilled } from '@element-plus/icons-vue'
@@ -118,7 +118,7 @@ async function toggleNoInvoice(r: object, v: boolean) {
 }
 
 function rowClass({ row }: { row: ExpenseItemDraft }): string {
-  return props.readonly && row.noInvoice ? 'row-no-invoice' : ''
+  return row.noInvoice ? 'row-no-invoice' : ''
 }
 
 function add() {
@@ -297,6 +297,10 @@ function typeName(r: object): string {
 </template>
 
 <style scoped>
+/* 无票行是芥黄浅底：错误提示和「删除」改用深一档的铁锈，对比度才够 4.5:1 */
+:deep(.row-no-invoice) {
+  --eas-danger: var(--eas-rust-deep);
+}
 .expense-table {
   min-width: 0;
 }
@@ -311,7 +315,7 @@ function typeName(r: object): string {
 .table-scroll:focus-visible,
 .table-foot :deep(.el-button:focus-visible),
 .expense-table :deep(.el-checkbox__original:focus-visible + .el-checkbox__inner) {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .table--edit {
@@ -328,18 +332,27 @@ function typeName(r: object): string {
 .expense-table :deep(.el-textarea__inner) {
   min-height: var(--eas-control-height);
 }
+/* 登记簿金额：展示字 16，右对齐 */
+.table :deep(.money) {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* 合计行：row-hover 底 + 裁切虚线，金额展示字右对齐 */
 .total-row {
   display: flex;
   justify-content: flex-end;
   align-items: baseline;
   gap: 16px;
-  padding: 12px 24px;
+  padding: 12px var(--eas-sheet-pad);
   background: var(--eas-row-hover);
   color: var(--eas-ink-2);
-  border-top: 1px solid var(--eas-rule);
+  border-top: 2px dashed var(--eas-rule);
 }
 .total-row :deep(.money) {
-  font-family: var(--eas-font-serif);
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--eas-ink);

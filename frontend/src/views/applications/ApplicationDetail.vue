@@ -71,7 +71,7 @@ watch(() => router.currentRoute.value.fullPath, () => {
 }, { flush: 'post' })
 const statusSentence = computed(() => detail.value ? detailStatusSentence(detail.value, ownerAction('COPY')) : '')
 const actionBar = ref<HTMLElement | null>(null)
-const actionBarHeight = ref(64)
+const actionBarHeight = ref(72)
 watch(actionBar, (element, _old, onCleanup) => {
   if (!element) return
   const measure = () => { actionBarHeight.value = element.getBoundingClientRect().height }
@@ -299,7 +299,7 @@ async function urge() {
 
       <article class="sheet sheet--wide slip" :aria-label="`${detail.appNo} 申请单`">
         <SlipHeader :detail="detail" />
-        <SlipSection v-if="visibleFlow && visibleFlow.nodes.length" title="签批" class="signature-section">
+        <SlipSection v-if="visibleFlow && visibleFlow.nodes.length" title="签批" glyph="sun" class="signature-section">
           <SignatureBar
             v-if="visibleFlow && visibleFlow.nodes.length"
             :flow="visibleFlow"
@@ -351,9 +351,9 @@ async function urge() {
           <div class="action-state"><span>{{ statusSentence }}</span><span v-if="nextUrgeAt && ownerAction('URGE')" class="urge-note">下次可催办：{{ fmtDateTime(nextUrgeAt) }}</span></div>
           <div v-if="hasActions" class="action-buttons">
             <el-button v-if="ownerAction('EDIT')" :disabled="busy" @click="router.push(`/applications/${detail.id}/edit`)">编辑草稿</el-button>
-            <el-button v-if="ownerAction('DELETE')" type="danger" plain :loading="acting === 'DELETE'" :disabled="busy" @click="ownerOperation('DELETE')">删除草稿</el-button>
+            <el-button v-if="ownerAction('DELETE')" type="danger" :loading="acting === 'DELETE'" :disabled="busy" @click="ownerOperation('DELETE')">删除草稿</el-button>
             <el-button v-if="ownerAction('COPY')" type="primary" :loading="acting === 'COPY'" :disabled="busy" @click="ownerOperation('COPY')">复制并修改</el-button>
-            <el-button v-if="ownerAction('WITHDRAW')" type="danger" plain :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
+            <el-button v-if="ownerAction('WITHDRAW')" type="danger" :loading="acting === 'WITHDRAW'" :disabled="busy" @click="ownerOperation('WITHDRAW')">撤回申请</el-button>
             <el-button v-if="ownerAction('URGE')" :loading="acting === 'URGE'" :disabled="busy || !!nextUrgeAt" @click="urge">催办</el-button>
             <el-button v-if="ownerAction('SUBMIT')" type="primary" :loading="acting === 'SUBMIT'" :disabled="busy" @click="ownerOperation('SUBMIT')">提交申请</el-button>
             <ApprovePanel v-if="canHandle && detail.myTaskId" :disabled="busy" :refreshing="loading" :refresh-error="loadError ? errorText(loadError) : null" :key="`${detail.id}-${detail.myTaskId}`" :task-id="detail.myTaskId" :app-version="detail.version" :can-approve="allowed('APPROVE')" :can-reject="allowed('REJECT')" @submit="onSubmit" @refresh="load" />
@@ -365,7 +365,7 @@ async function urge() {
 </template>
 
 <style scoped>
-.application-detail { width: 100%; max-width: 1040px; min-width: 0; margin: 0 auto; gap: 16px; padding-bottom: calc(var(--detail-action-height, 64px) + 16px); }
+.application-detail { box-sizing: border-box; width: 100%; max-width: 1040px; min-width: 0; margin: 0 auto; gap: 16px; padding-bottom: calc(var(--detail-action-height, 72px) + 16px); }
 .detail-toolbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .slip { min-width: 0; font-size: var(--eas-fs-14); line-height: 1.65; }
 .application-link { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 0; overflow-wrap: anywhere; }
@@ -376,16 +376,16 @@ async function urge() {
 .log-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
 .log-table { width: 100%; }
 .log-table :deep(.row-linked > td.el-table__cell) { background: var(--eas-row-hover); }
-.log-table :deep(.row-linked > td.el-table__cell:first-child) { box-shadow: inset 3px 0 0 var(--eas-primary); }
+.log-table :deep(.row-linked > td.el-table__cell:first-child) { box-shadow: inset 3px 0 0 var(--eas-mustard); }
 .detail-actions {
   position: fixed;
   z-index: 10;
   bottom: 0;
   left: 0;
   right: 0;
-  min-height: 64px;
+  min-height: 72px;
   box-sizing: border-box;
-  border-top: 1px solid var(--eas-rule);
+  box-shadow: 0 -4px 0 var(--eas-shade);
   background: var(--eas-sheet);
 }
 .detail-actions-inner {
@@ -396,17 +396,19 @@ async function urge() {
   box-sizing: border-box;
   width: calc(100% - 80px);
   max-width: 1040px;
-  min-height: 63px;
+  min-height: 72px;
   margin: 0 auto;
+  padding: 10px 0;
 }
 .action-state { display: flex; flex-direction: column; min-width: 0; color: var(--eas-ink-2); font-size: var(--eas-fs-note); overflow-wrap: anywhere; }
 .urge-note { font-size: var(--eas-fs-12); }
-.action-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; flex-shrink: 0; gap: 8px; }
+.action-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; flex-shrink: 0; gap: 14px; }
 .detail-actions .el-button { margin-left: 0; }
 @media (max-width: 768px) {
   .slip { --eas-sheet-inset: 16px; }
-  .detail-actions-inner { width: calc(100% - 32px); padding: 10px 0; flex-wrap: wrap; gap: 8px; }
-  .action-state { flex-basis: 100%; }
-  .action-buttons { flex-shrink: 1; width: 100%; }
+  .detail-actions-inner { width: calc(100% - 32px); gap: 8px; }
+  .action-state { flex: 1 1 auto; font-size: var(--eas-fs-xs); }
+  .action-buttons { flex: 0 1 58%; max-width: 58%; flex-wrap: nowrap; justify-content: flex-start; gap: 10px; padding: 8px 4px; overflow-x: auto; scrollbar-width: thin; }
+  .detail-actions .el-button { flex: none; }
 }
 </style>

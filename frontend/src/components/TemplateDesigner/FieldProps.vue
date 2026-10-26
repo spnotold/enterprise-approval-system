@@ -479,11 +479,17 @@ function onStat(v: boolean | string | number) {
   flex-direction: column;
 }
 .panel-title {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-16);
   font-weight: 600;
-  font-size: 14px;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px dashed var(--eas-rule);
   margin-bottom: 12px;
 }
 .issue-alert {

@@ -7,11 +7,11 @@
   cursor: pointer;
 }
 
-/* 行尾操作的排布 */
+/* 行尾操作的排布（小按钮带硬投影，间距留出投影的位置） */
 .eas-row-table .row-actions {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
 }
 .eas-row-table .row-actions .el-button + .el-button {
   margin-left: 0;
@@ -21,9 +21,16 @@
 .eas-tnum {
   font-variant-numeric: tabular-nums;
 }
+/* 列表里的金额：展示字 16px（docs/ui_design.md 第 3 节） */
+.eas-row-table .money {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  letter-spacing: var(--eas-display-tracking);
+}
 
 .eas-row-clickable tr.el-table__row:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: -2px;
 }
 .eas-row-table .app-link {
@@ -116,7 +123,7 @@
 .list-state {
   padding: 16px var(--eas-sheet-pad);
 }
-/* 单据顶部的更新提示条 */
+/* 单据顶部的更新提示条：天青浅底 */
 .list-note {
   display: flex;
   align-items: center;
@@ -124,7 +131,7 @@
   gap: 4px 12px;
   padding: 10px var(--eas-sheet-pad);
   border-bottom: 1px solid var(--eas-rule);
-  background: var(--eas-primary-tint);
+  background: var(--eas-sky-tint);
   color: var(--eas-ink);
   font-size: var(--eas-fs-sm);
 }
@@ -133,16 +140,18 @@
   margin-left: auto;
 }
 
-/* 窄屏卡片：与登记簿同一张单据里的分条 */
+/* 窄屏卡片：一张张纸色小卡，硬投影；压在单据里，与登记簿同一张纸分出层次 */
 .mobile-cards {
+  display: grid;
+  gap: 14px;
+  padding: 4px 16px 18px;
   border-top: 0;
 }
 .mobile-card {
-  padding: 14px var(--eas-sheet-pad);
-  border-bottom: 1px solid var(--eas-rule);
-}
-.mobile-card:last-child {
-  border-bottom: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--eas-field);
+  box-shadow: 4px 4px 0 var(--eas-shade);
 }
 .mobile-card-main {
   display: flex;
@@ -152,7 +161,7 @@
   text-decoration: none;
 }
 .mobile-card-main:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .mobile-card-top {
@@ -193,15 +202,20 @@
 .mobile-card-go {
   align-self: flex-end;
   margin-top: 2px;
-  color: var(--eas-primary);
+  color: var(--eas-link);
   font-size: var(--eas-fs-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--eas-mustard);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 .mobile-card-actions {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 10px;
+  margin-top: 10px;
 }
 .mobile-card-actions .el-button {
   min-height: 32px;
@@ -223,4 +237,18 @@
 }
 .eas-row-table .el-table-fixed-column--right.is-first-column {
   border-left: 0;
+}
+
+/* 当前节点胶囊：长节点名换行显示，不截断 */
+.eas-row-table .el-tag.node-tag {
+  height: auto;
+  min-height: 22px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  white-space: normal;
+  line-height: 1.4;
+  text-align: left;
+}
+.eas-row-table .el-tag.node-tag .el-tag__content {
+  overflow-wrap: anywhere;
 }

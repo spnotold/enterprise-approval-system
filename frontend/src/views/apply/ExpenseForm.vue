@@ -258,8 +258,8 @@ const selectedRelated = computed(() =>
     </template>
 
     <el-form label-position="top" class="expense-form" @submit.prevent>
-      <section class="form-section">
-        <h3 class="section-title">报销信息</h3>
+      <section class="sheet-section">
+        <h3 class="section-title"><i class="ink-glyph ink-glyph--leaf" aria-hidden="true" />报销信息</h3>
         <el-form-item label="标题" required :error="err('title')">
           <el-input v-model="model.title" maxlength="100" show-word-limit placeholder="如：11 月北京出差报销" />
         </el-form-item>
@@ -319,7 +319,7 @@ const selectedRelated = computed(() =>
         </el-form-item>
       </section>
 
-      <section class="form-section">
+      <section class="sheet-section">
         <h3 class="section-title">费用明细</h3>
         <div v-if="err('items')" class="field-error field-error-msg">{{ err('items') }}</div>
         <el-alert
@@ -345,9 +345,14 @@ const selectedRelated = computed(() =>
 .total-box {
   text-align: right;
 }
+.total-box .muted {
+  font-size: var(--eas-fs-12);
+  color: var(--eas-ink-3);
+}
 .total {
-  font-family: var(--eas-font-serif);
+  font-family: var(--eas-font-display);
   font-size: var(--eas-fs-26);
+  font-variant-numeric: tabular-nums;
 }
 .related {
   width: 100%;
@@ -357,9 +362,6 @@ const selectedRelated = computed(() =>
   grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 8px;
   margin-top: 8px;
-}
-.related-card {
-  border: 1px solid var(--eas-rule);
 }
 .related-head {
   display: flex;

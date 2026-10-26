@@ -169,11 +169,14 @@ async function remove(t: ExpenseTypeAdmin) {
         <h2 class="sheet-title">费用类型</h2>
         <p class="sheet-sub">报销明细里可选的费用类型。已有报销单使用的类型不能删除，只能停用。</p>
       </div>
-      <div class="head-actions">
+    </header>
+
+    <div class="toolbar list-filters">
+      <div class="list-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">新建费用类型</el-button>
       </div>
-    </header>
+    </div>
 
     <el-table v-loading="loading" :data="sorted" row-key="id" class="eas-row-table" style="width: 100%">
       <el-table-column prop="code" label="编码" min-width="120" />

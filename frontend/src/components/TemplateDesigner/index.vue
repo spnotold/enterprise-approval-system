@@ -487,9 +487,9 @@ defineExpose({ locate })
 }
 .cols {
   display: grid;
-  gap: 16px;
+  gap: 20px;
   align-items: start;
-  grid-template-columns: 168px minmax(0, 1fr) minmax(340px, 400px);
+  grid-template-columns: 176px minmax(0, 1fr) minmax(340px, 400px);
 }
 .cols.no-lib {
   grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
@@ -499,7 +499,7 @@ defineExpose({ locate })
 }
 .col {
   min-width: 0;
-  padding: 12px;
+  padding: 16px;
 }
 .col-side {
   position: sticky;

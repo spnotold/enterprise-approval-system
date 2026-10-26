@@ -345,7 +345,7 @@ async function onSubmit() {
     </el-form>
 
     <div class="switch-line">
-      已有账号？<router-link to="/login" class="link">返回登录</router-link>
+      已有账号？<router-link to="/login" class="text-link">返回登录</router-link>
     </div>
   </AuthShell>
 </template>
@@ -353,10 +353,11 @@ async function onSubmit() {
 <style scoped>
 .auth-title {
   margin: 0;
-  font-family: var(--eas-font-serif);
-  font-size: 28px;
+  font-family: var(--eas-font-display);
+  font-size: calc(var(--eas-fs-40) + var(--eas-fs-xs));
   font-weight: 600;
   line-height: var(--eas-lh-title);
+  letter-spacing: var(--eas-display-tracking);
 }
 .auth-sub {
   margin: 6px 0 24px;
@@ -374,7 +375,8 @@ async function onSubmit() {
 }
 .auth-form :deep(.el-input__wrapper),
 .auth-form :deep(.el-select__wrapper) {
-  min-height: 40px;
+  box-sizing: border-box;
+  min-height: 44px;
 }
 .full {
   width: 100%;
@@ -418,22 +420,12 @@ async function onSubmit() {
 }
 .submit {
   width: 100%;
-  height: 42px;
+  height: 46px;
   font-size: var(--eas-fs-nav);
 }
 .switch-line {
   margin-top: 16px;
   font-size: var(--eas-fs-sm);
   color: var(--eas-ink-2);
-}
-.link {
-  color: var(--eas-primary);
-  text-decoration: none;
-}
-.link:hover {
-  text-decoration: underline;
-}
-.link:focus-visible {
-  border-radius: var(--eas-radius-tag);
 }
 </style>

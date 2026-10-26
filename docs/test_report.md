@@ -8,7 +8,7 @@
 | 数据库 | 真实 PostgreSQL 16，Flyway 迁移与演示数据和部署环境一致；不用 H2，因为条件更新、部分唯一索引、触发器只有在真实 PostgreSQL 上才测得准 |
 | 隔离 | 每次运行新建带随机后缀的临时库，结束后删除；每个用例开始前清空业务数据并重放种子脚本（`IntegrationTestBase`） |
 | 文件存储 | 测试中 `StorageService` 由 Mock 替代；Tika 魔数检测、附件绑定与权限检查走真实代码，对象读写及写入时的哈希计算不由该套集成测试验证 |
-| Web 前端 | Vitest：金额与表单 Schema 工具、路由（栏目、菜单、滚动恢复）、登录分栏与单据头展示逻辑、模板设计器与工作台格式化等（16 个测试文件） |
+| Web 前端 | Vitest：金额与表单 Schema 工具、路由（栏目、菜单、滚动恢复）、登录分栏与单据头展示逻辑、模板设计器与工作台格式化、背景风景（风与飘叶）计算等（15 个测试文件） |
 | 移动端 | Node test runner：表单校验、金额、自定义表单渲染工具函数 |
 
 有 Docker 的机器上直接运行，`TestDatabase` 用 Testcontainers 启动 `postgres:16-alpine`，所有测试类共用这一个容器（运行用户需能访问 Docker，例如在 `docker` 组中）：
@@ -52,10 +52,10 @@ cd backend && mvn test
 | 后端 `ReviewRound2Test` | 5 | 5 | 0 |
 | 后端 `AdminBootstrapTest` | 2 | 2 | 0 |
 | 后端合计 | **84** | **84** | **0** |
-| Web `npm run test` | 274 | 274 | 0 |
+| Web `npm run test` | 223 | 223 | 0 |
 | 移动端 `npm run test` | 42 | 42 | 0 |
 
-后端结果为 2026-10-16 的完整重跑（此后后端代码未改动），依据 18 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 84 项，全部通过，失败 0、错误 0、跳过 0。Web 与移动端为 2026-10-21 网页界面 v2「案卷」（见 `docs/ui_design.md`）合入 `dev` 后的结果：Web 的 `npm run lint`、`npm run typecheck`、`npm run build` 通过，16 个测试文件共 274 项测试通过；移动端未改动，`npm run test` 42 项通过，`npm run typecheck`、`npm run build:h5` 与 `npm run build:mp-weixin` 结果沿用 2026-10-17 的验证。
+后端结果为 2026-10-16 的完整重跑（此后后端代码未改动），依据 18 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 84 项，全部通过，失败 0、错误 0、跳过 0。Web 与移动端为 2026-10-26 网页界面 v3「套色」（见 `docs/ui_design.md`）合入后的结果：Web 的 `npm run lint`、`npm run typecheck`、`npm run build` 通过，15 个测试文件共 223 项测试通过（v2 的格纸点阵连同它的 67 项测试一起删除，换成背景风景的 10 项测试；其余新增为发起入口插画匹配等）；移动端未改动，`npm run test` 42 项通过，`npm run typecheck`、`npm run build:h5` 与 `npm run build:mp-weixin` 结果沿用 2026-10-17 的验证。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 

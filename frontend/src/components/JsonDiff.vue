@@ -213,16 +213,14 @@ const rawAfter = computed(() => pretty(afterValue.value))
 }
 .jd-chip {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: var(--eas-radius-control);
-  font-size: 12px;
-  border: 1px solid var(--eas-rule);
-  background: var(--eas-desk);
+  padding: 3px 10px;
+  border-radius: var(--eas-radius-pill);
+  font-size: var(--eas-fs-xs);
+  font-weight: 600;
+  background: var(--eas-tab);
 }
 .jd-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-control);
 }
 .jd-table {
   width: 100%;
@@ -242,7 +240,7 @@ const rawAfter = computed(() => pretty(afterValue.value))
   color: var(--eas-ink-2);
   font-weight: 600;
   white-space: nowrap;
-  border-bottom: 1px solid var(--eas-rule-strong);
+  border-bottom: 2px solid var(--eas-ink);
 }
 .jd-table tbody tr:last-child td {
   border-bottom: none;
@@ -259,23 +257,31 @@ const rawAfter = computed(() => pretty(afterValue.value))
 .jd-kind {
   white-space: nowrap;
 }
-.jd-added,
-.jd-chip.jd-added {
-  background: var(--eas-success-tint);
+.jd-added {
+  background: var(--eas-sage-tint);
 }
-.jd-removed,
-.jd-chip.jd-removed {
+.jd-chip.jd-added {
+  background: var(--eas-sage-tint);
+  color: var(--eas-ink);
+}
+.jd-removed {
   background: var(--eas-danger-tint);
 }
-.jd-changed,
+.jd-chip.jd-removed {
+  background: var(--eas-rust);
+  color: var(--eas-sheet);
+}
+.jd-changed {
+  background: var(--eas-mustard-tint);
+}
 .jd-chip.jd-changed {
-  background: var(--eas-warning-tint);
+  background: var(--eas-mustard-tint);
 }
 .jd-added .jd-kind {
   color: var(--eas-success);
 }
 .jd-removed .jd-kind {
-  color: var(--eas-danger);
+  color: var(--eas-rust);
 }
 .jd-changed .jd-kind {
   color: var(--eas-warning-text);

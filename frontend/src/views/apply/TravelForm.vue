@@ -233,8 +233,8 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
     @delete="draft.removeDraft"
   >
     <el-form label-position="top" class="travel-form" @submit.prevent>
-      <section class="form-section">
-        <h3 class="section-title">行程信息</h3>
+      <section class="sheet-section">
+        <h3 class="section-title"><i class="ink-glyph ink-glyph--hill" aria-hidden="true" />行程信息</h3>
         <el-form-item label="标题" required :error="err('title')">
           <el-input v-model="model.title" maxlength="100" show-word-limit placeholder="如：赴北京参加技术交流会" />
         </el-form-item>
@@ -306,7 +306,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
         </el-form-item>
       </section>
 
-      <section class="form-section">
+      <section class="sheet-section">
         <h3 class="section-title">同行人员</h3>
         <div v-if="err('companions')" class="field-error field-error-msg">{{ err('companions') }}</div>
         <div v-if="model.companions.length === 0" class="muted small">无同行人员</div>
@@ -336,7 +336,7 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
         </el-button>
       </section>
 
-      <section class="form-section">
+      <section class="sheet-section">
         <h3 class="section-title">附件</h3>
         <el-form-item label="附件" :error="err('attachmentIds')">
           <AttachmentUploader v-model="model.attachments" ref-type="TRAVEL_ATTACHMENT" :max-count="20" />
@@ -356,6 +356,10 @@ const END_DEFAULT = new Date(2000, 0, 1, 18, 0, 0)
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.duration strong {
+  font-family: var(--eas-font-display);
+  font-variant-numeric: tabular-nums;
 }
 .duration-note {
   width: 100%;
