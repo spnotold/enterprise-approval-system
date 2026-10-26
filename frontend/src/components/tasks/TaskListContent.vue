@@ -171,7 +171,12 @@ const otherText = computed(() => (pending.value ? '查看已办' : '查看待办
             </div>
           </template>
         </el-table-column>
-        <el-table-column :label="pending ? '当前节点' : '审批节点'" width="150" prop="nodeName" />
+        <el-table-column :label="pending ? '当前节点' : '审批节点'" width="150">
+          <template #default="{ row }">
+            <el-tag v-if="pending" type="primary" size="small" class="node-tag" :title="row.nodeName">{{ row.nodeName }}</el-tag>
+            <template v-else>{{ row.nodeName }}</template>
+          </template>
+        </el-table-column>
         <el-table-column label="金额" width="120" align="right">
           <template #default="{ row }">
             <MoneyText v-if="row.amountCents != null" :cents="row.amountCents" />
@@ -199,11 +204,11 @@ const otherText = computed(() => (pending.value ? '查看已办' : '查看待办
               <el-button
                 v-if="pending && row.status === 'PENDING'"
                 size="small"
-                type="primary"
+                type="warning"
                 :disabled="loading"
                 @click.stop="open(row as TaskItem)"
               >处理</el-button>
-              <el-button v-else link type="primary" :disabled="loading" @click.stop="open(row as TaskItem)">查看</el-button>
+              <el-button v-else size="small" :disabled="loading" @click.stop="open(row as TaskItem)">查看</el-button>
             </div>
           </template>
         </el-table-column>

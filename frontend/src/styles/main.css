@@ -594,9 +594,11 @@ body,
 .el-button.is-text:not(.is-disabled):hover {
   background-color: var(--eas-row-hover);
 }
+/* 小按钮也至少 32px 高（可点元素的底线） */
 .el-button--small:not(.is-link):not(.is-text) {
+  height: 32px;
   border-radius: var(--eas-radius-pill);
-  padding: 0 12px;
+  padding: 0 14px;
   box-shadow: 2px 2px 0 var(--eas-btn-shadow);
 }
 .el-button--small:not(.is-disabled):not(.is-loading):not(.is-link):not(.is-text):hover {
