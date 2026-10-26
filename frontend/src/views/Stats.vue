@@ -1109,7 +1109,8 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
 }
 .ledger-value {
   font-family: var(--eas-font-display);
-  font-size: 36px;
+  /* 金额随宽度收小，中等宽度也不会被截成省略号 */
+  font-size: clamp(28px, 2.7vw, 36px);
   font-weight: 600;
   line-height: var(--eas-lh-title);
   letter-spacing: var(--eas-display-tracking);
@@ -1183,7 +1184,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .ledger {
     display: grid;
     grid-template-columns: 1fr 1fr;
