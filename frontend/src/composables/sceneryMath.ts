@@ -8,6 +8,19 @@ export function coverRect(viewW: number, viewH: number, imgW: number, imgH: numb
   return { x: (viewW - width) / 2, y: viewH - height, width, height }
 }
 
+/** 设备像素比最多按 2 算：再高肉眼看不出，GPU 和内存却翻倍 */
+export const MAX_DPR = 2
+
+/**
+ * 画布的缩放：取设备像素比（不超过 MAX_DPR），同时保证两边都不超过 GPU 允许的最大尺寸，
+ * 超出时等比缩小，免得浏览器把绘图缓冲裁成别的比例。
+ */
+export function backingScale(viewW: number, viewH: number, dpr: number, maxDim: number): number {
+  const wanted = Math.min(Math.max(dpr || 1, 1), MAX_DPR)
+  if (viewW <= 0 || viewH <= 0 || maxDim <= 0) return wanted
+  return Math.min(wanted, maxDim / viewW, maxDim / viewH)
+}
+
 /** 一阵风：从 x（视口宽为 1）出发，沿 dir 方向扫过草地，强度 strength，起于 t0 秒 */
 export interface Gust {
   x: number

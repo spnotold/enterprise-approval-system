@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   GUST_INTERVAL,
+  MAX_DPR,
+  backingScale,
   LEAF_PUSH_RADIUS,
   MAX_GUSTS,
   coverRect,
@@ -34,6 +36,21 @@ describe('coverRect', () => {
     expect(r.height).toBeCloseTo(900)
     expect(r.width).toBeGreaterThan(400)
     expect(r.y).toBeCloseTo(0)
+  })
+})
+
+describe('backingScale', () => {
+  it('uses the device pixel ratio up to the cap', () => {
+    expect(backingScale(1440, 900, 1, 8192)).toBe(1)
+    expect(backingScale(1440, 900, 1.5, 8192)).toBe(1.5)
+    expect(backingScale(1440, 900, 3, 8192)).toBe(MAX_DPR)
+    expect(backingScale(1440, 900, 0.5, 8192)).toBe(1)
+  })
+
+  it('shrinks both sides by the same factor when a side would exceed the GPU limit', () => {
+    const scale = backingScale(5000, 2000, 2, 8192)
+    expect(5000 * scale).toBeLessThanOrEqual(8192)
+    expect(scale).toBeCloseTo(8192 / 5000)
   })
 })
 

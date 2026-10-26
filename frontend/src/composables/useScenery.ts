@@ -4,6 +4,7 @@ import {
   LEAF_INTERVAL_SPREAD,
   MAX_GUSTS,
   MAX_LEAVES,
+  backingScale,
   gustFromPointer,
   isLeafGone,
   leafFlip,
@@ -113,12 +114,16 @@ function createMeadow(canvas: HTMLCanvasElement, bg: HTMLImageElement, veil: num
   gl.uniform2f(u('imgSize'), bg.naturalWidth, bg.naturalHeight)
   gl.uniform1f(u('veil'), veil)
   gl.uniform3f(u('page'), ...cssColor('--eas-desk'))
+  const limits = [gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), ...gl.getParameter(gl.MAX_VIEWPORT_DIMS)] as number[]
   return {
+    /** GPU 允许的画布单边最大尺寸 */
+    maxDim: Math.min(...limits.filter((n) => n > 0)),
     resize(w: number, h: number) {
       canvas.width = w
       canvas.height = h
-      gl.viewport(0, 0, w, h)
-      gl.uniform2f(u('res'), w, h)
+      // 浏览器可能仍把绘图缓冲缩小，着色器一律按实际尺寸算
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)
+      gl.uniform2f(u('res'), gl.drawingBufferWidth, gl.drawingBufferHeight)
     },
     draw(t: number, gusts: Float32Array) {
       gl.uniform1f(u('t'), t)
@@ -147,8 +152,6 @@ export function useScenery(meadowRef: Ref<HTMLCanvasElement | null>, leavesRef: 
     const meadowCanvas = meadowRef.value
     const leafCanvas = leavesRef.value
     if (!meadowCanvas || !leafCanvas) return
-    const still =
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(hover: none)').matches
     let bg: HTMLImageElement
     let leafImgs: HTMLImageElement[]
     try {
@@ -158,22 +161,47 @@ export function useScenery(meadowRef: Ref<HTMLCanvasElement | null>, leavesRef: 
     }
     if (disposed) return
 
-    const meadow = createMeadow(meadowCanvas, bg, options.veil ?? 0.28)
+    let meadow = createMeadow(meadowCanvas, bg, options.veil ?? 0.28)
     live.value = !!meadow
+    const onContextLost = (e: Event) => {
+      // GPU 上下文丢了就不再画草地，交给 CSS 静态背景
+      e.preventDefault()
+      meadow = null
+      live.value = false
+    }
+    meadowCanvas.addEventListener('webglcontextlost', onContextLost)
     const ctx = leafCanvas.getContext('2d')
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+
+    // 减弱动效或触屏（无悬停）时静止；两个条件运行中都可能变化
+    const motionQueries = [window.matchMedia('(prefers-reduced-motion: reduce)'), window.matchMedia('(hover: none)')]
+    const isStill = () => motionQueries.some((q) => q.matches)
+    let still = isStill()
+
     let W = 0
     let H = 0
     const resize = () => {
       W = window.innerWidth
       H = window.innerHeight
-      meadow?.resize(Math.round(W * dpr), Math.round(H * dpr))
-      leafCanvas.width = Math.round(W * dpr)
-      leafCanvas.height = Math.round(H * dpr)
-      ctx?.setTransform(dpr, 0, 0, dpr, 0, 0)
+      const scale = backingScale(W, H, window.devicePixelRatio, meadow?.maxDim ?? 4096)
+      meadow?.resize(Math.round(W * scale), Math.round(H * scale))
+      leafCanvas.width = Math.round(W * scale)
+      leafCanvas.height = Math.round(H * scale)
+      ctx?.setTransform(scale, 0, 0, scale, 0, 0)
       if (still) meadow?.draw(0, packGusts([]))
     }
     resize()
+    // 换显示器或缩放网页会改变设备像素比，且不一定触发 resize
+    let dprQuery: MediaQueryList | null = null
+    const onDprChange = () => {
+      resize()
+      watchDpr()
+    }
+    const watchDpr = () => {
+      dprQuery?.removeEventListener('change', onDprChange)
+      dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+      dprQuery.addEventListener('change', onDprChange)
+    }
+    watchDpr()
 
     const gusts: (Gust | null)[] = new Array(MAX_GUSTS).fill(null)
     let gustCursor = 0
@@ -184,7 +212,7 @@ export function useScenery(meadowRef: Ref<HTMLCanvasElement | null>, leavesRef: 
     let last = performance.now()
 
     const onPointer = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return
+      if (still || e.pointerType !== 'mouse') return
       const now = performance.now() / 1000
       const gust = lastX == null ? null : gustFromPointer(e.clientX, W, e.clientX - lastX, now, lastGustAt)
       lastX = e.clientX
@@ -232,21 +260,39 @@ export function useScenery(meadowRef: Ref<HTMLCanvasElement | null>, leavesRef: 
       last = performance.now()
       schedule()
     }
-
-    window.addEventListener('resize', resize)
-    if (!still) {
-      // 开场先放两片叶子在半路，免得第一眼是空的
-      leaves.push(spawnLeaf(Math.random, H, leafImgs.length, W * 0.25), spawnLeaf(Math.random, H, leafImgs.length, W * 0.7))
-      window.addEventListener('pointermove', onPointer, { passive: true })
-      document.documentElement.addEventListener('pointerleave', onLeave)
-      document.addEventListener('visibilitychange', onVisibility)
+    // 切到静止：停帧、收起叶子、画一帧静态风景；切回动态：先放两片叶子再开始
+    const applyMotion = () => {
+      still = isStill()
+      if (still) {
+        if (raf) cancelAnimationFrame(raf)
+        raf = 0
+        leaves.length = 0
+        ctx?.clearRect(0, 0, W, H)
+        meadow?.draw(0, packGusts([]))
+        return
+      }
+      if (!leaves.length) {
+        // 开场先放两片叶子在半路，免得第一眼是空的
+        leaves.push(spawnLeaf(Math.random, H, leafImgs.length, W * 0.25), spawnLeaf(Math.random, H, leafImgs.length, W * 0.7))
+      }
+      last = performance.now()
       schedule()
     }
+
+    window.addEventListener('resize', resize)
+    window.addEventListener('pointermove', onPointer, { passive: true })
+    document.documentElement.addEventListener('pointerleave', onLeave)
+    document.addEventListener('visibilitychange', onVisibility)
+    for (const q of motionQueries) q.addEventListener('change', applyMotion)
+    applyMotion()
     cleanup = () => {
       window.removeEventListener('resize', resize)
       window.removeEventListener('pointermove', onPointer)
       document.documentElement.removeEventListener('pointerleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
+      for (const q of motionQueries) q.removeEventListener('change', applyMotion)
+      dprQuery?.removeEventListener('change', onDprChange)
+      meadowCanvas.removeEventListener('webglcontextlost', onContextLost)
       meadow?.dispose()
     }
   })
