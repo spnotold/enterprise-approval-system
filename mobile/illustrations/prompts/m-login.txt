@@ -1,0 +1,9 @@
+Use case: mobile app illustration for the top of the login screen of an enterprise approval app
+Asset type: landscape illustration, 1536x1152. It is shown full width at the top of a phone screen, about 390x300 px. A short brand line and a large heading in dark navy text are placed over the upper-left in HTML, and a paper card overlaps the bottom 12%.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: a quiet windowsill in the morning. A wooden rubber stamp stands upright beside a small neat stack of paper forms, with a sprig of leaves in a small round vase. Beyond the window: a calm lake, a few pine trees and soft blue hills.
+Scene: the sill is a flat band along the bottom; the window frame is a simple vertical bar on the right; the landscape fills the middle.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified geometric forms, one hard-edged shadow tone per shape, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream paper, mustard yellow, burnt orange / rust, navy and slate blue, sage green, pale sky blue. Keep it muted.
+Composition: keep the upper 45% plain pale cream sky with at most one thin cloud, nothing behind the upper-left where the heading goes; no sun. The stamp, papers and vase sit in the lower right third. The bottom 12% is plain sill surface with no objects. Calm, poster-like, large shapes, generous negative space.
+Constraints: no text, letters, numbers, logos, watermark or border; no writing on the papers (only plain lines); not photorealistic, not 3D.

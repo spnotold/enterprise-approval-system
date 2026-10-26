@@ -4,6 +4,7 @@
 import { getCurrentInstance, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import uCharts from '@qiun/ucharts'
 import type { ChartData } from '@/utils/chart'
+import { CHART_SERIES, PALETTE } from '@/utils/palette'
 
 const props = withDefaults(
   defineProps<{
@@ -17,14 +18,13 @@ const props = withDefaults(
   { opts: () => ({}), height: 480 },
 )
 
-// canvas 读不到 CSS 变量，这里的色值是 styles/tokens.css 中同名 token 的镜像，改 token 时需同步
-const INK = '#22303a'
-const INK_2 = '#5e6b73'
-const RULE = '#daddd8'
-const RULE_STRONG = '#c4c9c3'
-const SURFACE = '#ffffff'
-// 序列色（docs/ui_design.md 第 2 节）：黛蓝、苔绿、土黄、赭、灰、浅黛
-const SERIES_COLORS = ['#3e5c76', '#4f7a5c', '#a27b2c', '#9c4a3e', '#7a858c', '#8a9fb3']
+// canvas 读不到 CSS 变量，色值取 utils/palette.ts（styles/tokens.css 的镜像）
+const INK = PALETTE.ink
+const INK_2 = PALETTE.ink2
+const RULE = PALETTE.rule
+const RULE_STRONG = PALETTE.ruleStrong
+const SURFACE = PALETTE.sheet
+const SERIES_COLORS = [...CHART_SERIES]
 
 const BASE_X_AXIS = { disableGrid: true, fontColor: INK_2, fontSize: 12, axisLineColor: RULE_STRONG }
 const BASE_Y_AXIS = { gridType: 'dash', gridColor: RULE, dashLength: 4, data: [{ min: 0, fontColor: INK_2, fontSize: 12 }] }
