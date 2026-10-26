@@ -164,7 +164,7 @@ function textMax(f: FormField): number {
           @tap="setValue(f.key, o.value)"
         >
           <view class="radio-dot" />
-          <text>{{ o.label }}</text>
+          <text class="radio-label">{{ o.label }}</text>
         </view>
       </view>
       <AttachmentPicker
@@ -230,7 +230,9 @@ function textMax(f: FormField): number {
   border: 10rpx solid var(--eas-sheet);
 }
 
-.radio-item text {
+/* 小程序自定义组件里只认类选择器 */
+.radio-label {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 </style>
