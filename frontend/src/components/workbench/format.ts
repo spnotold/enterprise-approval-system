@@ -43,3 +43,33 @@ export function shortDesc(t: Pick<TemplateOption, 'category' | 'bizType' | 'desc
   }
   return null
 }
+
+export type ApplyIllustrationKey = 'purchase' | 'travel' | 'expense' | 'leave' | 'seal' | 'generic'
+
+/** 根据模板类型、编码与名称匹配对应的套色插画键名 */
+export function resolveApplyIllustrationKey(
+  t: Pick<TemplateOption, 'bizType' | 'code' | 'name'>,
+): ApplyIllustrationKey {
+  if (t.bizType === 'PURCHASE') return 'purchase'
+  if (t.bizType === 'TRAVEL') return 'travel'
+  if (t.bizType === 'EXPENSE') return 'expense'
+  const code = (t.code ?? '').toUpperCase()
+  const name = t.name ?? ''
+  const codeParts = code.split(/[^A-Z0-9]+/)
+  if (codeParts.includes('LEAVE') || name.includes('请假') || name.includes('休假')) {
+    return 'leave'
+  }
+  if (
+    codeParts.includes('SEAL') ||
+    codeParts.includes('STAMP') ||
+    name.includes('用章') ||
+    name.includes('印章') ||
+    name.includes('盖章')
+  ) {
+    return 'seal'
+  }
+  if (codeParts.includes('PURCHASE') || name.includes('采购')) return 'purchase'
+  if (codeParts.includes('TRAVEL') || name.includes('差旅') || name.includes('出差')) return 'travel'
+  if (codeParts.includes('EXPENSE') || name.includes('报销')) return 'expense'
+  return 'generic'
+}

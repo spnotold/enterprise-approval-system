@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ago, dateLine, shortDesc, SHORT_DESC_MAX } from './format'
+import { ago, dateLine, resolveApplyIllustrationKey, shortDesc, SHORT_DESC_MAX } from './format'
 
 describe('dateLine', () => {
   it('writes month, day and weekday without the year', () => {
@@ -63,5 +63,28 @@ describe('shortDesc', () => {
       const text = shortDesc(custom(s))
       if (text) expect([...text].length).toBeLessThanOrEqual(SHORT_DESC_MAX)
     }
+  })
+})
+
+describe('resolveApplyIllustrationKey', () => {
+  it('maps builtin business types directly', () => {
+    expect(resolveApplyIllustrationKey({ bizType: 'PURCHASE', code: 'BUILTIN_PURCHASE', name: '采购申请' })).toBe('purchase')
+    expect(resolveApplyIllustrationKey({ bizType: 'TRAVEL', code: 'BUILTIN_TRAVEL', name: '差旅申请' })).toBe('travel')
+    expect(resolveApplyIllustrationKey({ bizType: 'EXPENSE', code: 'BUILTIN_EXPENSE', name: '报销申请' })).toBe('expense')
+  })
+
+  it('maps leave and seal custom templates by code or name and falls back to generic', () => {
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'LEAVE', name: '请假申请' })).toBe('leave')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'CUSTOM_1', name: '员工休假单' })).toBe('leave')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'SEAL', name: '用章申请' })).toBe('seal')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'CUSTOM_2', name: '合同印章使用' })).toBe('seal')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'MEETING_ROOM', name: '会议室预订' })).toBe('generic')
+  })
+
+  it('recognizes code words without matching unrelated custom templates', () => {
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'custom_leave', name: '员工申请' })).toBe('leave')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'seal-request', name: '合同申请' })).toBe('seal')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'TIMESTAMP', name: '记录申请' })).toBe('generic')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'SEALANT', name: '维修申请' })).toBe('generic')
   })
 })
