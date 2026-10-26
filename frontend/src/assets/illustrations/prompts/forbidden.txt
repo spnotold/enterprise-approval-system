@@ -1,0 +1,8 @@
+Use case: website illustration for the "no permission" (403) page
+Asset type: square spot illustration, 1024x1024, shown about 200x200 px inside a circle above a short message. It is one of a matching set with the empty in-tray illustration.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: a closed wooden filing cabinet with a small brass padlock on its drawer, a potted plant on top.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified geometric forms, minimal facial detail, one hard-edged shadow tone per shape, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream paper, mustard yellow, burnt orange / rust, navy and slate blue, sage green, pale sky blue. Keep it muted.
+Composition: the objects form one compact group in the center occupying about 55% of the frame; the rest is plain flat warm cream background with no wall details, so the image blends into a cream page. Soft single shadow to the right.
+Constraints: no text, letters, numbers, logos, watermark or border; no writing on any paper (only plain lines); natural hands and anatomy; not photorealistic, not 3D.

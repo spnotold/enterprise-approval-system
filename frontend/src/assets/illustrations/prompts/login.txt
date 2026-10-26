@@ -1,0 +1,9 @@
+Use case: website illustration for the login page of an enterprise approval system
+Asset type: wide landscape illustration, 1536x1024. It fills the left panel of the login page; a small white document card may be placed over the upper-left area in HTML.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: a calm office desk by a large window in late afternoon. On the desk, a neat stack of paper forms and a wooden rubber stamp resting beside a freshly stamped round red seal mark on the top sheet. A potted plant with long leaves, a mug, and a pen. Through the window, distant soft hills and a low sun.
+Scene: desk surface in the lower third, window frame and sky in the upper part, no people.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified geometric forms, one hard-edged shadow tone per shape, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream paper, mustard yellow, burnt orange / rust, navy and slate blue, sage green, pale sky blue. Keep it muted.
+Composition: keep the upper-left 45% as plain sky and window wall with very little detail, for overlaid content; the stamp and papers sit lower right of center; calm, poster-like, large shapes, generous negative space.
+Constraints: no text, letters, numbers, logos, watermark or border; no writing on the papers (only plain lines); not photorealistic, not 3D.

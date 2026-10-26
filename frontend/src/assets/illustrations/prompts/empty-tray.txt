@@ -1,0 +1,8 @@
+Use case: website illustration for empty states (no pending tasks, no applications, no notifications)
+Asset type: square spot illustration, 1024x1024, shown about 200x200 px centered above a short message.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: an empty wooden document in-tray resting on a desk, a closed fountain pen beside it, a small potted plant and a cup of tea. A feeling of everything being done and calm.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified geometric forms, minimal facial detail, one hard-edged shadow tone per shape, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream paper, mustard yellow, burnt orange / rust, navy and slate blue, sage green, pale sky blue. Keep it muted.
+Composition: the objects form one compact group in the center occupying about 55% of the frame; the rest is plain flat warm cream background with no wall details, so the image blends into a cream page. Soft single shadow to the right.
+Constraints: no text, letters, numbers, logos, watermark or border; no writing on any paper (only plain lines); natural hands and anatomy; not photorealistic, not 3D.

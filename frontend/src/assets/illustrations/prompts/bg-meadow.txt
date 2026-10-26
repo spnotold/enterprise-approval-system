@@ -1,0 +1,8 @@
+Use case: full-page background for every screen of an enterprise approval website. White-ish document cards sit on top of the middle of it, so it must stay quiet.
+Asset type: wide background illustration, 2560x1440.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: a very pale, airy, sun-faded landscape. The upper 60% is almost plain warm cream sky (close to #F1ECE1) with only two or three thin, pale wisps of cloud. No sun or moon anywhere. Across the lower third: a distant row of soft low hills and a calm lake, then a gentle meadow band along the bottom edge.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified forms, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream, very pale sage green, pale sky blue, pale slate blue hills, a hint of pale mustard in the meadow. Everything washed out and low contrast, like a print faded by sunlight; no dark navy, no strong shadows.
+Composition: no focal subject; nothing busy in the center; the lower-left and lower-right corners stay simple meadow because separate grass layers will be placed there. No people, animals, buildings or trees in the foreground.
+Constraints: no text, letters, numbers, logos, watermark or border; not photorealistic, not 3D.
