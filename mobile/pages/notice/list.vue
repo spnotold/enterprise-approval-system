@@ -15,6 +15,14 @@ import { NOTICE_TYPE_LABEL } from '@/utils/labels'
 import { openLink } from '@/utils/nav'
 import { fmtShort } from '@/utils/time'
 
+/** 消息类型标签的颜色与状态一致：通过鼠尾草、驳回铁锈、超时和催办芥黄，其余暗纸 */
+function noticeTone(type: string): string {
+  if (type === 'APP_APPROVED' || type === 'NODE_APPROVED' || type === 'REGISTRATION_APPROVED') return 'tag-green'
+  if (type === 'APP_REJECTED') return 'tag-red'
+  if (type === 'TASK_OVERDUE' || type === 'URGE') return 'tag-orange'
+  return ''
+}
+
 const unreadOnly = ref(false)
 const ready = ref(false)
 const unread = computed(() => notice.state.unread)
@@ -111,7 +119,7 @@ onReachBottom(() => void list.loadMore())
     <SwipeCell v-for="n in list.items.value" :key="n.id" :cell-id="`notice-${n.id}`" :actions="n.read ? [] : [{ key: 'read', text: '标为已读', type: 'primary' }]" @content-tap="tap(n)" @action="markRead(n)">
       <view class="card notice" hover-class="is-pressed" hover-stay-time="60">
         <view class="row">
-          <text class="tag" :class="{ 'tag-red': n.type === 'APP_REJECTED' || n.type === 'TASK_OVERDUE' }">
+          <text class="tag" :class="noticeTone(n.type)">
             {{ NOTICE_TYPE_LABEL[n.type] ?? '通知' }}
           </text>
           <view v-if="!n.read" class="dot" />

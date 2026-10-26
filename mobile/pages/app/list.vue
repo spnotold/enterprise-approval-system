@@ -264,8 +264,7 @@ onReachBottom(() => void list.loadMore())
 .search {
   display: flex;
   align-items: center;
-  height: 72rpx;
-  margin: 8rpx 0;
+  height: 88rpx;
   padding: 0 24rpx;
   background: var(--eas-field);
   border: 3rpx solid var(--eas-rule-strong);

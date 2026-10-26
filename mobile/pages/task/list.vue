@@ -12,7 +12,7 @@ import { closeSwipeCells, useSwipeTabs } from '@/composables/useSwipeTabs'
 import { usePagedList } from '@/composables/usePagedList'
 import { auth, requireLogin } from '@/stores/auth'
 import { NOTICE_EVENT, notice, type IncomingNotice } from '@/stores/notice'
-import { APP_TYPE_LABEL } from '@/utils/labels'
+import { APP_TYPE_LABEL, TASK_STATUS_LABEL } from '@/utils/labels'
 import { goDetail, goTaskHandle } from '@/utils/nav'
 import { fmtShort } from '@/utils/time'
 import { pickerValue, type UniPickerChangeEvent } from '@/utils/uniEvent'
@@ -141,10 +141,16 @@ onReachBottom(() => void list.loadMore())
           </view>
           <view class="line muted"><text class="ellipsis app-no">{{ t.appNo }}</text><text class="applicant">{{ t.applicant.realName }}<text v-if="t.deptName">（{{ t.deptName }}）</text></text></view>
           <view class="row between last-line">
-            <view class="row flex1">
-              <text v-if="tab === 'pending'" class="tag tag-blue">{{ t.nodeName }}</text>
-              <StatusTag v-else :status="t.appStatus" />
-              <text v-if="t.overdue && tab === 'pending'" class="tag tag-orange">已超时</text>
+            <view v-if="tab === 'pending'" class="row flex1">
+              <text class="tag tag-blue">{{ t.nodeName }}</text>
+              <text v-if="t.overdue" class="tag tag-orange">已超时</text>
+            </view>
+            <!-- 已办：我处理的节点、我的处理结果，再跟申请当前的状态 -->
+            <view v-else class="row wrap flex1 done-tags">
+              <text class="tag">{{ t.nodeName }}</text>
+              <text class="tag" :class="{ 'tag-green': t.status === 'APPROVED', 'tag-red': t.status === 'REJECTED' }">{{ TASK_STATUS_LABEL[t.status] }}</text>
+              <!-- 我驳回的申请必然是「已驳回」，不再重复一枚 -->
+              <view v-if="!(t.status === 'REJECTED' && t.appStatus === 'REJECTED')" class="done-status"><StatusTag :status="t.appStatus" /></view>
             </view>
             <text class="muted">{{ fmtShort(tab === 'done' ? t.actedAt : t.createdAt) }}</text>
           </view>
@@ -196,6 +202,11 @@ onReachBottom(() => void list.loadMore())
   min-height: 44rpx;
 }
 
+.done-tags .tag,
+.done-status {
+  margin-bottom: 8rpx;
+}
+
 .comment {
   margin-top: 12rpx;
 }
@@ -204,8 +215,7 @@ onReachBottom(() => void list.loadMore())
 .search {
   display: flex;
   align-items: center;
-  height: 72rpx;
-  margin: 8rpx 0;
+  height: 88rpx;
   padding: 0 24rpx;
   background: var(--eas-field);
   border: 3rpx solid var(--eas-rule-strong);

@@ -161,7 +161,8 @@ function action(a: SwipeAction): void {
 }
 
 /* 按下：色块沉一档（催办芥黄、撤回纸色换行按下底） */
-.swipe-action--mustard.is-pressed { background-color: var(--eas-mustard-deep) !important; }
+/* 芥黄块按下保持底色（深一档的芥黄上墨字不够 4.5:1），用内圈深芥黄表示按下 */
+.swipe-action--mustard.is-pressed { background-color: var(--eas-mustard) !important; box-shadow: inset 0 0 0 6rpx var(--eas-mustard-deep); }
 .swipe-action--paper.is-pressed { background-color: var(--eas-row-hover) !important; }
 .swipe-action--muted.is-pressed { background-color: var(--eas-ink) !important; }
 

@@ -543,7 +543,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 80rpx;
+  height: 88rpx;
   border-radius: var(--eas-radius-pill);
   font-size: 28rpx;
   font-weight: 600;
@@ -610,10 +610,10 @@ textarea {
 .filter-chip {
   display: flex;
   align-items: center;
-  height: 72rpx;
-  min-height: 72rpx;
+  height: 88rpx;
+  min-height: 88rpx;
   padding: 0 28rpx;
-  margin: 8rpx 16rpx 8rpx 0;
+  margin: 0 16rpx 0 0;
   background: var(--eas-tab);
   border-radius: var(--eas-radius-pill);
   font-size: 26rpx;

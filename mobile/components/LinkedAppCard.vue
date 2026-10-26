@@ -23,7 +23,6 @@ defineProps<{
       <text class="link-no">{{ app.appNo }}</text>
       <text v-if="app.finishedAt">{{ fmtDate(app.finishedAt) }} 通过</text>
     </view>
-    <!-- 全角标点后不加空格；word-break: keep-all 让「预算」等词不被拆行 -->
     <view v-if="app.travel" class="link-text">{{ textOr(app.travel.origin) }} → {{ textOr(app.travel.destination) }}，{{ fmtDate(app.travel.startTime) }} 至 {{ fmtDate(app.travel.endTime) }}，{{ app.travel.naturalDays ?? '—' }} 天，预算 {{ app.travel.budgetCents === null ? '—' : '¥' + formatCents(app.travel.budgetCents) }}</view>
     <view v-if="app.purchase" class="link-text">供应商 {{ textOr(app.purchase.selectedSupplier) }}，金额 {{ app.purchase.selectedAmountCents === null ? '—' : '¥' + formatCents(app.purchase.selectedAmountCents) }}，{{ app.purchase.itemCount }} 项明细</view>
   </view>
@@ -81,7 +80,7 @@ defineProps<{
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-2);
   line-height: 1.6;
-  word-break: keep-all;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 </style>

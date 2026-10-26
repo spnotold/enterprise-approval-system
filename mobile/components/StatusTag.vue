@@ -56,7 +56,7 @@ const nodeText = computed(() => {
   color: var(--eas-sheet);
 }
 
-.tone-draft .pill { background-color: var(--eas-tab); color: var(--eas-ink); }
+.tone-draft .pill { background-color: var(--eas-tab); background-image: none; color: var(--eas-ink); }
 .tone-sky .pill { background-color: var(--eas-sky); color: var(--eas-ink); }
 .tone-sage .pill { background-color: var(--eas-sage); color: var(--eas-ink); }
 .tone-rust .pill { background-color: var(--eas-rust); color: var(--eas-sheet); }
