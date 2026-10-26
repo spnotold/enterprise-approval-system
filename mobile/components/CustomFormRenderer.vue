@@ -164,7 +164,7 @@ function textMax(f: FormField): number {
           @tap="setValue(f.key, o.value)"
         >
           <view class="radio-dot" />
-          <text>{{ o.label }}</text>
+          <text class="radio-label">{{ o.label }}</text>
         </view>
       </view>
       <AttachmentPicker
@@ -187,6 +187,8 @@ function textMax(f: FormField): number {
 .radio-list {
   display: flex;
   flex-wrap: wrap;
+  gap: 16rpx;
+  padding: 0 8rpx 8rpx 0;
 }
 
 .radio-item {
@@ -194,18 +196,24 @@ function textMax(f: FormField): number {
   align-items: center;
   min-height: 88rpx;
   padding: 0 28rpx 0 20rpx;
-  margin: 0 16rpx 16rpx 0;
-  background: var(--eas-paper);
-  border-radius: var(--eas-radius-control);
-  border: 2rpx solid var(--eas-rule-strong);
+  max-width: 100%;
+  background: var(--eas-tab);
+  border-radius: var(--eas-radius-pill);
   font-size: var(--eas-fs-sm);
   color: var(--eas-ink);
 }
 
 .radio-item.checked {
-  border-color: var(--eas-primary);
-  background: var(--eas-primary-tint);
-  color: var(--eas-primary);
+  background-color: var(--eas-ink);
+  background-image: var(--eas-grain-deep);
+  background-size: var(--eas-grain-size);
+  background-blend-mode: multiply;
+  color: var(--eas-sheet);
+  box-shadow: var(--eas-offset-mark);
+}
+
+.radio-item.checked.is-pressed {
+  background-color: var(--eas-ink) !important;
 }
 
 .radio-dot {
@@ -215,9 +223,16 @@ function textMax(f: FormField): number {
   border: 2rpx solid var(--eas-rule-strong);
   margin-right: 12rpx;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .radio-item.checked .radio-dot {
-  border: 10rpx solid var(--eas-primary);
+  border: 10rpx solid var(--eas-sheet);
+}
+
+/* 小程序自定义组件里只认类选择器 */
+.radio-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 </style>

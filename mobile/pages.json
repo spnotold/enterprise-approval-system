@@ -37,13 +37,15 @@
     {
       "path": "pages/login/index",
       "style": {
-        "navigationBarTitleText": "登录"
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/register/index",
       "style": {
-        "navigationBarTitleText": "注册"
+        "navigationBarTitleText": "注册",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -106,10 +108,10 @@
     }
   ],
   "tabBar": {
-    "color": "#6C777E",
-    "selectedColor": "#3E5C76",
-    "backgroundColor": "#FFFFFF",
-    "borderStyle": "black",
+    "color": "#5C646B",
+    "selectedColor": "#22313F",
+    "backgroundColor": "#FBF6EA",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/home/index",
@@ -146,8 +148,8 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "企业审批系统",
-    "navigationBarBackgroundColor": "#F2F3F0",
-    "backgroundColor": "#F2F3F0"
+    "navigationBarBackgroundColor": "#F1ECE1",
+    "backgroundColor": "#F1ECE1"
   },
   "easycom": {
     "autoscan": true,

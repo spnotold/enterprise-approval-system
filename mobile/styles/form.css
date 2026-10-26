@@ -1,44 +1,48 @@
 /*
- * 申请表单共用样式（流转单）：只放表单页要覆盖全局 App.vue 的部分。
+ * 申请表单共用样式（套色）：只放表单页要覆盖全局 App.vue 的部分。
  * 在各页面 / 组件的 <style scoped> 里用 @import 引入，这样选择器带上本组件的作用域，
  * 优先级高于 App.vue 中的同名全局类，且不依赖 H5 才有的 :focus。
  * 输入框聚焦用 @focus / @blur 切换 .is-focus（小程序没有 :focus 伪类）。
  */
 
-/* 白底分组 */
+/* 一组字段是一张单据 */
 .card {
-  background: var(--eas-surface);
+  background: var(--eas-sheet);
   border-radius: var(--eas-radius-panel);
-  padding: 0 28rpx 12rpx;
-  margin-bottom: 16rpx;
+  box-shadow: var(--eas-shadow-sheet);
+  padding: 0 32rpx 16rpx;
+  margin: 0 8rpx 32rpx 0;
 }
 
-/* 分组小标题：分组内第一行，下方一条细线 */
+/* 分组小标题：分组内第一行，展示字，下方一条虚线 */
 .card-title {
   display: flex;
   align-items: center;
-  min-height: 88rpx;
+  min-height: 96rpx;
   margin-bottom: 4rpx;
-  font-size: var(--eas-fs-sm);
-  font-weight: 600;
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-title);
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
   color: var(--eas-ink);
-  border-bottom: 1rpx solid var(--eas-rule);
+  border-bottom: 4rpx dashed var(--eas-rule);
 }
 
-/* 分组之间的小标题（卡片外） */
+/* 分组之间的小标题（单据外） */
 .section-title {
-  margin: 24rpx 8rpx 16rpx;
-  font-size: var(--eas-fs-sm);
-  font-weight: 600;
-  color: var(--eas-ink-2);
+  margin: 24rpx 8rpx 20rpx;
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-md);
+  font-weight: 700;
+  color: var(--eas-ink);
 }
 
-/* 输入框：纸色底 + 常驻边框，聚焦只换边框颜色，不改变尺寸 */
+/* 输入框：field 底 + 常驻框线，聚焦换墨线框 + 芥黄错版，不改变尺寸 */
 .input,
 .textarea,
 .picker-value {
-  background: var(--eas-paper);
-  border: 2rpx solid var(--eas-rule-strong);
+  background: var(--eas-field);
+  border: 3rpx solid var(--eas-rule-strong);
   border-radius: var(--eas-radius-control);
   color: var(--eas-ink);
 }
@@ -54,18 +58,19 @@
 
 .is-error {
   background: var(--eas-danger-tint) !important;
-  border-color: var(--eas-danger) !important;
+  border-color: var(--eas-rust) !important;
 }
 
 .is-focus,
 .is-focus.is-error {
-  border-color: var(--eas-primary) !important;
+  border-color: var(--eas-ink) !important;
+  box-shadow: var(--eas-offset-mark);
 }
 
-/* 二选一 / 开关式选项 */
+/* 二选一 / 开关式选项：胶囊；选中 = 藏青 + 颗粒 + 芥黄错版 */
 .modes {
   display: flex;
-  margin: 12rpx 0;
+  margin: 12rpx 8rpx 16rpx 0;
 }
 
 .mode {
@@ -74,13 +79,13 @@
   align-items: center;
   justify-content: center;
   min-height: 88rpx;
-  margin-left: 16rpx;
+  margin-left: 20rpx;
   padding: 0 28rpx;
   font-size: var(--eas-fs-sm);
+  font-weight: 600;
   color: var(--eas-ink-2);
-  background: var(--eas-surface);
-  border: 2rpx solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
+  background: var(--eas-tab);
+  border-radius: var(--eas-radius-pill);
 }
 
 .mode:first-child {
@@ -88,19 +93,26 @@
 }
 
 .mode.chosen {
-  color: var(--eas-primary);
-  font-weight: 600;
-  background: var(--eas-primary-tint);
-  border-color: var(--eas-primary);
+  color: var(--eas-sheet);
+  background-color: var(--eas-ink);
+  background-image: var(--eas-grain-deep);
+  background-size: var(--eas-grain-size);
+  background-blend-mode: multiply;
+  box-shadow: var(--eas-offset-mark);
+}
+
+.mode.chosen.is-pressed {
+  background-color: var(--eas-ink) !important;
 }
 
 .mode-auto {
   flex: none;
 }
 
-/* 金额右对齐，数字等宽 */
+/* 金额：展示字数字，右对齐，等宽 */
 .amount,
 .kv-amount {
+  font-family: var(--eas-font-display);
   font-variant-numeric: tabular-nums;
 }
 
@@ -109,12 +121,7 @@
   font-weight: 600;
 }
 
+/* 合计行：row-hover 底 */
 .item-sum {
   min-height: 72rpx;
-}
-
-/* 底部固定栏按钮的按压态（主按钮不能用 is-pressed，白字会看不清） */
-.press-primary {
-  background-color: var(--eas-primary-hover) !important;
-  border-color: var(--eas-primary-hover) !important;
 }

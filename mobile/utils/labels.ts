@@ -28,13 +28,13 @@ export const APP_STATUS_LABEL: Record<AppStatus, string> = {
 
 export const APP_STATUS_ORDER: AppStatus[] = ['DRAFT', 'IN_APPROVAL', 'APPROVED', 'REJECTED', 'WITHDRAWN']
 
-/** 状态颜色：草稿灰、审批中蓝、已通过绿、已驳回红、已撤回深灰 */
+/** 状态颜色（套色）：草稿暗纸、审批中天青、已通过鼠尾草、已驳回铁锈、已撤回灰 */
 export const APP_STATUS_COLOR: Record<AppStatus, string> = {
-  DRAFT: '#8f959e',
-  IN_APPROVAL: '#2f6bff',
-  APPROVED: '#16a34a',
-  REJECTED: '#e5484d',
-  WITHDRAWN: '#4b5563',
+  DRAFT: '#efe5cf',
+  IN_APPROVAL: '#b3cbd5',
+  APPROVED: '#a3b590',
+  REJECTED: '#a94a2c',
+  WITHDRAWN: '#7d8389',
 }
 
 export const NODE_STATUS_LABEL: Record<NodeStatus, string> = {

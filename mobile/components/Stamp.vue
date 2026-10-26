@@ -24,13 +24,20 @@ const play = props.animate
 
 <style scoped>
 .stamp {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 4rpx solid currentColor;
-  border-radius: var(--eas-radius-control);
-  transform: rotate(-6deg);
+  border: 6rpx double currentColor;
+  border-radius: 18rpx;
+  background-image: var(--eas-grain);
+  background-size: var(--eas-grain-size);
+  background-blend-mode: multiply;
+  -webkit-mask-image: var(--eas-stamp-mask);
+  mask-image: var(--eas-stamp-mask);
+  mask-size: cover;
+  transform: rotate(-10deg);
 }
 
 .stamp-text {
@@ -43,7 +50,7 @@ const play = props.animate
 .size-sm {
   padding: 2rpx 10rpx;
   border-width: 2rpx;
-  border-radius: var(--eas-radius-tag);
+  border-radius: 14rpx;
 }
 
 .size-sm .stamp-text {
@@ -71,8 +78,14 @@ const play = props.animate
   color: var(--eas-primary);
 }
 
+/* 撤回章用深一档的灰，纸上才够 4.5:1 */
 .tone-muted {
-  color: var(--eas-muted);
+  color: var(--eas-ink-2);
+}
+
+/* 小章落在铁锈浅底的驳回格上，用深铁锈保证对比度 */
+.size-sm.tone-danger {
+  color: var(--eas-rust-deep);
 }
 
 .stamp.play {
@@ -82,11 +95,11 @@ const play = props.animate
 @keyframes stamp-in {
   from {
     opacity: 0;
-    transform: scale(1.15) rotate(-6deg);
+    transform: scale(1.15) rotate(-10deg);
   }
   to {
     opacity: 1;
-    transform: scale(1) rotate(-6deg);
+    transform: scale(1) rotate(-10deg);
   }
 }
 

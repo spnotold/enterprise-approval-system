@@ -1,47 +1,96 @@
-/* 设计 token（见 docs/ui_design.md）：页面与组件只用这些变量，不写死色值 */
+/* 设计 token（见 docs/ui_design.md 第三版「套色」第 9 节）：页面与组件只用这些变量，不写死色值。
+   颜色和网页端 frontend/src/styles/tokens.css 同一套；尺寸按 750rpx 设计宽度换算（1px ≈ 2rpx）。
+   JS 里要用的颜色（图表、switch 的 color 属性）在 utils/palette.ts，改色时两处一起改。 */
 page {
-  /* 底色与文字 */
-  --eas-paper: #f2f3f0;
-  --eas-paper-deep: #e8eae5;
-  --eas-surface: #ffffff;
-  --eas-ink: #22303a;
-  --eas-ink-2: #5e6b73;
-  --eas-ink-3: #6c777e;
-  --eas-placeholder: #8b959b;
-  --eas-rule: #daddd8;
-  --eas-rule-strong: #c4c9c3;
+  /* 纸：页面底、单据纸、暗纸（未选中的胶囊 / 草稿 / 未到）、行按下、单据的硬投影、输入框底 */
+  --eas-desk: #f1ece1;
+  --eas-sheet: #fbf6ea;
+  --eas-tab: #efe5cf;
+  --eas-row-hover: #f4ecdb;
+  --eas-shade: #d8caab;
+  --eas-field: #fffcf4;
 
-  /* 语义色 */
-  --eas-primary: #3e5c76;
-  --eas-primary-hover: #324a5e;
-  --eas-primary-tint: #eceff1;
-  --eas-success: #4f7a5c;
-  --eas-success-tint: #edf2ef;
-  --eas-danger: #9c4a3e;
-  --eas-danger-tint: #f5edec;
-  --eas-warning: #a27b2c;
-  --eas-warning-text: #826223;
-  --eas-warning-tint: #f6f2ea;
-  --eas-muted: #7a858c;
-  --eas-muted-tint: #f2f3f4;
+  /* 文字与线 */
+  --eas-ink: #22313f;
+  --eas-ink-deep: #111c26;
+  --eas-ink-2: #5b6670;
+  --eas-ink-3: #5c646b;
+  --eas-placeholder: #6c7073; /* 输入框底上 4.87:1 */
+  --eas-rule: #e7dcc4;
+  --eas-rule-strong: #cfc2a4;
 
-  /* 字体 */
+  /* 五色墨：只以小块实色出现，各有固定用途 */
+  --eas-mustard: #d9a441;      /* 注意 / 当前 / 选中的错版 */
+  --eas-mustard-deep: #a97a22; /* 芥黄色块的投影 */
+  --eas-mustard-tint: #f4e2b3;
+  --eas-rust: #a94a2c;         /* 驳回 / 危险 / 印章 / 未读 */
+  --eas-rust-deep: #7a3320;
+  --eas-sage: #a3b590;         /* 已通过（色块） */
+  --eas-sage-tint: #e2e9d6;
+  --eas-sky: #b3cbd5;          /* 审批中（色块） */
+  --eas-sky-tint: #dce7ea;
+  --eas-link: #3b6684;
+
+  /* 语义色（名字沿用第一版，值换成套色墨） */
+  --eas-primary: #27425a;
+  --eas-primary-hover: #1f3549;
+  --eas-primary-tint: #e3e3da;
+  --eas-success: #3f5a38;
+  --eas-success-tint: var(--eas-sage-tint);
+  --eas-danger: #a94a2c;
+  --eas-danger-tint: #f2dfd3;
+  --eas-warning: #a97a22;
+  --eas-warning-text: #7a5718;
+  --eas-warning-tint: var(--eas-mustard-tint);
+  --eas-muted: #7d8389;
+
+  /* 旧名：第一版的白卡片和纸底一律换成单据纸和页面底 */
+  --eas-paper: var(--eas-desk);
+  --eas-paper-deep: var(--eas-tab);
+  --eas-surface: var(--eas-sheet);
+  --eas-muted-tint: var(--eas-tab);
+
+  /* 套色颗粒：multiply 叠在有颜色的墨块上（工具类 .inked）；纸面和文字保持干净。
+     默认的颗粒很淡（不透明度 ≤ 0.12），芥黄 / 鼠尾草 / 天青上的墨字叠了颗粒仍有 4.5:1；
+     深色块（藏青、铁锈、墨，上面是纸色字）用 --eas-grain-deep，颗粒更明显。
+     都小于 40KB，编译到小程序时会转成 base64 */
+  --eas-grain: url('./textures/grain-soft.png');
+  --eas-grain-deep: url('./textures/grain.png');
+  --eas-grain-size: 128rpx;
+  /* 印章残缺：噪声遮罩，用作 mask-image */
+  --eas-stamp-mask: url('./textures/stamp-mask.png');
+
+  /* 字体：标题与大数字用展示字（数字取 Fraunces 柔角，中文落到思源宋体粗体；H5 自带字体文件，
+     小程序取系统宋体），其余系统无衬线 */
   --eas-font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, -apple-system,
     'Helvetica Neue', sans-serif;
-  --eas-font-serif: 'Source Han Serif SC', 'Noto Serif CJK SC', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  --eas-font-display: 'Fraunces Variable', 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'Songti SC',
+    'STSong', serif;
+  --eas-font-serif: var(--eas-font-display);
+  --eas-display-tracking: 0.01em;
 
   /* 字号阶 */
   --eas-fs-xs: 24rpx;
+  --eas-fs-note: 26rpx;
   --eas-fs-sm: 28rpx;
   --eas-fs-md: 32rpx;
+  --eas-fs-title: 36rpx; /* 单据小节标题（展示字） */
   --eas-fs-lg: 40rpx;
   --eas-fs-xl: 52rpx;
+  --eas-fs-hero: 60rpx; /* 问候、登录标题、单据头金额 */
 
-  /* 形状 */
-  --eas-radius-panel: 12rpx;
-  --eas-radius-control: 8rpx;
-  --eas-radius-tag: 4rpx;
-  --eas-shadow-float: 0 16rpx 48rpx rgba(34, 48, 58, 0.12);
+  /* 形状：单据 28、输入框 24、浮层 32；按钮 / 页签 / 标签 / 计数都是胶囊 */
+  --eas-radius-panel: 28rpx;
+  --eas-radius-control: 24rpx;
+  --eas-radius-sheet-top: 32rpx;
+  --eas-radius-tag: 999rpx;
+  --eas-radius-pill: 999rpx;
+
+  /* 硬投影：0 模糊，往右下错开；单据用纸影，按钮用深一档的同色 */
+  --eas-shadow-sheet: 8rpx 8rpx 0 var(--eas-shade);
+  --eas-shadow-float: 0 0 0 2rpx var(--eas-rule-strong), 10rpx 10rpx 0 rgba(34, 49, 63, 0.16);
+  /* 选中 / 聚焦的「错版」：一块芥黄错开垫在后面 */
+  --eas-offset-mark: 6rpx 6rpx 0 var(--eas-mustard);
 
   /* 动效 */
   --eas-ease: cubic-bezier(0.2, 0, 0, 1);
@@ -50,11 +99,10 @@ page {
   --eas-dur-stamp: 240ms;
 }
 
-/* 通用按压态：配合 hover-class="is-pressed" hover-stay-time="60" 使用 */
+/* 通用按压态：配合 hover-class="is-pressed" hover-stay-time="60" 使用。
+   行、宫格换成 row-hover 底；带硬投影的单据和按钮另外沉进投影（见 App.vue）。 */
 .is-pressed {
-  background-color: var(--eas-paper-deep) !important;
-  transform: scale(0.985);
-  transition: transform var(--eas-dur-fast) var(--eas-ease);
+  background-color: var(--eas-row-hover) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

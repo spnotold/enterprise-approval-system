@@ -1,5 +1,6 @@
-// 生成 uni-app 底部导航栏的普通态与选中态 PNG 图标，使用 Node.js 内置模块绘制和编码。
-// 用法：在 mobile 目录执行 node scripts/gen-tabbar-icons.mjs
+// 生成 uni-app 底部导航栏的普通态与选中态 PNG 图标（套色）：实心几何图形，不用线框。
+// 普通态一块灰墨；选中态是藏青墨压在一块错开的芥黄上（「错版」，docs/ui_design.md 第 4 节）。
+// 只用 Node.js 内置模块绘制和编码。用法：在 mobile 目录执行 node scripts/gen-tabbar-icons.mjs
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,9 +10,11 @@ const WIDTH = 81;
 const HEIGHT = 81;
 const SUPERSAMPLE = 6;
 const SAMPLE_COUNT = SUPERSAMPLE * SUPERSAMPLE;
-const STROKE = 5.8;
-const NORMAL_COLOR = '#8f959e';
-const ACTIVE_COLOR = '#2f6bff';
+const NORMAL_COLOR = '#7d8389';
+const ACTIVE_INK = '#22313f';
+const ACTIVE_MARK = '#d9a441';
+// 选中态两层墨的错开量（px）：藏青往左上、芥黄往右下各挪一半
+const MARK_OFFSET = 5;
 const MAX_FILE_SIZE = 40 * 1024;
 const OUTPUT_DIR = path.resolve(import.meta.dirname, '..', 'static', 'tabbar');
 
@@ -67,122 +70,99 @@ function makePng(pixelRgba) {
   ]);
 }
 
-function line(x1, y1, x2, y2, width = STROKE) {
-  return { type: 'line', x1, y1, x2, y2, width };
-}
-
-function circle(cx, cy, radius, width = STROKE) {
-  return { type: 'circle', cx, cy, radius, width };
-}
-
-function roundRect(x, y, width, height, radius, strokeWidth = STROKE) {
-  return { type: 'roundRect', x, y, width, height, radius, strokeWidth };
-}
-
-function ellipseArc(cx, cy, rx, ry, startAngle, endAngle, steps = 36) {
-  const segments = [];
-  let previousX = cx + rx * Math.cos(startAngle);
-  let previousY = cy + ry * Math.sin(startAngle);
-  for (let step = 1; step <= steps; step += 1) {
-    const angle = startAngle + ((endAngle - startAngle) * step) / steps;
-    const nextX = cx + rx * Math.cos(angle);
-    const nextY = cy + ry * Math.sin(angle);
-    segments.push(line(previousX, previousY, nextX, nextY));
-    previousX = nextX;
-    previousY = nextY;
-  }
-  return segments;
-}
+// 图形：add 填上，cut 挖掉，按顺序叠
+const add = (shape) => ({ op: 'add', shape });
+const cut = (shape) => ({ op: 'cut', shape });
+const circle = (cx, cy, r) => ({ type: 'circle', cx, cy, r });
+const roundRect = (x, y, w, h, r) => ({ type: 'roundRect', x, y, w, h, r });
+// 上半个椭圆（底边平）：钟身、肩膀
+const dome = (cx, cy, rx, ry) => ({ type: 'dome', cx, cy, rx, ry });
+// 圆头粗线：勾、加号
+const capsule = (x1, y1, x2, y2, width) => ({ type: 'capsule', x1, y1, x2, y2, width });
+const polygon = (points) => ({ type: 'polygon', points });
 
 function iconShapes() {
   return {
     home: [
-      line(15, 37, 40.5, 14),
-      line(40.5, 14, 66, 37),
-      line(21, 32, 21, 66),
-      line(60, 32, 60, 66),
-      line(21, 66, 34, 66),
-      line(47, 66, 60, 66),
-      line(34, 66, 34, 49),
-      line(34, 49, 47, 49),
-      line(47, 49, 47, 66),
+      add(polygon([[11, 39], [40.5, 12], [70, 39]])),
+      add(roundRect(19, 33, 43, 35, 4)),
+      cut(roundRect(34, 46, 13, 30, 6.5)),
     ],
     apply: [
-      roundRect(15, 15, 51, 51, 12, STROKE),
-      line(40.5, 29, 40.5, 52),
-      line(29, 40.5, 52, 40.5),
+      add(roundRect(13, 13, 55, 55, 16)),
+      cut(capsule(40.5, 28, 40.5, 53, 7)),
+      cut(capsule(28, 40.5, 53, 40.5, 7)),
     ],
     task: [
-      roundRect(18, 20, 45, 49, 6, STROKE),
-      line(32, 20, 32, 18),
-      ...ellipseArc(40.5, 18, 8.5, 6, Math.PI, 2 * Math.PI, 18),
-      line(49, 18, 49, 20),
-      line(32, 39, 38, 45),
-      line(38, 45, 49, 34),
-      line(29, 58, 52, 58),
+      add(roundRect(16, 18, 49, 52, 8)),
+      cut(roundRect(27, 13, 27, 12, 6)),
+      add(roundRect(30, 10, 21, 12, 6)),
+      cut(capsule(28, 44, 36, 52, 7)),
+      cut(capsule(36, 52, 53, 35, 7)),
     ],
     notice: [
-      line(40.5, 15, 40.5, 20),
-      ...ellipseArc(40.5, 37, 16, 17, Math.PI, 2 * Math.PI, 36),
-      line(24.5, 37, 24.5, 53),
-      line(56.5, 37, 56.5, 53),
-      line(24.5, 53, 20, 56),
-      line(56.5, 53, 61, 56),
-      line(20, 56, 61, 56),
-      circle(40.5, 66, 2.2, 4.4),
+      add(circle(40.5, 17, 4.5)),
+      add(dome(40.5, 38, 18, 19)),
+      add(roundRect(22.5, 37, 36, 15, 0)),
+      add(roundRect(14, 50, 53, 8, 4)),
+      add(circle(40.5, 64, 6)),
     ],
     me: [
-      circle(40.5, 25, 9.6),
-      ...ellipseArc(40.5, 66, 26.5, 20.5, Math.PI, 2 * Math.PI, 48),
+      add(circle(40.5, 25, 13)),
+      add(dome(40.5, 70, 28, 24)),
     ],
   };
 }
 
-function contains(primitive, x, y) {
-  const half = primitive.width / 2;
-  if (primitive.type === 'line') {
-    const dx = primitive.x2 - primitive.x1;
-    const dy = primitive.y2 - primitive.y1;
-    const lengthSquared = dx * dx + dy * dy;
-    const projection = lengthSquared === 0
-      ? 0
-      : Math.max(0, Math.min(1, ((x - primitive.x1) * dx + (y - primitive.y1) * dy) / lengthSquared));
-    const nearestX = primitive.x1 + projection * dx;
-    const nearestY = primitive.y1 + projection * dy;
-    return (x - nearestX) ** 2 + (y - nearestY) ** 2 <= half * half;
+function contains(shape, x, y) {
+  switch (shape.type) {
+    case 'circle':
+      return (x - shape.cx) ** 2 + (y - shape.cy) ** 2 <= shape.r ** 2;
+    case 'roundRect': {
+      const qx = Math.abs(x - (shape.x + shape.w / 2)) - (shape.w / 2 - shape.r);
+      const qy = Math.abs(y - (shape.y + shape.h / 2)) - (shape.h / 2 - shape.r);
+      return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) <= shape.r;
+    }
+    case 'dome':
+      return y <= shape.cy && ((x - shape.cx) / shape.rx) ** 2 + ((y - shape.cy) / shape.ry) ** 2 <= 1;
+    case 'capsule': {
+      const dx = shape.x2 - shape.x1;
+      const dy = shape.y2 - shape.y1;
+      const t = Math.max(0, Math.min(1, ((x - shape.x1) * dx + (y - shape.y1) * dy) / (dx * dx + dy * dy || 1)));
+      return (x - shape.x1 - t * dx) ** 2 + (y - shape.y1 - t * dy) ** 2 <= (shape.width / 2) ** 2;
+    }
+    case 'polygon': {
+      let inside = false;
+      const pts = shape.points;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i, i += 1) {
+        const [xi, yi] = pts[i];
+        const [xj, yj] = pts[j];
+        if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    }
+    default:
+      throw new Error(`Unknown shape: ${shape.type}`);
   }
-
-  if (primitive.type === 'circle') {
-    return Math.abs(Math.hypot(x - primitive.cx, y - primitive.cy) - primitive.radius) <= half;
-  }
-
-  if (primitive.type === 'roundRect') {
-    const qx = Math.abs(x - (primitive.x + primitive.width / 2)) - (primitive.width / 2 - primitive.radius);
-    const qy = Math.abs(y - (primitive.y + primitive.height / 2)) - (primitive.height / 2 - primitive.radius);
-    const outside = Math.hypot(Math.max(qx, 0), Math.max(qy, 0));
-    const inside = Math.min(Math.max(qx, qy), 0);
-    const signedDistance = outside + inside - primitive.radius;
-    return Math.abs(signedDistance) <= primitive.strokeWidth / 2;
-  }
-
-  throw new Error(`Unknown shape primitive: ${primitive.type}`);
 }
 
-function rasterize(primitives) {
+function covers(ops, x, y) {
+  let inside = false;
+  for (const { op, shape } of ops) {
+    if (contains(shape, x, y)) inside = op === 'add';
+  }
+  return inside;
+}
+
+/** 覆盖率（0–255），整体平移 (dx, dy) */
+function rasterize(ops, dx = 0, dy = 0) {
   const alpha = new Uint8Array(WIDTH * HEIGHT);
   for (let y = 0; y < HEIGHT; y += 1) {
     for (let x = 0; x < WIDTH; x += 1) {
       let covered = 0;
-      for (let sampleY = 0; sampleY < SUPERSAMPLE; sampleY += 1) {
-        for (let sampleX = 0; sampleX < SUPERSAMPLE; sampleX += 1) {
-          const pointX = x + (sampleX + 0.5) / SUPERSAMPLE;
-          const pointY = y + (sampleY + 0.5) / SUPERSAMPLE;
-          for (let index = 0; index < primitives.length; index += 1) {
-            if (contains(primitives[index], pointX, pointY)) {
-              covered += 1;
-              break;
-            }
-          }
+      for (let sy = 0; sy < SUPERSAMPLE; sy += 1) {
+        for (let sx = 0; sx < SUPERSAMPLE; sx += 1) {
+          if (covers(ops, x + (sx + 0.5) / SUPERSAMPLE - dx, y + (sy + 0.5) / SUPERSAMPLE - dy)) covered += 1;
         }
       }
       alpha[y * WIDTH + x] = Math.round((covered * 255) / SAMPLE_COUNT);
@@ -196,16 +176,27 @@ function hexToRgb(hex) {
   return [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
 }
 
-function colorize(alpha, hex) {
-  const [red, green, blue] = hexToRgb(hex);
+/** 把若干层（覆盖率 + 颜色）由下往上叠成 RGBA */
+function compose(layers) {
   const rgba = Buffer.alloc(WIDTH * HEIGHT * 4);
-  for (let pixel = 0; pixel < alpha.length; pixel += 1) {
+  const colors = layers.map(([, hex]) => hexToRgb(hex));
+  for (let pixel = 0; pixel < WIDTH * HEIGHT; pixel += 1) {
+    let a = 0;
+    const rgb = [0, 0, 0];
+    layers.forEach(([alpha], index) => {
+      const top = alpha[pixel] / 255;
+      if (top === 0) return;
+      const below = a * (1 - top);
+      const out = top + below;
+      for (let k = 0; k < 3; k += 1) rgb[k] = (colors[index][k] * top + rgb[k] * below) / out;
+      a = out;
+    });
     const offset = pixel * 4;
-    if (alpha[pixel] !== 0) {
-      rgba[offset] = red;
-      rgba[offset + 1] = green;
-      rgba[offset + 2] = blue;
-      rgba[offset + 3] = alpha[pixel];
+    if (a > 0) {
+      rgba[offset] = Math.round(rgb[0]);
+      rgba[offset + 1] = Math.round(rgb[1]);
+      rgba[offset + 2] = Math.round(rgb[2]);
+      rgba[offset + 3] = Math.round(a * 255);
     }
   }
   return rgba;
@@ -291,17 +282,19 @@ function asciiPreview(pixels) {
 
 function main() {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  const shapes = iconShapes();
   const files = [];
+  const half = MARK_OFFSET / 2;
 
-  for (const [name, primitives] of Object.entries(shapes)) {
-    const alpha = rasterize(primitives);
-    for (const [suffix, color] of [['', NORMAL_COLOR], ['-active', ACTIVE_COLOR]]) {
+  for (const [name, ops] of Object.entries(iconShapes())) {
+    const variants = [
+      ['', [[rasterize(ops), NORMAL_COLOR]]],
+      ['-active', [[rasterize(ops, half, half), ACTIVE_MARK], [rasterize(ops, -half, -half), ACTIVE_INK]]],
+    ];
+    for (const [suffix, layers] of variants) {
       const fileName = `${name}${suffix}.png`;
       const filePath = path.join(OUTPUT_DIR, fileName);
-      fs.writeFileSync(filePath, makePng(colorize(alpha, color)));
-      const verified = verifyPng(filePath);
-      files.push({ fileName, ...verified });
+      fs.writeFileSync(filePath, makePng(compose(layers)));
+      files.push({ fileName, ...verifyPng(filePath) });
     }
   }
 

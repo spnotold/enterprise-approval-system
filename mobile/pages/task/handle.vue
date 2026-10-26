@@ -101,7 +101,7 @@ onPullDownRefresh(() => void load(true))
 
 <template>
   <view class="page" :class="{ 'page--bar': !!myTask }">
-    <EmptyState v-if="notFound" text="无权查看或申请已不存在" />
+    <EmptyState v-if="notFound" kind="none" text="无权查看或申请已不存在" />
     <template v-else-if="detail">
       <view v-if="!myTask" class="banner banner-warning">该待办已处理或已失效，当前无需你审批。</view>
       <AppDetailBody :detail="detail" :stamp-seq="stampSeq" />

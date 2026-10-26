@@ -30,67 +30,97 @@ const emit = defineEmits<{ change: [index: number] }>()
 
 <style scoped>
 .steps {
-  width: 100%;
+  width: calc(100% - 8rpx);
   white-space: nowrap;
-  background: var(--eas-surface);
+  background: var(--eas-sheet);
   border-radius: var(--eas-radius-panel);
-  margin-bottom: 16rpx;
+  box-shadow: var(--eas-shadow-sheet);
+  margin: 0 8rpx 32rpx 0;
 }
 
 .steps-inner {
   display: flex;
-  padding: 0 8rpx;
+  padding: 12rpx 4rpx;
 }
 
 .step {
   position: relative;
   flex: 1;
-  min-width: 136rpx;
-  height: 112rpx;
+  min-width: 0;
+  height: 128rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: var(--eas-ink-3);
-  font-size: var(--eas-fs-xs);
-  border-bottom: 4rpx solid transparent;
+  border-radius: var(--eas-radius-control);
+}
+
+.step::before {
+  content: '';
+  position: absolute;
+  top: 40rpx;
+  left: 50%;
+  width: 100%;
+  height: 4rpx;
+  background: var(--eas-rule);
+}
+
+.step:last-child::before {
+  display: none;
+}
+
+.step.done::before {
+  background: var(--eas-sage);
 }
 
 .step-no {
-  width: 40rpx;
-  height: 40rpx;
-  line-height: 40rpx;
+  position: relative;
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 56rpx;
   border-radius: 50%;
   text-align: center;
-  background: var(--eas-paper);
-  font-size: var(--eas-fs-xs);
+  background: var(--eas-tab);
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-md);
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
   font-variant-numeric: tabular-nums;
-  margin-bottom: 6rpx;
+  margin-bottom: 12rpx;
+}
+
+.step-name {
+  position: relative;
+  font-size: 24rpx;
 }
 
 .step.done .step-no {
-  background: var(--eas-primary-tint);
-  color: var(--eas-primary);
+  background: var(--eas-sage);
+  color: var(--eas-ink);
 }
 
 .step.active {
-  color: var(--eas-primary);
+  color: var(--eas-ink);
   font-weight: 600;
-  border-bottom-color: var(--eas-primary);
 }
 
 .step.active .step-no {
-  background: var(--eas-primary);
-  color: var(--eas-surface);
+  background-color: var(--eas-ink);
+  background-image: var(--eas-grain-deep);
+  background-size: var(--eas-grain-size);
+  background-blend-mode: multiply;
+  color: var(--eas-sheet);
+  box-shadow: var(--eas-offset-mark);
 }
 
 .step-err {
   position: absolute;
-  top: 16rpx;
-  right: 28rpx;
+  top: 8rpx;
+  right: calc(50% - 38rpx);
   width: 14rpx;
   height: 14rpx;
   border-radius: 50%;
-  background: var(--eas-danger);
+  background: var(--eas-rust);
 }
 </style>

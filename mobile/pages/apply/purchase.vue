@@ -11,6 +11,7 @@ import { formatCents, multiplyCents, sumCents } from '@/lib/money'
 import { requireLogin } from '@/stores/auth'
 import { emptyPurchase, emptyPurchaseItem, emptyQuote, lowestQuote, purchaseBody, rowKey, validatePurchase } from '@/utils/applyForms'
 import { hideLoading, loading, showError, toast } from '@/utils/feedback'
+import { SWITCH_COLOR } from '@/utils/palette'
 import { todayCN } from '@/utils/time'
 
 const form = reactive(emptyPurchase())
@@ -27,8 +28,6 @@ const total = computed(() => sumCents(form.items.map(i => multiplyCents(i.quanti
 // 聚焦中的输入框 key；小程序没有 :focus，用 @focus / @blur 切换 .is-focus
 const foc = ref('')
 const ic = (k: string, path = k) => ({ 'is-focus': foc.value === k, 'is-error': !!fe.get(path) })
-// 原生 switch 不支持 CSS 变量，取值同 --eas-primary
-const PRIMARY = '#3e5c76'
 const errorSteps = computed(() => [...new Set(Object.keys(fe.map).map(fieldStep))])
 let itemMap: number[] = [], quoteMap: number[] = [], initialId: number | null = null
 
@@ -133,7 +132,7 @@ onLoad(async q => {
       <view :class="{ locked: draft.busy }">
         <view v-show="step === 0">
           <view class="card">
-            <view class="card-title">申请信息</view>
+            <view class="card-title"><view class="ink-glyph ink-glyph--stack" /><text class="flex1">申请信息</text></view>
             <FormItem label="标题" required :error="fe.get('title')">
               <input
                 v-model="form.title"
@@ -177,9 +176,9 @@ onLoad(async q => {
             </FormItem>
           </view>
           <view class="card">
-            <view class="card-title switch-title" :class="{ plain: !form.singleSource }">
+            <view class="card-title switch-title">
               <text>单一来源采购</text>
-              <switch :checked="form.singleSource" :color="PRIMARY" @change="toggleSingle" />
+              <switch :checked="form.singleSource" :color="SWITCH_COLOR" @change="toggleSingle" />
             </view>
             <view v-show="form.singleSource">
               <FormItem label="单一来源说明" required :error="fe.get('singleSourceReason')" help="至少 20 字，附说明材料或在说明中写明依据">
@@ -207,14 +206,15 @@ onLoad(async q => {
           </view>
         </view>
 
-        <view v-show="step === 1">
-          <view class="section-title row between">
-            <text>采购明细</text>
-            <text class="sum">合计 <text class="amount">¥{{ formatCents(total) }}</text></text>
+        <view v-show="step === 1" class="card detail-sheet">
+          <view class="card-title">采购明细</view>
+          <view class="row between group-sum">
+            <text class="sum-label">合计</text>
+            <text class="amount">¥{{ formatCents(total) }}</text>
           </view>
           <view v-if="fe.get('items')" class="field-err page-err">{{ fe.get('items') }}</view>
-          <view v-for="(it, i) in form.items" :key="it.key" class="card">
-            <view class="card-title row between">
+          <view v-for="(it, i) in form.items" :key="it.key" class="detail-block">
+            <view class="detail-title row between">
               <text>明细 {{ i + 1 }}</text>
               <view class="link-btn danger" hover-class="is-pressed" :hover-stay-time="60" @tap="removeItem(i)">删除</view>
             </view>
@@ -296,11 +296,12 @@ onLoad(async q => {
           >添加明细</button>
         </view>
 
-        <view v-show="step === 2">
-          <view class="banner banner-info">非单一来源至少 2 家供应商；线上报价需链接及截图，线下需报价单或说明。</view>
+        <view v-show="step === 2" class="card detail-sheet">
+          <view class="card-title">{{ steps[2] }}</view>
+          <view class="banner banner-info quote-help">非单一来源至少 2 家供应商；线上报价需链接及截图，线下需报价单或说明。</view>
           <view v-if="fe.get('quotes')" class="field-err page-err">{{ fe.get('quotes') }}</view>
-          <view v-for="(q, i) in form.quotes" :key="q.key" class="card" :class="{ lowest: q.quoteAmountCents !== null && q.quoteAmountCents === lowest }">
-            <view class="card-title row between">
+          <view v-for="(q, i) in form.quotes" :key="q.key" class="detail-block" :class="{ lowest: q.quoteAmountCents !== null && q.quoteAmountCents === lowest }">
+            <view class="detail-title row between">
               <view class="row">
                 <text>报价 {{ i + 1 }}</text>
                 <text v-if="q.quoteAmountCents !== null && q.quoteAmountCents === lowest" class="tag tag-green tag-gap">最低价</text>
@@ -440,7 +441,7 @@ onLoad(async q => {
           <view class="card-title">确认申请</view>
           <view class="kv"><text class="kv-label">标题</text><text class="kv-value">{{ form.title || '未填写' }}</text></view>
           <view class="kv"><text class="kv-label">采购事由</text><text class="kv-value">{{ form.reason || '未填写' }}</text></view>
-          <view class="kv"><text class="kv-label">明细合计</text><text class="kv-value kv-amount">¥{{ formatCents(total) }}</text></view>
+          <view class="kv group-sum"><text class="kv-label">明细合计</text><text class="kv-value kv-amount amount">¥{{ formatCents(total) }}</text></view>
           <view class="kv"><text class="kv-label">预算上限</text><text class="kv-value kv-amount">¥{{ formatCents(form.budgetLimitCents) }}</text></view>
           <view class="kv"><text class="kv-label">拟选供应商</text><text class="kv-value">{{ selected?.supplierName || '未选择' }}</text></view>
           <view class="kv"><text class="kv-label">拟选金额</text><text class="kv-value kv-amount">¥{{ formatCents(selected?.quoteAmountCents) }}</text></view>
@@ -489,14 +490,40 @@ onLoad(async q => {
   font-variant-numeric: tabular-nums;
 }
 
-.sum {
-  font-size: var(--eas-fs-sm);
-  font-weight: 400;
-  color: var(--eas-ink-2);
+.detail-sheet {
+  padding-bottom: 32rpx;
 }
 
-.sum .amount {
+.detail-block {
+  margin: 24rpx 0;
+  padding: 0 24rpx 16rpx;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
+}
+
+.detail-title {
+  min-height: 88rpx;
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
   color: var(--eas-ink);
+}
+
+.group-sum,
+.item-sum {
+  padding: 16rpx 20rpx;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
+}
+
+.group-sum {
+  margin: 20rpx 0;
+}
+
+.amount,
+.kv-amount {
+  text-align: right;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
 }
 
 .sum-label {
@@ -510,37 +537,45 @@ onLoad(async q => {
   justify-content: space-between;
 }
 
-.switch-title.plain {
-  border-bottom-color: transparent;
+.tag-gap {
+  margin-left: 12rpx;
 }
 
-.tag-gap {
-  margin-left: 16rpx;
+.quote-help {
+  margin-top: 24rpx;
 }
 
 .quote-option {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
   min-height: 96rpx;
   padding: 16rpx 20rpx;
-  margin-bottom: 16rpx;
-  border: 2rpx solid var(--eas-rule);
+  margin: 0 8rpx 20rpx 0;
+  background: var(--eas-row-hover);
   border-radius: var(--eas-radius-control);
 }
 
 .quote-option.chosen {
-  background: var(--eas-primary-tint);
-  border-color: var(--eas-primary);
+  background: var(--eas-tab);
+  box-shadow: var(--eas-offset-mark);
+}
+
+/* 未选的报价本来就是 row-hover 底，按下换暗纸，看得出按到了 */
+.quote-option.is-pressed,
+.quote-option.chosen.is-pressed {
+  background-color: var(--eas-tab) !important;
 }
 
 .quote-name {
   flex: 1;
   min-width: 0;
-  margin-right: 16rpx;
+  overflow-wrap: anywhere;
 }
 
-.lowest {
-  border-left: 6rpx solid var(--eas-success);
+.quote-option .amount {
+  margin-left: auto;
 }
 
 .next {

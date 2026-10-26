@@ -1,0 +1,9 @@
+Use case: mobile app illustration for the header banner of the home (workbench) screen of an enterprise approval app
+Asset type: wide banner illustration, 1536x832. It is shown about 345x190 px with rounded corners on a phone. A greeting heading in dark navy and one line of small text are placed over the upper-left in HTML.
+Input images: style, palette and texture references only. Do not copy their subjects or composition.
+Primary request: a person in a mustard coat walks along a lakeside path to the right, carrying a folder of papers under one arm. Pine trees and a small boathouse with a rust-red roof stand on the right; soft blue hills and a calm lake behind.
+Scene: the path is a gentle band along the bottom; the lake and hills stretch across the whole width.
+Style and medium: mid-century modern editorial illustration, flat gouache shapes with softly irregular edges, simplified geometric figures with minimal facial detail, one hard-edged shadow tone per shape, fine paper grain and slightly faded screen-print ink.
+Palette: warm cream paper, mustard yellow, burnt orange / rust, navy and slate blue, sage green, pale sky blue. Keep it muted.
+Composition: keep the left 55% and the whole upper half very quiet: flat pale cream sky over low distant hills, no sun, nothing busy where the heading goes. The person, trees and boathouse sit in the right 40%, in the lower two thirds. Calm, poster-like, large shapes, generous negative space.
+Constraints: no text, letters, numbers, logos, watermark or border; no writing on the papers (only plain lines); natural hands and anatomy; not photorealistic, not 3D.

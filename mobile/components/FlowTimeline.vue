@@ -92,7 +92,7 @@ function candidateNames(n: FlowNodeView): string {
 
 .tl-node {
   display: flex;
-  --tone: var(--eas-rule-strong);
+  --tone: var(--eas-ink-3);
 }
 
 .tl-node.tone-primary {
@@ -127,15 +127,9 @@ function candidateNames(n: FlowNodeView): string {
   background: var(--tone);
 }
 
-/* 当前节点：空心圈 */
-.tl-node.tone-primary .tl-dot {
-  background: var(--eas-surface);
-  border: 4rpx solid var(--eas-primary);
-}
-
 .tl-line {
   flex: 1;
-  width: 2rpx;
+  width: 4rpx;
   background: var(--eas-rule);
   margin: 8rpx 0;
 }
@@ -204,8 +198,8 @@ function candidateNames(n: FlowNodeView): string {
 .tl-task {
   margin-top: 12rpx;
   padding: 12rpx 16rpx;
-  background: var(--eas-paper);
-  border-radius: var(--eas-radius-control);
+  background: var(--eas-row-hover);
+  border-radius: 20rpx;
 }
 
 .tl-task-head {
@@ -217,6 +211,10 @@ function candidateNames(n: FlowNodeView): string {
   margin-left: 12rpx;
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-2);
+}
+
+.tl-task-who {
+  font-weight: 600;
 }
 
 .tl-time {

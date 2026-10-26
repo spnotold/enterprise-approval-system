@@ -16,6 +16,8 @@ const showDemo = ref(false)
 const focus = ref<'' | 'account' | 'password'>('')
 // 仅后端以 demo profile 运行时展示演示账号；请求失败按非 demo 处理
 const demoMode = ref(false)
+// 自定义导航栏：顶部内容让出真实状态栏高度（小程序的 --status-bar-height 是编译时写死的 25px；H5 为 0）
+const topInset = `${uni.getSystemInfoSync().statusBarHeight ?? 0}px`
 let redirect = ''
 
 const DEMO_ACCOUNTS = [
@@ -89,86 +91,86 @@ function goRegister(): void {
 </script>
 
 <template>
-  <view class="login">
-    <view class="head">
-      <view class="title">企业审批系统</view>
+  <view class="login" :style="{ '--top-inset': topInset }">
+    <!-- 插画头：整幅铺满，状态栏区域也铺图；品牌和标题压在左上的天空上 -->
+    <view class="hero">
+      <image class="hero-img" src="/static/illustrations/m-login.jpg" mode="aspectFill" />
+      <image class="leaf leaf-a" src="/static/illustrations/leaf-1.png" mode="aspectFit" />
+      <image class="leaf leaf-b" src="/static/illustrations/leaf-3.png" mode="aspectFit" />
+      <image class="leaf leaf-c" src="/static/illustrations/leaf-5.png" mode="aspectFit" />
+      <view class="brand">
+        <view class="seal inked"><text class="seal-char">审</text></view>
+        <text class="brand-name">企业审批</text>
+      </view>
+      <view class="hero-title">登录</view>
     </view>
 
-    <view class="panel">
-      <view class="field">
-        <view class="label">用户名或邮箱</view>
-        <input
-          v-model="account"
-          class="ctl"
-          :class="{ 'ctl--focus': focus === 'account' }"
-          placeholder="请输入用户名或邮箱"
-          placeholder-class="ctl-placeholder"
-          maxlength="100"
-          confirm-type="next"
-          @focus="focus = 'account'"
-          @blur="focus = ''"
-        />
-      </view>
-      <view class="field">
-        <view class="label">密码</view>
-        <view class="ctl-row" :class="{ 'ctl--focus': focus === 'password' }">
+    <view class="body">
+      <view class="card sheet">
+        <view class="field">
+          <view class="label">用户名或邮箱</view>
           <input
-            v-model="password"
-            class="ctl-bare flex1"
-            :password="!showPwd"
-            placeholder="请输入密码"
-            placeholder-class="ctl-placeholder"
-            maxlength="64"
-            confirm-type="done"
-            @focus="focus = 'password'"
+            v-model="account"
+            class="input"
+            :class="{ 'is-focus': focus === 'account' }"
+            placeholder="请输入用户名或邮箱"
+            placeholder-class="placeholder"
+            maxlength="100"
+            confirm-type="next"
+            @focus="focus = 'account'"
             @blur="focus = ''"
-            @confirm="submit"
           />
-          <view class="ctl-action" hover-class="is-pressed" :hover-stay-time="60" @tap="showPwd = !showPwd">
-            {{ showPwd ? '隐藏' : '显示' }}
+        </view>
+        <view class="field">
+          <view class="label">密码</view>
+          <view class="input pwd" :class="{ 'is-focus': focus === 'password' }">
+            <input
+              v-model="password"
+              class="pwd-in"
+              :password="!showPwd"
+              placeholder="请输入密码"
+              placeholder-class="placeholder"
+              maxlength="64"
+              confirm-type="done"
+              @focus="focus = 'password'"
+              @blur="focus = ''"
+              @confirm="submit"
+            />
+            <view class="pwd-toggle" hover-class="is-pressed" :hover-stay-time="60" @tap="showPwd = !showPwd">
+              {{ showPwd ? '隐藏' : '显示' }}
+            </view>
           </view>
         </view>
+        <view v-if="error" class="field-err">{{ error }}</view>
+        <button class="btn btn-primary btn-block submit" :loading="busy" :disabled="busy" :hover-stay-time="60" @tap="submit">登录</button>
       </view>
-      <view v-if="error" class="err">{{ error }}</view>
-      <button
-        class="submit"
-        hover-class="submit--pressed"
-        :hover-stay-time="60"
-        :loading="busy"
-        :disabled="busy"
-        @tap="submit"
-      >
-        登录
-      </button>
+
       <view class="links">
-        <view class="link" hover-class="is-pressed" :hover-stay-time="60" @tap="goRegister">注册新账号</view>
-        <view v-if="demoMode" class="link" hover-class="is-pressed" :hover-stay-time="60" @tap="showDemo = !showDemo">
+        <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="goRegister">注册新账号</view>
+        <view v-if="demoMode" class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="showDemo = !showDemo">
           {{ showDemo ? '收起演示账号' : '演示账号' }}
         </view>
       </view>
-    </view>
 
-    <view v-if="demoMode && showDemo" class="panel demo-panel">
-      <view class="demo-head">
-        <text class="demo-title">演示账号</text>
-        <text class="note">密码均为 Demo@2026</text>
-      </view>
-      <view
-        v-for="d in DEMO_ACCOUNTS"
-        :key="d.username"
-        class="demo"
-        hover-class="is-pressed"
-        :hover-stay-time="60"
-        @tap="fillDemo(d.username)"
-      >
-        <view class="flex1">
-          <view>
-            <text class="demo-name">{{ d.name }}</text>
-            <text class="note demo-user">{{ d.username }}</text>
-          </view>
-          <view class="note">{{ d.desc }}</view>
+      <view v-if="demoMode && showDemo" class="demo">
+        <view class="demo-head">
+          <text class="demo-title">演示账号</text>
+          <text class="demo-note">密码都是 Demo@2026</text>
         </view>
-        <text class="demo-fill">填入</text>
+        <view class="demo-grid">
+          <view
+            v-for="d in DEMO_ACCOUNTS"
+            :key="d.username"
+            class="demo-card"
+            hover-class="is-pressed"
+            :hover-stay-time="60"
+            @tap="fillDemo(d.username)"
+          >
+            <view class="demo-name">{{ d.name }}</view>
+            <view class="demo-user">{{ d.username }}</view>
+            <view class="demo-desc">{{ d.desc }}</view>
+          </view>
+        </view>
       </view>
     </view>
   </view>
@@ -177,34 +179,150 @@ function goRegister(): void {
 <style scoped>
 .login {
   min-height: 100vh;
-  padding: 96rpx 40rpx calc(48rpx + env(safe-area-inset-bottom));
-  background: var(--eas-paper);
+}
+
+/* ---------- 插画头 ---------- */
+.hero {
+  position: relative;
+  height: 600rpx;
+  overflow: hidden;
+}
+
+.hero-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 飘叶：一片 8–12 秒，从左往右边飘边转、上下轻摆；30 秒一轮、三片错开，同时最多一片 */
+.leaf {
+  position: absolute;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.leaf-a {
+  top: 240rpx;
+  width: 48rpx;
+  height: 52rpx;
+  animation: leaf-a 30s linear infinite;
+}
+
+.leaf-b {
+  top: 320rpx;
+  width: 36rpx;
+  height: 40rpx;
+  animation: leaf-b 30s linear infinite;
+  animation-delay: 10s;
+}
+
+.leaf-c {
+  top: 400rpx;
+  width: 44rpx;
+  height: 48rpx;
+  animation: leaf-c 30s linear infinite;
+  animation-delay: 20s;
+}
+
+@keyframes leaf-a {
+  0% { transform: translate(-120rpx, 0) rotate(0deg); opacity: 0; }
+  2% { opacity: 1; }
+  9% { transform: translate(90rpx, 20rpx) rotate(60deg); }
+  16% { transform: translate(300rpx, -16rpx) rotate(140deg); }
+  23% { transform: translate(510rpx, 16rpx) rotate(220deg); }
+  29% { transform: translate(700rpx, -10rpx) rotate(300deg); opacity: 1; }
+  31% { transform: translate(860rpx, 4rpx) rotate(330deg); opacity: 0; }
+  100% { transform: translate(860rpx, 4rpx) rotate(330deg); opacity: 0; }
+}
+
+@keyframes leaf-b {
+  0% { transform: translate(-100rpx, 0) rotate(-20deg); opacity: 0; }
+  2% { opacity: 1; }
+  8% { transform: translate(120rpx, -14rpx) rotate(40deg); }
+  15% { transform: translate(340rpx, 18rpx) rotate(120deg); }
+  21% { transform: translate(560rpx, -12rpx) rotate(200deg); }
+  25% { transform: translate(720rpx, 10rpx) rotate(260deg); opacity: 1; }
+  27% { transform: translate(850rpx, 0) rotate(300deg); opacity: 0; }
+  100% { transform: translate(850rpx, 0) rotate(300deg); opacity: 0; }
+}
+
+@keyframes leaf-c {
+  0% { transform: translate(-110rpx, 0) rotate(10deg); opacity: 0; }
+  3% { opacity: 1; }
+  10% { transform: translate(150rpx, 22rpx) rotate(90deg); }
+  19% { transform: translate(400rpx, -20rpx) rotate(180deg); }
+  27% { transform: translate(620rpx, 14rpx) rotate(260deg); opacity: 1; }
+  33% { transform: translate(860rpx, -6rpx) rotate(340deg); opacity: 0; }
+  100% { transform: translate(860rpx, -6rpx) rotate(340deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf {
+    display: none;
+  }
+}
+
+/* 品牌：铁锈圆章 + 芥黄错版，右上角留给小程序胶囊按钮 */
+.brand {
+  position: absolute;
+  top: calc(var(--top-inset, 0px) + 32rpx);
+  left: 40rpx;
+  display: flex;
+  align-items: center;
+}
+
+.seal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  background-color: var(--eas-rust);
+  border-radius: 50%;
+  box-shadow: var(--eas-offset-mark);
+}
+
+.seal-char {
+  font-family: var(--eas-font-display);
+  font-size: 44rpx;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-sheet);
+}
+
+.brand-name {
+  margin-left: 24rpx;
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-lg);
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
   color: var(--eas-ink);
-  font-family: var(--eas-font-sans);
 }
 
-.head {
-  margin-bottom: 40rpx;
-}
-
-.title {
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-xl);
-  font-weight: 600;
+.hero-title {
+  position: absolute;
+  top: calc(var(--top-inset, 0px) + 152rpx);
+  left: 40rpx;
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-hero);
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
   line-height: 1.3;
   color: var(--eas-ink);
 }
 
-.panel {
-  padding: 16rpx 32rpx 24rpx;
-  margin-bottom: 24rpx;
-  background: var(--eas-surface);
-  border: 1rpx solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
+/* ---------- 表单单据：向上压住插画底边 ---------- */
+.body {
+  padding: 0 40rpx calc(48rpx + env(safe-area-inset-bottom));
 }
 
-.field {
-  padding: 16rpx 0;
+.sheet {
+  position: relative;
+  margin-top: -48rpx;
+  padding-top: 16rpx;
 }
 
 .label {
@@ -213,160 +331,109 @@ function goRegister(): void {
   color: var(--eas-ink-2);
 }
 
-.ctl,
-.ctl-row {
-  width: 100%;
-  height: 88rpx;
-  background: var(--eas-paper);
-  border: 2rpx solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
-  font-size: var(--eas-fs-md);
-  color: var(--eas-ink);
-  transition: border-color var(--eas-dur-fast) var(--eas-ease);
-}
-
-.ctl {
-  padding: 0 24rpx;
-}
-
-.ctl-row {
+/* 密码行：输入框 + 右侧「显示 / 隐藏」 */
+.pwd {
   display: flex;
   align-items: center;
+  padding: 0;
 }
 
-.ctl-bare {
+.pwd-in {
+  flex: 1;
+  min-width: 0;
   height: 100%;
   padding: 0 24rpx;
-  font-size: var(--eas-fs-md);
+  font-size: 30rpx;
   color: var(--eas-ink);
 }
 
-.ctl--focus {
-  border-color: var(--eas-primary);
-}
-
-.ctl-placeholder {
-  color: var(--eas-placeholder);
-}
-
-.ctl-action {
+.pwd-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   min-width: 112rpx;
   height: 100%;
-  padding: 0 16rpx;
+  padding: 0 20rpx;
   font-size: var(--eas-fs-sm);
-  color: var(--eas-primary);
+  color: var(--eas-link);
   border-radius: var(--eas-radius-control);
-}
-
-.err {
-  margin-top: 8rpx;
-  font-size: var(--eas-fs-xs);
-  line-height: 1.5;
-  color: var(--eas-danger);
 }
 
 .submit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 88rpx;
-  margin: 24rpx 0 0;
-  padding: 0;
-  line-height: 88rpx;
-  font-size: var(--eas-fs-md);
-  color: var(--eas-surface);
-  background: var(--eas-primary);
-  border-radius: var(--eas-radius-control);
-  transition: background-color var(--eas-dur-fast) var(--eas-ease);
-}
-
-.submit::after {
-  border: none;
-}
-
-.submit--pressed {
-  background: var(--eas-primary-hover);
-}
-
-.submit[disabled] {
-  opacity: 0.55;
+  margin-top: 24rpx;
 }
 
 .links {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8rpx;
-}
-
-.link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 88rpx;
-  min-height: 88rpx;
+  margin-right: 8rpx;
   padding: 0 16rpx;
-  font-size: var(--eas-fs-sm);
-  color: var(--eas-primary);
-  border-radius: var(--eas-radius-control);
 }
 
-.links .link:first-child {
-  margin-left: -16rpx;
-}
-
-.links .link:last-child {
-  margin-right: -16rpx;
-}
-
-.note {
-  font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-3);
-}
-
-.demo-panel {
-  padding-bottom: 8rpx;
+/* ---------- 演示账号：两列纸色小卡 ---------- */
+.demo {
+  margin: 8rpx 8rpx 0 0;
 }
 
 .demo-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 16rpx 0 8rpx;
+  padding: 16rpx 8rpx 20rpx;
 }
 
 .demo-title {
+  font-family: var(--eas-font-display);
   font-size: var(--eas-fs-md);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
 }
 
-.demo {
+.demo-note {
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
+}
+
+.demo-grid {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.demo-card {
+  width: calc(50% - 10rpx);
   min-height: 88rpx;
-  margin: 0 -32rpx;
-  padding: 16rpx 32rpx;
-  border-top: 1rpx solid var(--eas-rule);
+  padding: 20rpx 24rpx;
+  background: var(--eas-sheet);
+  border-radius: var(--eas-radius-control);
+  box-shadow: 6rpx 6rpx 0 var(--eas-shade);
+  transition: transform var(--eas-dur-fast) var(--eas-ease), box-shadow var(--eas-dur-fast) var(--eas-ease);
+}
+
+.demo-card.is-pressed {
+  transform: translate(4rpx, 4rpx);
+  box-shadow: 2rpx 2rpx 0 var(--eas-shade);
 }
 
 .demo-name {
   font-size: var(--eas-fs-sm);
   font-weight: 600;
+  color: var(--eas-ink);
 }
 
 .demo-user {
-  margin-left: 16rpx;
+  margin-top: 2rpx;
+  font-size: var(--eas-fs-xs);
+  color: var(--eas-ink-3);
 }
 
-.demo-fill {
-  flex-shrink: 0;
-  margin-left: 16rpx;
-  font-size: var(--eas-fs-sm);
-  color: var(--eas-primary);
+.demo-desc {
+  margin-top: 8rpx;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.5;
+  color: var(--eas-ink-3);
 }
 </style>
