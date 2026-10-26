@@ -55,7 +55,7 @@ cd backend && mvn test
 | Web `npm run test` | 223 | 223 | 0 |
 | 移动端 `npm run test` | 80 | 80 | 0 |
 
-后端结果为 2026-10-16 的完整重跑（此后后端代码未改动），依据 18 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 84 项，全部通过，失败 0、错误 0、跳过 0。Web 与移动端为 2026-10-26 网页界面 v3「套色」（见 `docs/ui_design.md`）合入后的结果：Web 的 `npm run lint`、`npm run typecheck`、`npm run build` 通过，15 个测试文件共 223 项测试通过（v2 的格纸点阵连同它的 67 项测试一起删除，换成背景风景的 10 项测试；其余新增为发起入口插画匹配等）；移动端在同日套用了 v3（`docs/ui_design.md` 第 9 节）：12 个测试文件共 80 项测试通过（新增发起入口插画匹配 5 项），`npm run typecheck`、`npm run build:h5`、`npm run build:mp-weixin` 通过，小程序包 1.06 MB（主包上限 2 MB）；H5 在 390 与 360 宽下逐页截图，无横向溢出。
+后端结果为 2026-10-16 的完整重跑（此后后端代码未改动），依据 18 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 84 项，全部通过，失败 0、错误 0、跳过 0。Web 与移动端为 2026-10-26 网页界面 v3「套色」（见 `docs/ui_design.md`）合入后的结果：Web 的 `npm run lint`、`npm run typecheck`、`npm run build` 通过，15 个测试文件共 223 项测试通过（v2 的格纸点阵连同它的 67 项测试一起删除，换成背景风景的 10 项测试；其余新增为发起入口插画匹配等）；移动端在同日套用了 v3（`docs/ui_design.md` 第 9 节）：12 个测试文件共 80 项测试通过（新增发起入口插画匹配 5 项），`npm run typecheck`、`npm run build:h5`、`npm run build:mp-weixin` 通过，小程序包 1.07 MB（主包上限 2 MB）；H5 在 390 与 360 宽下逐页截图，无横向溢出。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 
