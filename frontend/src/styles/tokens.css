@@ -48,13 +48,13 @@
   /* 印章残缺：噪声遮罩 */
   --eas-stamp-mask: url('../assets/textures/stamp-mask.png');
 
-  /* 字体：标题与大数字用展示字（数字取 Fraunces 柔角，中文落到站酷小薇），其余系统无衬线 */
+  /* 字体：标题与大数字用展示字（数字取 Fraunces 柔角，中文落到思源宋体粗体），其余系统无衬线。
+     站酷小薇已弃用：它把「回」画成实心方块，「驳回」「返回」都看不清。 */
   --eas-font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', system-ui, sans-serif;
-  --eas-font-display: 'Fraunces Variable', 'ZCOOL XiaoWei', 'Source Han Serif SC', 'Songti SC', serif;
+  --eas-font-display: 'Fraunces Variable', 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'Songti SC', serif;
   /* 旧名：v2 的宋体位置一律换成展示字 */
   --eas-font-serif: var(--eas-font-display);
-  /* 站酷小薇字身偏窄，标题收一点字距 */
-  --eas-display-tracking: -0.06em;
+  --eas-display-tracking: 0.01em;
 
   /* 字号阶：12 辅助 / 14 正文 / 16 小节 / 20 / 26 单据标题 / 32 / 40 页面标题 */
   --eas-fs-12: 12px;

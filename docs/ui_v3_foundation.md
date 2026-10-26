@@ -47,7 +47,7 @@
 
 修改基础语义色后运行 `node scripts/generate-theme-colors.mjs --write`（浅色阶按与单据纸混色生成），`--check` 验证没有过期。
 
-字体：`main.ts` 导入 `@fontsource-variable/fraunces/soft.css` 和 `@fontsource/zcool-xiaowei/400.css`，都按 unicode-range 分片，浏览器只下载用到的字。全局 `font-variation-settings: 'SOFT' 100`。
+字体：`main.ts` 导入 `@fontsource-variable/fraunces/soft.css` 和 `@fontsource/noto-serif-sc/700.css`，都按 unicode-range 分片，浏览器只下载用到的字。中文展示字只有 700 一档，写 400 / 600 时浏览器就近取 700。全局 `font-variation-settings: 'SOFT' 100`。
 
 ## 素材
 

@@ -154,6 +154,8 @@ async function copyNo() {
   max-width: 100%;
 }
 .slip-stamp { position: absolute; top: 22px; right: var(--eas-sheet-inset); }
+/* 只有章、没有金额时不用给金额留位置 */
+.slip-header-aside:not(:has(.slip-amount)) { min-height: 96px; padding-top: 0; }
 .slip-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .amount-label { color: var(--eas-ink-3); font-size: var(--eas-fs-12); }
 .slip-amount :deep(.money) {

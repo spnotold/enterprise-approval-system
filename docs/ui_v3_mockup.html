@@ -5,7 +5,7 @@
 <title>界面样稿：套色（v3）</title>
 <!-- 静态样稿，仅作视觉参照。每个 .frame 是一屏 1440×900。风格规则见 .agents/skills/frontend-design/SKILL.md；插画由 site-illustration skill 生成，位于 frontend/src/assets/illustrations/。 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Fraunces:opsz,wght,SOFT@9..144,600,100&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&family=Fraunces:opsz,wght,SOFT@9..144,600,100&display=swap" rel="stylesheet" />
 <style>
 :root {
   /* 纸 */
@@ -29,7 +29,7 @@
   --sage-ink: #3f5a38;
   --sky: #b3cbd5;
   --slate: #3b6684;
-  --display: 'Fraunces', 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+  --display: 'Fraunces', 'Noto Serif SC', serif;
   --sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', system-ui, sans-serif;
   /* 套色颗粒：只叠在有颜色的墨块上（multiply），纸面和文字保持干净 */
   --grain: url(../frontend/src/assets/textures/grain.png);
@@ -71,12 +71,12 @@ a { color: inherit; text-decoration: none; }
 .avatar { width: 38px; height: 38px; border-radius: 50%; background-color: var(--sage); color: var(--ink); display: grid; place-items: center; font: 400 17px var(--display); }
 
 .page { max-width: 1264px; margin: 0 auto; padding: 10px 48px 40px; }
-h1 { font: 600 44px/1.15 var(--display); font-variation-settings: 'SOFT' 100; margin: 0; letter-spacing: -0.07em; }
+h1 { font: 600 44px/1.15 var(--display); font-variation-settings: 'SOFT' 100; margin: 0; letter-spacing: 0.01em; }
 
 /* ── 单据：纸色平涂 + 一层硬投影，不描边 ── */
 .sheet { background: var(--paper); border-radius: 16px; box-shadow: 6px 6px 0 var(--shade); }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px 10px; }
-.sheet-head h2 { margin: 0; font: 400 21px var(--display); letter-spacing: -0.07em; display: flex; align-items: center; gap: 10px; }
+.sheet-head h2 { margin: 0; font: 400 21px var(--display); letter-spacing: 0.01em; display: flex; align-items: center; gap: 10px; }
 .more { font-size: 13px; font-weight: 600; color: var(--slate); text-decoration: underline; text-decoration-color: var(--mustard); text-decoration-thickness: 2px; text-underline-offset: 5px; }
 .more:hover { color: var(--ink); }
 /* 小节标题前的两色小图形：两块墨叠印（multiply），每张单据一个 */
@@ -137,7 +137,7 @@ table.reg { width: 100%; border-collapse: collapse; }
 .art { position: relative; margin: 24px 0 30px 24px; border-radius: 20px; background: #eadcbe center / cover no-repeat; box-shadow: 8px 8px 0 var(--shade); }
 .demo { position: absolute; left: 56px; top: 60px; width: 430px; padding: 20px 22px 22px; background: var(--paper); border-radius: 16px; box-shadow: 8px 8px 0 rgba(34, 49, 63, 0.22); }
 .kind { font-size: 12px; color: var(--ink-3); display: flex; gap: 12px; }
-.demo h3 { font: 400 26px/1.3 var(--display); letter-spacing: -0.07em; margin: 4px 0 2px; }
+.demo h3 { font: 400 26px/1.3 var(--display); letter-spacing: 0.01em; margin: 4px 0 2px; }
 .demo .meta { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
 .demo .meta b { font: 600 24px var(--display); font-variation-settings: 'SOFT' 100; color: var(--ink); }
 .demo .sign .cell { min-height: 82px; padding: 10px 14px; }
@@ -180,7 +180,7 @@ table.reg { width: 100%; border-collapse: collapse; }
 .start { display: block; }
 .start .pic { display: block; border-radius: 12px; overflow: hidden; box-shadow: 4px 4px 0 var(--shade); transition: transform 120ms, box-shadow 120ms; }
 .start img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
-.start b { display: block; font: 400 19px var(--display); letter-spacing: -0.07em; margin-top: 10px; }
+.start b { display: block; font: 400 19px var(--display); letter-spacing: 0.01em; margin-top: 10px; }
 .start span { font-size: 12px; color: var(--ink-3); }
 /* 悬停：抬起，投影换成芥黄（错版） */
 .start.hover .pic { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--mustard); }
@@ -220,7 +220,7 @@ table.reg { width: 100%; border-collapse: collapse; }
 .empty .pic { position: relative; width: 210px; height: 210px; margin: 0 auto 22px; }
 .empty .pic::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--mustard); transform: translate(9px, 9px); }
 .empty img { position: relative; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
-.empty h3 { font: 400 26px var(--display); letter-spacing: -0.07em; margin: 0 0 4px; }
+.empty h3 { font: 400 26px var(--display); letter-spacing: 0.01em; margin: 0 0 4px; }
 .empty p { margin: 0 0 20px; color: var(--ink-2); }
 
 /* ── 详情 ── */
@@ -233,13 +233,13 @@ table.reg { width: 100%; border-collapse: collapse; }
 .amount small { display: block; font-size: 12px; color: var(--ink-3); }
 .amount div { font: 600 44px/1.05 var(--display); font-variation-settings: 'SOFT' 100; }
 .block { padding: 18px 36px 26px; border-top: 2px dashed var(--rule); }
-.block h2 { margin: 0 0 14px; font: 400 21px var(--display); letter-spacing: -0.07em; display: flex; align-items: center; gap: 10px; }
+.block h2 { margin: 0 0 14px; font: 400 21px var(--display); letter-spacing: 0.01em; display: flex; align-items: center; gap: 10px; }
 .block h2 small { margin-left: auto; font: 400 12px var(--sans); color: var(--ink-3); }
 /* 签批栏：一格一块色，格与格之间留纸缝；当前格芥黄并错版 */
 .sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .cell { position: relative; padding: 14px 18px 16px; min-height: 128px; border-radius: 14px; }
 .cell small { font-size: 12px; font-weight: 600; color: var(--ink-2); }
-.cell .who { font: 400 21px var(--display); letter-spacing: -0.07em; margin-top: 2px; }
+.cell .who { font: 400 21px var(--display); letter-spacing: 0.01em; margin-top: 2px; }
 .cell p { margin: 3px 0 0; font-size: 13px; color: var(--ink-2); }
 .cell.done { background: var(--sage-tint); }
 .cell.now { background-color: var(--mustard-tint); box-shadow: 4px 4px 0 var(--mustard); }
