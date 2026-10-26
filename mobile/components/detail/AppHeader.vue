@@ -21,6 +21,7 @@ const props = defineProps<{
 const finalStamp = computed(() => {
   if (props.detail.status === 'APPROVED') return { text: '已通过', tone: 'success' as const }
   if (props.detail.status === 'REJECTED') return { text: '已驳回', tone: 'danger' as const }
+  if (props.detail.status === 'WITHDRAWN') return { text: '已撤回', tone: 'muted' as const }
   return null
 })
 
@@ -43,12 +44,12 @@ function copyNo(): void {
       <view v-if="finalStamp" class="doc-stamp">
         <Stamp :text="finalStamp.text" :tone="finalStamp.tone" />
       </view>
-      <StatusTag v-else :status="detail.status" />
     </view>
 
     <view class="doc-title">{{ detail.title || detail.templateName }}</view>
 
     <view class="doc-meta">
+      <StatusTag :status="detail.status" />
       <view class="meta-item">
         <text class="meta-label">申请人</text>
         <text class="meta-value">{{ detail.applicant.realName }}</text>
@@ -60,11 +61,9 @@ function copyNo(): void {
         <text class="meta-label">{{ detail.submittedAt ? '提交于' : '创建于' }}</text>
         <text class="meta-value num">{{ fmtShort(detail.submittedAt ?? detail.createdAt) }}</text>
       </view>
-      <view v-if="detail.amountCents !== null" class="meta-item">
-        <text class="meta-label">金额</text>
-        <text class="meta-value amount">¥{{ formatCents(detail.amountCents) }}</text>
-      </view>
     </view>
+
+    <view v-if="detail.amountCents !== null" class="doc-amount amount">¥{{ formatCents(detail.amountCents) }}</view>
 
     <view class="doc-sig">
       <SignatureBar :flow="detail.flow" :stamp-seq="stampSeq" />
@@ -107,13 +106,15 @@ function copyNo(): void {
 <style scoped>
 .doc {
   background: var(--eas-surface);
-  border: 1rpx solid var(--eas-rule);
   border-radius: var(--eas-radius-panel);
-  padding: 28rpx 28rpx 8rpx;
-  margin-bottom: 24rpx;
+  box-shadow: var(--eas-shadow-sheet);
+  padding: 32rpx 32rpx 20rpx;
+  margin: 0 8rpx 32rpx 0;
+  overflow: hidden;
 }
 
 .doc-head {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -125,13 +126,14 @@ function copyNo(): void {
   align-items: center;
   flex: 1;
   min-width: 0;
+  padding-right: 112rpx;
 }
 
 .doc-type {
   flex-shrink: 0;
-  font-size: var(--eas-fs-sm);
-  color: var(--eas-ink-2);
-  margin-right: 20rpx;
+  padding-right: 16rpx;
+  font-size: 24rpx;
+  color: var(--eas-ink-3);
 }
 
 /* 单号：长按复制，按压时有底色反馈 */
@@ -139,7 +141,7 @@ function copyNo(): void {
   padding: 8rpx 8rpx;
   margin: -8rpx 0;
   border-radius: var(--eas-radius-tag);
-  font-size: var(--eas-fs-sm);
+  font-size: 24rpx;
   color: var(--eas-ink-3);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
@@ -148,25 +150,29 @@ function copyNo(): void {
 }
 
 .doc-stamp {
+  position: absolute;
+  top: 30rpx;
+  right: 0;
   flex-shrink: 0;
-  margin: 4rpx 4rpx 0 16rpx;
+  z-index: 1;
 }
 
 .doc-title {
-  margin: 12rpx 0 16rpx;
+  margin: 12rpx 0 20rpx;
   font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-lg);
-  font-weight: 600;
+  font-size: 44rpx;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
   line-height: 1.35;
   color: var(--eas-ink);
-  word-break: break-all;
+  word-break: normal;
 }
 
 .doc-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  margin-bottom: 24rpx;
+  margin-bottom: 12rpx;
 }
 
 .meta-item {
@@ -177,7 +183,7 @@ function copyNo(): void {
 
 .meta-label {
   font-size: var(--eas-fs-xs);
-  color: var(--eas-ink-3);
+  color: var(--eas-ink-2);
   margin-right: 10rpx;
 }
 
@@ -190,12 +196,23 @@ function copyNo(): void {
   font-weight: 600;
 }
 
+.doc-amount {
+  margin: 16rpx 0 24rpx;
+  font-family: var(--eas-font-display);
+  font-size: 56rpx;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
+  line-height: 1.15;
+  text-align: right;
+  color: var(--eas-ink);
+}
+
 .doc-sig {
   padding: 24rpx 0;
-  border-top: 1rpx solid var(--eas-rule);
+  border-top: 4rpx dashed var(--eas-rule);
 }
 
 .fields {
-  border-top: 1rpx solid var(--eas-rule);
+  border-top: 4rpx dashed var(--eas-rule);
 }
 </style>

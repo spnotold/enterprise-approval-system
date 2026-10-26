@@ -125,21 +125,20 @@ const expandedNode = computed<FlowNodeView | null>(() => {
 
 .sig-row {
   display: inline-flex;
-  padding: 8rpx 0;
+  padding: 8rpx 8rpx 14rpx 0;
 }
 
 .sig-cell {
   flex-shrink: 0;
   width: 232rpx;
   min-height: 184rpx;
-  margin-right: 12rpx;
+  margin-right: 16rpx;
   padding: 16rpx 18rpx;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  background: var(--eas-surface);
-  border: 2rpx solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
+  background: var(--eas-tab);
+  border-radius: 24rpx;
   white-space: normal;
 }
 
@@ -148,18 +147,22 @@ const expandedNode = computed<FlowNodeView | null>(() => {
 }
 
 .sig-cell.is-active {
-  background: var(--eas-primary-tint);
-  border: 2rpx dashed var(--eas-primary);
+  background: var(--eas-mustard-tint);
+  box-shadow: var(--eas-offset-mark);
 }
 
 .sig-cell.is-open {
-  border-color: var(--eas-primary);
-  border-width: 3rpx;
+  box-shadow: var(--eas-offset-mark);
+}
+
+.sig-cell.is-done {
+  background: var(--eas-sage-tint);
 }
 
 .sig-name {
   max-width: 100%;
-  font-size: var(--eas-fs-xs);
+  font-size: 24rpx;
+  font-weight: 600;
   color: var(--eas-ink-2);
   overflow: hidden;
   white-space: nowrap;
@@ -169,8 +172,9 @@ const expandedNode = computed<FlowNodeView | null>(() => {
 .sig-handler {
   max-width: 100%;
   margin-top: 8rpx;
-  font-size: var(--eas-fs-sm);
-  font-weight: 600;
+  font-family: var(--eas-font-display);
+  font-size: 36rpx;
+  font-weight: 700;
   color: var(--eas-ink);
   overflow: hidden;
   white-space: nowrap;
@@ -199,7 +203,7 @@ const expandedNode = computed<FlowNodeView | null>(() => {
 .sig-void {
   margin-top: 8rpx;
   font-size: var(--eas-fs-xs);
-  color: var(--eas-muted);
+  color: var(--eas-ink-2);
 }
 
 .sig-cell.is-void .sig-name,
@@ -251,6 +255,7 @@ const expandedNode = computed<FlowNodeView | null>(() => {
 
 .sig-task-who {
   font-size: var(--eas-fs-sm);
+  font-weight: 600;
   color: var(--eas-ink);
 }
 
