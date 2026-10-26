@@ -12,7 +12,7 @@ import { closeSwipeCells, useSwipeTabs } from '@/composables/useSwipeTabs'
 import { usePagedList } from '@/composables/usePagedList'
 import { auth, requireLogin } from '@/stores/auth'
 import { NOTICE_EVENT, notice, type IncomingNotice } from '@/stores/notice'
-import { APP_TYPE_LABEL, TASK_STATUS_LABEL } from '@/utils/labels'
+import { APP_TYPE_LABEL } from '@/utils/labels'
 import { goDetail, goTaskHandle } from '@/utils/nav'
 import { fmtShort } from '@/utils/time'
 import { pickerValue, type UniPickerChangeEvent } from '@/utils/uniEvent'
@@ -22,6 +22,7 @@ const type = ref<AppType | null>(null)
 const keyword = ref('')
 const ready = ref(false)
 const updates = ref(0)
+const searchFocus = ref(false)
 
 const TYPE_OPTIONS: { value: AppType | null; label: string }[] = [
   { value: null, label: '全部类型' },
@@ -112,7 +113,7 @@ onReachBottom(() => void list.loadMore())
             <uni-icons type="bottom" size="12" color="var(--eas-ink-2)" />
           </view>
         </picker>
-        <view class="search flex1">
+        <view class="search flex1" :class="{ 'is-focus': searchFocus }">
           <uni-icons type="search" size="16" color="var(--eas-ink-3)" />
           <input
             v-model="keyword"
@@ -121,6 +122,8 @@ onReachBottom(() => void list.loadMore())
             placeholder-class="placeholder"
             confirm-type="search"
             @confirm="reload"
+            @focus="searchFocus = true"
+            @blur="searchFocus = false"
           />
         </view>
       </view>
@@ -131,28 +134,26 @@ onReachBottom(() => void list.loadMore())
         <view v-for="t in list.items.value" :key="t.taskId" class="card" hover-class="is-pressed" hover-stay-time="60" @tap="!swipe.suppressTap.value && open(t)">
           <view class="row between">
             <view class="row flex1">
-              <text class="tag tag-blue">{{ APP_TYPE_LABEL[t.type] }}</text>
-              <text class="bold ellipsis">{{ t.title || t.templateName }}</text>
+              <text class="tag">{{ APP_TYPE_LABEL[t.type] }}</text>
+              <text class="title ellipsis">{{ t.title || t.templateName }}</text>
             </view>
-            <text v-if="t.amountCents !== null" class="amount">¥{{ formatCents(t.amountCents) }}</text>
+            <text v-if="t.amountCents !== null" class="amount card-amount">¥{{ formatCents(t.amountCents) }}</text>
           </view>
-          <view class="muted line"><text>{{ t.appNo }}</text><text class="applicant">{{ t.applicant.realName }}</text><text v-if="t.deptName">（{{ t.deptName }}）</text></view>
-          <view class="row between">
-            <view class="row">
-              <text class="tag">{{ t.nodeName }}</text>
-              <text v-if="t.overdue && tab === 'pending'" class="tag tag-red">已超时</text>
-              <text v-if="tab === 'done'" class="tag" :class="t.status === 'REJECTED' ? 'tag-red' : 'tag-green'">
-                {{ TASK_STATUS_LABEL[t.status] }}
-              </text>
-              <StatusTag v-if="tab === 'done'" :status="t.appStatus" />
+          <view class="line muted"><text class="ellipsis app-no">{{ t.appNo }}</text><text class="applicant">{{ t.applicant.realName }}<text v-if="t.deptName">（{{ t.deptName }}）</text></text></view>
+          <view class="row between last-line">
+            <view class="row flex1">
+              <text v-if="tab === 'pending'" class="tag tag-blue">{{ t.nodeName }}</text>
+              <StatusTag v-else :status="t.appStatus" />
+              <text v-if="t.overdue && tab === 'pending'" class="tag tag-orange">已超时</text>
             </view>
             <text class="muted">{{ fmtShort(tab === 'done' ? t.actedAt : t.createdAt) }}</text>
           </view>
-          <view v-if="tab === 'done' && t.comment" class="muted ellipsis line">意见：{{ t.comment }}</view>
+          <view v-if="tab === 'done' && t.comment" class="muted ellipsis line comment">意见：{{ t.comment }}</view>
         </view>
 
         <EmptyState
           v-if="list.loaded.value && !list.items.value.length"
+          :kind="hasFilter ? 'search' : 'tray'"
           :text="hasFilter ? '没有符合条件的记录' : tab === 'pending' ? '暂无待办' : '暂无已办记录'"
           :action-text="hasFilter ? '清空筛选' : ''"
           @action="clearFilter"
@@ -165,24 +166,58 @@ onReachBottom(() => void list.loadMore())
 
 <style scoped>
 .list-area { min-height: 55vh; touch-action: pan-y; }
-.applicant { margin-left: 16rpx; }
-.line {
-  margin: 6rpx 0 10rpx;
+
+/* 第一行标题：600 单行截断 */
+.title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--eas-ink);
 }
 
+/* 金额：展示字数字靠右 */
+.card-amount {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 30rpx;
+}
+
+/* 第二行：单号 + 申请人（部门） */
+.applicant { margin-left: 16rpx; }
+
+.app-no { margin-right: 4rpx; }
+
+.line {
+  margin-top: 14rpx;
+}
+
+.last-line {
+  margin-top: 14rpx;
+  min-height: 44rpx;
+}
+
+.comment {
+  margin-top: 12rpx;
+}
+
+/* 搜索框：field 底胶囊，聚焦墨线框 + 芥黄错版（.is-focus 全局） */
 .search {
   display: flex;
   align-items: center;
-  height: 88rpx;
-  padding: 0 20rpx;
-  background: var(--eas-surface);
-  border-radius: var(--eas-radius-control);
+  height: 72rpx;
+  margin: 8rpx 0;
+  padding: 0 24rpx;
+  background: var(--eas-field);
+  border: 3rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-pill);
+  transition: border-color var(--eas-dur-fast) var(--eas-ease), box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 
 .search-input {
   flex: 1;
-  height: 88rpx;
-  margin-left: 8rpx;
+  height: 100%;
+  margin-left: 12rpx;
   font-size: 26rpx;
+  min-width: 0;
 }
 </style>
