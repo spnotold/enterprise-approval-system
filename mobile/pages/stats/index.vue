@@ -380,7 +380,8 @@ const noLegendOptions: Record<string, unknown> = { legend: { show: false } }
   <view class="stats">
     <view class="definition">按提交时间统计；已通过金额仅含已通过申请；部门以提交时所属部门为准</view>
 
-    <view class="seg">
+    <!-- 只有「个人」一项时不画分段 -->
+    <view v-if="tabs.length > 1" class="seg">
       <view
         v-for="tab in tabs"
         :key="tab.name"

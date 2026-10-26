@@ -423,12 +423,19 @@ textarea {
   padding: 0 24rpx;
 }
 
-.input:focus,
-.textarea:focus,
 .is-focus {
   border-color: var(--eas-ink);
   box-shadow: var(--eas-offset-mark);
 }
+
+/* #ifdef H5 */
+/* H5 原生聚焦也给同样的样式；放在条件块里，不让 :focus 进小程序的样式表 */
+.input:focus,
+.textarea:focus {
+  border-color: var(--eas-ink);
+  box-shadow: var(--eas-offset-mark);
+}
+/* #endif */
 
 .placeholder {
   color: var(--eas-placeholder);
