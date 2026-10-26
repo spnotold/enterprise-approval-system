@@ -129,7 +129,7 @@ async function confirm() {
 
 <template>
   <div class="approve-panel">
-    <el-button v-if="canReject" :disabled="disabled || loading" class="reject-button" @click="open('REJECT')">驳回</el-button>
+    <el-button v-if="canReject" type="danger" :disabled="disabled || loading" class="reject-button" @click="open('REJECT')">驳回</el-button>
     <el-button v-if="canApprove" :disabled="disabled || loading" type="primary" @click="open('APPROVE')">同意</el-button>
 
     <el-dialog
@@ -206,22 +206,9 @@ async function confirm() {
 }
 .approve-panel .el-button {
   min-width: 72px;
-  border-radius: var(--eas-radius-control);
 }
 .approve-panel .el-button:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
-/* 驳回：次要描边按钮（rule-strong 边），悬停才露出赭色 */
-.reject-button:not(.is-disabled) {
-  border-color: var(--eas-rule-strong);
-  color: var(--eas-ink);
-  background: var(--eas-sheet);
-  transition: border-color var(--eas-dur-fast) var(--eas-ease), color var(--eas-dur-fast) var(--eas-ease), background-color var(--eas-dur-fast) var(--eas-ease);
-}
-.reject-button:not(.is-disabled):hover,
-.reject-button:not(.is-disabled):focus-visible {
-  border-color: var(--eas-danger);
-  color: var(--eas-danger);
-  background: var(--eas-danger-tint);
-}</style>
+</style>
