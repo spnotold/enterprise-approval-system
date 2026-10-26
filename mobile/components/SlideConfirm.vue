@@ -271,6 +271,13 @@ onBeforeUnmount(clearArm)
   touch-action: none;
 }
 
+/* #ifdef H5 */
+.slide-knob:focus-visible {
+  outline: 4rpx solid var(--eas-sheet);
+  outline-offset: -10rpx;
+}
+/* #endif */
+
 .slide-knob.dragging,
 .slide-fill.dragging {
   transition: none;
@@ -312,7 +319,7 @@ onBeforeUnmount(clearArm)
 .slide.is-done .slide-hint {
   left: 0;
   right: 96rpx;
-  color: var(--eas-success);
+  color: var(--eas-ink);
   font-weight: 600;
 }
 

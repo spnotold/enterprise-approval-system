@@ -61,7 +61,7 @@ const expandedNode = computed<FlowNodeView | null>(() => {
           v-for="n in flow.nodes"
           :key="n.seq"
           class="sig-cell"
-          :class="[`is-${stateOf(n)}`, { 'is-open': expanded === n.seq }]"
+          :class="[`is-${stateOf(n)}`, { 'is-open': expanded === n.seq, 'is-rejected': n.status === 'REJECTED' }]"
           hover-class="is-pressed"
           :hover-stay-time="60"
           @tap="toggle(n.seq)"
@@ -157,6 +157,11 @@ const expandedNode = computed<FlowNodeView | null>(() => {
 
 .sig-cell.is-done {
   background: var(--eas-sage-tint);
+}
+
+/* 驳回的节点：铁锈浅底（鼠尾草只表示同意） */
+.sig-cell.is-done.is-rejected {
+  background: var(--eas-danger-tint);
 }
 
 .sig-name {

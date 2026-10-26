@@ -78,8 +78,14 @@ const play = props.animate
   color: var(--eas-primary);
 }
 
+/* 撤回章用深一档的灰，纸上才够 4.5:1 */
 .tone-muted {
-  color: var(--eas-muted);
+  color: var(--eas-ink-2);
+}
+
+/* 小章落在铁锈浅底的驳回格上，用深铁锈保证对比度 */
+.size-sm.tone-danger {
+  color: var(--eas-rust-deep);
 }
 
 .stamp.play {

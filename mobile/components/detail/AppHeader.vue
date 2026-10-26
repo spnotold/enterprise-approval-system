@@ -41,15 +41,12 @@ function copyNo(): void {
         <text class="doc-type">{{ APP_TYPE_LABEL[detail.type] }}</text>
         <text class="doc-no" hover-class="is-pressed" :hover-stay-time="60" @longpress="copyNo">{{ detail.appNo }}</text>
       </view>
-      <view v-if="finalStamp" class="doc-stamp">
-        <Stamp :text="finalStamp.text" :tone="finalStamp.tone" />
-      </view>
     </view>
 
     <view class="doc-title">{{ detail.title || detail.templateName }}</view>
 
     <view class="doc-meta">
-      <StatusTag :status="detail.status" />
+      <view class="doc-status"><StatusTag :status="detail.status" /></view>
       <view class="meta-item">
         <text class="meta-label">申请人</text>
         <text class="meta-value">{{ detail.applicant.realName }}</text>
@@ -63,7 +60,13 @@ function copyNo(): void {
       </view>
     </view>
 
-    <view v-if="detail.amountCents !== null" class="doc-amount amount">¥{{ formatCents(detail.amountCents) }}</view>
+    <!-- 终态的章落在金额这一行的左侧空白处，不压标题；没有金额时章独占这一行 -->
+    <view v-if="finalStamp || detail.amountCents !== null" class="doc-summary">
+      <view v-if="finalStamp" class="doc-stamp">
+        <Stamp :text="finalStamp.text" :tone="finalStamp.tone" />
+      </view>
+      <view v-if="detail.amountCents !== null" class="doc-amount amount">¥{{ formatCents(detail.amountCents) }}</view>
+    </view>
 
     <view class="doc-sig">
       <SignatureBar :flow="detail.flow" :stamp-seq="stampSeq" />
@@ -126,7 +129,6 @@ function copyNo(): void {
   align-items: center;
   flex: 1;
   min-width: 0;
-  padding-right: 112rpx;
 }
 
 .doc-type {
@@ -149,12 +151,17 @@ function copyNo(): void {
   text-overflow: ellipsis;
 }
 
+.doc-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 96rpx;
+  margin: 16rpx 0 24rpx;
+}
+
 .doc-stamp {
-  position: absolute;
-  top: 30rpx;
-  right: 0;
   flex-shrink: 0;
-  z-index: 1;
+  margin: 8rpx 24rpx 8rpx 0;
 }
 
 .doc-title {
@@ -165,7 +172,7 @@ function copyNo(): void {
   letter-spacing: var(--eas-display-tracking);
   line-height: 1.35;
   color: var(--eas-ink);
-  word-break: normal;
+  word-break: break-all;
 }
 
 .doc-meta {
@@ -173,6 +180,11 @@ function copyNo(): void {
   flex-wrap: wrap;
   align-items: baseline;
   margin-bottom: 12rpx;
+}
+
+.doc-status {
+  flex-shrink: 0;
+  margin: 0 24rpx 8rpx 0;
 }
 
 .meta-item {
@@ -197,7 +209,8 @@ function copyNo(): void {
 }
 
 .doc-amount {
-  margin: 16rpx 0 24rpx;
+  margin: 0 0 0 auto;
+  max-width: 100%;
   font-family: var(--eas-font-display);
   font-size: 56rpx;
   font-weight: 700;
