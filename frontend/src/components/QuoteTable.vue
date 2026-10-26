@@ -175,7 +175,7 @@ function remove(i: number) {
 .table-foot :deep(.el-button:focus-visible),
 .quote-table :deep(.el-radio__original:focus-visible + .el-radio__inner),
 .quote-table .link:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .table--edit {
@@ -190,6 +190,13 @@ function remove(i: number) {
 }
 .quote-table :deep(.el-textarea__inner) {
   min-height: var(--eas-control-height);
+}
+/* 登记簿金额：展示字 16，右对齐 */
+.quote-table .table :deep(.money) {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .description-field {
   margin-top: 4px;
@@ -216,7 +223,7 @@ function remove(i: number) {
   flex-wrap: wrap;
 }
 .link {
-  color: var(--eas-primary);
+  color: var(--eas-link);
   word-break: break-all;
 }
 .sr-only {

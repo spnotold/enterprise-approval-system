@@ -220,16 +220,10 @@ function maxLength(f: FormField): number {
   grid-column: 1 / -1;
 }
 .form-renderer--edit :deep(.el-form-item__label) {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   padding: 0;
   font-size: var(--eas-fs-sm);
-  font-weight: 500;
   line-height: 1.5;
-  color: var(--eas-ink-2);
-}
-/* 必填星号用 danger */
-.form-renderer :deep(.el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label::before) {
-  color: var(--eas-danger);
 }
 .form-renderer :deep(.el-form-item__content) {
   font-size: var(--eas-fs-sm);
@@ -265,7 +259,7 @@ function maxLength(f: FormField): number {
   margin-right: 0;
 }
 .form-renderer :deep(.el-radio__original:focus-visible + .el-radio__inner) {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .help {
