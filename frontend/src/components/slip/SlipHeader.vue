@@ -77,7 +77,7 @@ async function copyNo() {
   gap: 24px;
   padding: 28px var(--eas-sheet-inset) 22px;
 }
-.slip-header.has-aside { grid-template-columns: minmax(0, 1fr) minmax(150px, 210px); }
+.slip-header.has-aside { grid-template-columns: minmax(0, 1fr) auto; }
 .slip-header-main {
   min-width: 0;
 }
@@ -89,10 +89,6 @@ async function copyNo() {
   color: var(--eas-ink-3);
   font-size: var(--eas-fs-note);
 }
-.slip-status.status-tag { --tone: var(--eas-tab); --tone-text: var(--eas-ink); padding: 3px 10px; border: 0; border-radius: var(--eas-radius-pill); background-color: var(--tone); background-image: var(--eas-grain); background-blend-mode: multiply; color: var(--tone-text); font-size: var(--eas-fs-xs); font-weight: 600; }
-.slip-status.tone-primary { --tone: var(--eas-sky); --tone-text: var(--eas-ink); }
-.slip-status.tone-success { --tone: var(--eas-sage); --tone-text: var(--eas-ink); }
-.slip-status.tone-danger { --tone: var(--eas-rust); --tone-text: var(--eas-sheet); }
 .slip-no {
   position: relative;
   min-height: 32px;
@@ -162,7 +158,8 @@ async function copyNo() {
 .amount-label { color: var(--eas-ink-3); font-size: var(--eas-fs-12); }
 .slip-amount :deep(.money) {
   font-family: var(--eas-font-display);
-  font-size: 44px;
+  font-size: clamp(30px, 3.4vw, 44px);
+  white-space: nowrap;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.05;

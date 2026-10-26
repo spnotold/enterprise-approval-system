@@ -383,7 +383,6 @@ async function urge() {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 72px;
   min-height: 72px;
   box-sizing: border-box;
   box-shadow: 0 -4px 0 var(--eas-shade);
@@ -397,9 +396,9 @@ async function urge() {
   box-sizing: border-box;
   width: calc(100% - 80px);
   max-width: 1040px;
-  height: 72px;
   min-height: 72px;
   margin: 0 auto;
+  padding: 10px 0;
 }
 .action-state { display: flex; flex-direction: column; min-width: 0; color: var(--eas-ink-2); font-size: var(--eas-fs-note); overflow-wrap: anywhere; }
 .urge-note { font-size: var(--eas-fs-12); }
