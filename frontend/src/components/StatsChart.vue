@@ -113,7 +113,7 @@ watch(
 </script>
 
 <template>
-  <div ref="el" class="stats-chart" :style="{ height: `${height}px` }" />
+  <div ref="el" class="stats-chart" role="img" aria-label="统计图表" :style="{ height: `${height}px` }" />
 </template>
 
 <style scoped>
