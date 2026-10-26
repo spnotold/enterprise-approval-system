@@ -484,6 +484,14 @@ onBeforeUnmount(() => {
   .specimen-amount strong {
     font-size: var(--eas-fs-md);
   }
+  /* 太窄时「金额」叠在数字上面，免得金额伸出纸边 */
+  .specimen-amount {
+    white-space: normal;
+  }
+  .amount-label {
+    display: block;
+    margin-right: 0;
+  }
   .cell-person,
   .cell-time {
     padding-right: 0;

@@ -231,10 +231,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
   min-width: 0;
   container: auth-main / inline-size;
 }
+/* 表单垫一张单据：背后的风景不会透到说明和校验文字下面 */
 .auth-box {
   box-sizing: border-box;
-  width: min(540px, 100%);
-  padding: 32px 64px;
+  width: min(540px, calc(100% - 48px));
+  margin: 24px 24px 24px 18px;
+  padding: 36px 48px 40px;
+  border-radius: 20px;
+  background: var(--eas-sheet);
+  box-shadow: var(--eas-shadow-sheet);
 }
 
 .auth-split {
@@ -304,13 +309,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
 }
 @container auth-main (inline-size < 500px) {
   .auth-box {
-    padding-right: 40px;
-    padding-left: 40px;
+    padding-right: 32px;
+    padding-left: 32px;
   }
 }
 @container auth-main (inline-size < 440px) {
   .auth-box {
-    padding: 32px 24px;
+    width: calc(100% - 28px);
+    margin: 16px 14px 20px 10px;
+    padding: 28px 20px 32px;
   }
 }
 
@@ -326,7 +333,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize))
     align-items: flex-start;
   }
   .auth-box {
-    padding: 32px 20px;
+    width: calc(100% - 32px);
+    margin: 16px 16px 24px 12px;
+    padding: 28px 20px 32px;
   }
 }
 </style>
