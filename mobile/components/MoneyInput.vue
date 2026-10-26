@@ -71,7 +71,7 @@ function onBlur(): void {
 
 <template>
   <view>
-    <view class="money" :class="{ 'is-error': error || invalid, 'is-focus': focused }">
+    <view class="input money" :class="{ 'is-error': error || invalid, 'is-focus': focused }">
       <text class="money-unit">¥</text>
       <input
         class="money-input"
@@ -92,38 +92,37 @@ function onBlur(): void {
 </template>
 
 <style scoped>
+@import '../styles/form.css';
+
 .money {
   display: flex;
   align-items: center;
   height: 88rpx;
   padding: 0 20rpx;
-  background: var(--eas-paper);
-  border: 2rpx solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
-}
-
-.money.is-error {
-  background: var(--eas-danger-tint) !important;
-  border-color: var(--eas-danger);
-}
-
-.money.is-focus {
-  border-color: var(--eas-primary);
 }
 
 .money-unit,
 .money-suffix {
   color: var(--eas-ink-2);
   font-size: var(--eas-fs-sm);
+  flex-shrink: 0;
 }
 
 .money-input {
   flex: 1;
-  height: 84rpx;
+  min-width: 0;
+  width: 0;
+  height: 82rpx;
   padding: 0 12rpx;
   font-size: var(--eas-fs-md);
   color: var(--eas-ink);
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.money:not(.is-focus) .money-input {
+  font-family: var(--eas-font-display);
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
 }
 </style>

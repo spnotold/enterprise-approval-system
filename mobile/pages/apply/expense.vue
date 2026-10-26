@@ -156,7 +156,7 @@ onLoad(async q => {
       <view v-if="noInvoiceRows.length" class="banner banner-warning">含 {{ noInvoiceRows.length }} 条无票支出，合计 ¥{{ formatCents(noInvoiceTotal) }}</view>
       <view :class="{ locked: draft.busy }">
         <view class="card">
-          <view class="card-title">报销信息</view>
+          <view class="card-title"><view class="ink-glyph ink-glyph--leaf" /><text class="flex1">报销信息</text></view>
           <FormItem label="标题" required :error="fe.get('title')">
             <input
               v-model="form.title"
@@ -222,92 +222,95 @@ onLoad(async q => {
             />
           </FormItem>
         </view>
-        <view v-if="fe.get('items')" class="field-err page-err">{{ fe.get('items') }}</view>
-        <view v-for="(row, i) in form.items" :key="row.key" class="card" :class="{ 'no-invoice': row.noInvoice }">
-          <view class="card-title row between">
-            <text>费用明细 {{ i + 1 }}</text>
-            <view class="link-btn danger" hover-class="is-pressed" :hover-stay-time="60" @tap="removeRow(i)">删除</view>
+        <view class="card detail-sheet">
+          <view class="card-title">费用明细</view>
+          <view v-if="fe.get('items')" class="field-err page-err">{{ fe.get('items') }}</view>
+          <view v-for="(row, i) in form.items" :key="row.key" class="detail-block" :class="{ 'no-invoice': row.noInvoice }">
+            <view class="detail-title row between">
+              <text>费用明细 {{ i + 1 }}</text>
+              <view class="link-btn danger" hover-class="is-pressed" :hover-stay-time="60" @tap="removeRow(i)">删除</view>
+            </view>
+            <FormItem label="费用类型" required :error="fe.get(`items[${i}].expenseTypeCode`)">
+              <picker :range="types" range-key="name" :value="Math.max(0, types.findIndex(t => t.code === row.expenseTypeCode))" @change="pickType(row, $event)">
+                <view class="picker-value" :class="ic(`t${i}`, `items[${i}].expenseTypeCode`)" hover-class="is-pressed" :hover-stay-time="60">
+                  <text :class="{ placeholder: !row.expenseTypeCode }">{{ typeName(row) }}</text>
+                  <uni-icons type="right" size="16" color="var(--eas-ink-3)" />
+                </view>
+              </picker>
+            </FormItem>
+            <FormItem label="发生日期" required :error="fe.get(`items[${i}].occurDate`)">
+              <picker
+                mode="date"
+                :value="row.occurDate"
+                :start="addDays(todayCN(), -365)"
+                :end="todayCN()"
+                @change="row.occurDate = $event.detail.value; fe.clearField(`items[${i}].occurDate`)"
+              >
+                <view class="picker-value" :class="ic(`d${i}`, `items[${i}].occurDate`)" hover-class="is-pressed" :hover-stay-time="60">
+                  <text :class="{ placeholder: !row.occurDate }">{{ row.occurDate || '请选择日期' }}</text>
+                  <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
+                </view>
+              </picker>
+            </FormItem>
+            <FormItem label="用途说明" required :error="fe.get(`items[${i}].purpose`)">
+              <input
+                v-model="row.purpose"
+                class="input"
+                :class="ic(`p${i}`, `items[${i}].purpose`)"
+                maxlength="200"
+                placeholder="说明费用用途"
+                @input="fe.clearField(`items[${i}].purpose`)"
+                @focus="foc = `p${i}`"
+                @blur="foc = ''"
+              />
+            </FormItem>
+            <FormItem label="金额" required :error="fe.get(`items[${i}].amountCents`)">
+              <MoneyInput v-model="row.amountCents" :error="!!fe.get(`items[${i}].amountCents`)" @update:model-value="fe.clearField(`items[${i}].amountCents`)" />
+            </FormItem>
+            <view class="row between invoice-row">
+              <text>无票支出</text>
+              <view
+                class="mode mode-auto"
+                :class="{ chosen: row.noInvoice }"
+                hover-class="is-pressed"
+                :hover-stay-time="60"
+                @tap="toggleNoInvoice(row)"
+              >{{ row.noInvoice ? '取消勾选' : '勾选无票' }}</view>
+            </view>
+            <FormItem v-if="row.noInvoice" label="无票原因" required :error="fe.get(`items[${i}].noInvoiceReason`)" help="至少 10 字">
+              <textarea
+                v-model="row.noInvoiceReason"
+                class="textarea"
+                :class="ic(`r${i}`, `items[${i}].noInvoiceReason`)"
+                maxlength="300"
+                auto-height
+                placeholder="说明无法提供票据的原因"
+                @input="fe.clearField(`items[${i}].noInvoiceReason`)"
+                @focus="foc = `r${i}`"
+                @blur="foc = ''"
+              />
+            </FormItem>
+            <FormItem v-else label="票据" required :error="fe.first(`items[${i}].invoices`)">
+              <AttachmentPicker
+                v-model="row.attachments"
+                v-model:invoice-nos="row.invoiceNos"
+                ref-type="EXPENSE_INVOICE"
+                with-invoice-no
+                :warnings="warnings"
+                @busy="busyUploads[row.key] = $event"
+                @update:model-value="fe.clearUnder(`items[${i}].invoices`)"
+                @update:invoice-nos="fe.clearUnder(`items[${i}].invoices`)"
+              />
+            </FormItem>
           </view>
-          <FormItem label="费用类型" required :error="fe.get(`items[${i}].expenseTypeCode`)">
-            <picker :range="types" range-key="name" :value="Math.max(0, types.findIndex(t => t.code === row.expenseTypeCode))" @change="pickType(row, $event)">
-              <view class="picker-value" :class="ic(`t${i}`, `items[${i}].expenseTypeCode`)" hover-class="is-pressed" :hover-stay-time="60">
-                <text :class="{ placeholder: !row.expenseTypeCode }">{{ typeName(row) }}</text>
-                <uni-icons type="right" size="16" color="var(--eas-ink-3)" />
-              </view>
-            </picker>
-          </FormItem>
-          <FormItem label="发生日期" required :error="fe.get(`items[${i}].occurDate`)">
-            <picker
-              mode="date"
-              :value="row.occurDate"
-              :start="addDays(todayCN(), -365)"
-              :end="todayCN()"
-              @change="row.occurDate = $event.detail.value; fe.clearField(`items[${i}].occurDate`)"
-            >
-              <view class="picker-value" :class="ic(`d${i}`, `items[${i}].occurDate`)" hover-class="is-pressed" :hover-stay-time="60">
-                <text :class="{ placeholder: !row.occurDate }">{{ row.occurDate || '请选择日期' }}</text>
-                <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
-              </view>
-            </picker>
-          </FormItem>
-          <FormItem label="用途说明" required :error="fe.get(`items[${i}].purpose`)">
-            <input
-              v-model="row.purpose"
-              class="input"
-              :class="ic(`p${i}`, `items[${i}].purpose`)"
-              maxlength="200"
-              placeholder="说明费用用途"
-              @input="fe.clearField(`items[${i}].purpose`)"
-              @focus="foc = `p${i}`"
-              @blur="foc = ''"
-            />
-          </FormItem>
-          <FormItem label="金额" required :error="fe.get(`items[${i}].amountCents`)">
-            <MoneyInput v-model="row.amountCents" :error="!!fe.get(`items[${i}].amountCents`)" @update:model-value="fe.clearField(`items[${i}].amountCents`)" />
-          </FormItem>
-          <view class="row between invoice-row">
-            <text>无票支出</text>
-            <view
-              class="mode mode-auto"
-              :class="{ chosen: row.noInvoice }"
-              hover-class="is-pressed"
-              :hover-stay-time="60"
-              @tap="toggleNoInvoice(row)"
-            >{{ row.noInvoice ? '取消勾选' : '勾选无票' }}</view>
-          </view>
-          <FormItem v-if="row.noInvoice" label="无票原因" required :error="fe.get(`items[${i}].noInvoiceReason`)" help="至少 10 字">
-            <textarea
-              v-model="row.noInvoiceReason"
-              class="textarea"
-              :class="ic(`r${i}`, `items[${i}].noInvoiceReason`)"
-              maxlength="300"
-              auto-height
-              placeholder="说明无法提供票据的原因"
-              @input="fe.clearField(`items[${i}].noInvoiceReason`)"
-              @focus="foc = `r${i}`"
-              @blur="foc = ''"
-            />
-          </FormItem>
-          <FormItem v-else label="票据" required :error="fe.first(`items[${i}].invoices`)">
-            <AttachmentPicker
-              v-model="row.attachments"
-              v-model:invoice-nos="row.invoiceNos"
-              ref-type="EXPENSE_INVOICE"
-              with-invoice-no
-              :warnings="warnings"
-              @busy="busyUploads[row.key] = $event"
-              @update:model-value="fe.clearUnder(`items[${i}].invoices`)"
-              @update:invoice-nos="fe.clearUnder(`items[${i}].invoices`)"
-            />
-          </FormItem>
+          <button
+            class="btn btn-block"
+            :disabled="form.items.length >= 50"
+            hover-class="is-pressed"
+            :hover-stay-time="60"
+            @tap="form.items.push(emptyExpenseRow()); fe.clearUnder('items')"
+          >添加费用明细</button>
         </view>
-        <button
-          class="btn btn-block"
-          :disabled="form.items.length >= 50"
-          hover-class="is-pressed"
-          :hover-stay-time="60"
-          @tap="form.items.push(emptyExpenseRow()); fe.clearUnder('items')"
-        >添加费用明细</button>
         <view class="field-help mt">全空明细不会保存。提交前会保存最新内容并预览审批路径。</view>
       </view>
     </template>
@@ -329,10 +332,10 @@ onLoad(async q => {
         <view class="link-btn" hover-class="is-pressed" :hover-stay-time="60" @tap="loadLinks">重试</view>
       </view>
       <view v-else-if="!linkOptions.length" class="muted">暂无可关联的申请，可选择独立报销。</view>
-      <view v-for="a in linkOptions" :key="a.id" hover-class="is-pressed" :hover-stay-time="60" @tap="toggleLink(a.id)">
+      <view v-for="a in linkOptions" :key="a.id" class="link-option" hover-class="is-pressed" :hover-stay-time="60" @tap="toggleLink(a.id)">
         <LinkedAppCard :app="a" :selected="form.relatedApplicationIds.includes(a.id)" />
       </view>
-      <button class="btn btn-primary btn-block" hover-class="press-primary" :hover-stay-time="60" @tap="choosing = false">完成选择（{{ form.relatedApplicationIds.length }}）</button>
+      <button class="btn btn-primary btn-block link-done" hover-class="press-primary" :hover-stay-time="60" @tap="choosing = false">完成选择（{{ form.relatedApplicationIds.length }}）</button>
     </BottomSheet>
   </view>
 </template>
@@ -365,8 +368,22 @@ onLoad(async q => {
   min-height: 88rpx;
 }
 
-.no-invoice {
-  border-left: 6rpx solid var(--eas-warning);
+.detail-sheet {
+  padding-bottom: 32rpx;
+}
+
+.detail-block {
+  margin: 24rpx 0;
+  padding: 0 24rpx 16rpx;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
+}
+
+.detail-title {
+  min-height: 88rpx;
+  font-size: var(--eas-fs-md);
+  font-weight: 600;
+  color: var(--eas-ink);
 }
 
 .expense-bar {
@@ -377,7 +394,11 @@ onLoad(async q => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12rpx;
+  gap: 16rpx;
+  padding: 12rpx 20rpx;
+  margin-bottom: 20rpx;
+  background: var(--eas-row-hover);
+  border-radius: var(--eas-radius-control);
 }
 
 .bar-label {
@@ -388,6 +409,10 @@ onLoad(async q => {
 .bar-amount {
   font-size: var(--eas-fs-md);
   color: var(--eas-ink);
+  text-align: right;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
+  flex-shrink: 0;
 }
 
 .expense-bar .row .btn {
@@ -395,5 +420,14 @@ onLoad(async q => {
 }
 .page-err {
   margin: 0 8rpx 16rpx;
+}
+
+.link-option {
+  margin-right: 8rpx;
+  border-radius: var(--eas-radius-control);
+}
+
+.link-done {
+  margin-top: 24rpx;
 }
 </style>

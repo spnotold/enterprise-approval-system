@@ -130,7 +130,7 @@ onLoad(async q => {
           <text>{{ draft.appNo ? `草稿 ${draft.appNo}` : templateName }}</text>
           <text v-if="draft.dirty" class="head-dirty">未保存</text>
         </view>
-        <text class="tag tag-blue">v{{ versionNo }}</text>
+        <text class="tag">v{{ versionNo }}</text>
       </view>
       <view v-if="outdated" class="banner banner-warning">
         模板已更新。切换后保留同名同类型字段，请重新核对。
@@ -177,6 +177,10 @@ onLoad(async q => {
 }
 
 .head-meta {
+  flex: 1;
+  min-width: 0;
+  margin-right: 16rpx;
+  overflow-wrap: anywhere;
   font-size: var(--eas-fs-xs);
   color: var(--eas-ink-3);
   font-variant-numeric: tabular-nums;
