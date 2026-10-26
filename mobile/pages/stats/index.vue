@@ -395,9 +395,9 @@ const noLegendOptions: Record<string, unknown> = { legend: { show: false } }
     </view>
 
     <view v-if="active === 'personal'" class="banner banner-info">个人统计为全量数据，不按日期筛选；状态分布包含草稿。部门和企业统计不包含草稿。</view>
-    <view v-else-if="active === 'finance'" class="banner banner-info">财务金额仅含已通过申请；无票占比按已通过报销明细金额计算。</view>
+    <view v-if="active === 'finance'" class="banner banner-info">财务金额仅含已通过申请；无票占比按已通过报销明细金额计算。</view>
 
-    <view v-else class="card filter-card">
+    <view v-if="active !== 'personal'" class="card filter-card">
       <view class="card-title">提交日期（上海时区）</view>
       <view class="date-range">
         <picker class="date-pick" mode="date" :value="from" :end="to < today ? to : today" @change="changeDate('from', $event)">
@@ -753,9 +753,9 @@ const noLegendOptions: Record<string, unknown> = { legend: { show: false } }
   letter-spacing: var(--eas-display-tracking);
   color: var(--eas-ink);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* 大额不省略：放不下就折行，财务数字要能读全 */
+  min-width: 0;
+  word-break: break-all;
 }
 
 .ledger-cell--compact .ledger-num {
@@ -827,7 +827,8 @@ const noLegendOptions: Record<string, unknown> = { legend: { show: false } }
   border-top: 1rpx solid var(--eas-rule);
 }
 
-.detail-item:first-child {
+.detail-item:first-child,
+.divider + .detail-item {
   border-top: none;
 }
 

@@ -58,10 +58,8 @@ async function logout(): Promise<void> {
             {{ ROLE_LABEL[r.code] ?? r.name }}<text v-if="r.primaryHandler">（主办）</text>
           </text>
         </view>
-        <view class="sub">
-          <text>{{ me?.username }}</text>
-          <text class="sub-gap">{{ me?.email }}</text>
-        </view>
+        <view class="sub-line">{{ me?.username }}</view>
+        <view class="sub-line ellipsis">{{ me?.email }}</view>
       </view>
     </view>
 
@@ -153,6 +151,13 @@ async function logout(): Promise<void> {
 .sub {
   display: flex;
   flex-wrap: wrap;
+  font-size: var(--eas-fs-xs);
+  line-height: 1.6;
+  color: var(--eas-ink-2);
+}
+
+/* 用户名、邮箱各占一行，长邮箱省略，不撑宽页面 */
+.sub-line {
   font-size: var(--eas-fs-xs);
   line-height: 1.6;
   color: var(--eas-ink-2);
