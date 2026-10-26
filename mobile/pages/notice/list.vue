@@ -15,6 +15,14 @@ import { NOTICE_TYPE_LABEL } from '@/utils/labels'
 import { openLink } from '@/utils/nav'
 import { fmtShort } from '@/utils/time'
 
+/** 消息类型标签的颜色与状态一致：通过鼠尾草、驳回铁锈、超时和催办芥黄，其余暗纸 */
+function noticeTone(type: string): string {
+  if (type === 'APP_APPROVED' || type === 'NODE_APPROVED' || type === 'REGISTRATION_APPROVED') return 'tag-green'
+  if (type === 'APP_REJECTED') return 'tag-red'
+  if (type === 'TASK_OVERDUE' || type === 'URGE') return 'tag-orange'
+  return ''
+}
+
 const unreadOnly = ref(false)
 const ready = ref(false)
 const unread = computed(() => notice.state.unread)
@@ -102,7 +110,7 @@ onReachBottom(() => void list.loadMore())
         <view class="seg-indicator" :style="{ width: 'calc((100% - 12rpx) / 2)', transform: `translateX(${unreadOnly ? 100 : 0}%)` }" />
         <view class="seg-item" :class="{ active: !unreadOnly }" hover-class="is-pressed" hover-stay-time="60" @tap="setTab(false)">全部</view>
         <view class="seg-item" :class="{ active: unreadOnly }" hover-class="is-pressed" hover-stay-time="60" @tap="setTab(true)">
-          未读<text v-if="unread">（{{ unread > 99 ? '99+' : unread }}）</text>
+          <text>未读<text v-if="unread">（{{ unread > 99 ? '99+' : unread }}）</text></text>
         </view>
       </view>
       <view class="link-btn read-all" :class="{ disabled: !unread }" hover-class="is-pressed" hover-stay-time="60" @tap="readAll">全部已读</view>
@@ -110,17 +118,15 @@ onReachBottom(() => void list.loadMore())
 
     <SwipeCell v-for="n in list.items.value" :key="n.id" :cell-id="`notice-${n.id}`" :actions="n.read ? [] : [{ key: 'read', text: '标为已读', type: 'primary' }]" @content-tap="tap(n)" @action="markRead(n)">
       <view class="card notice" hover-class="is-pressed" hover-stay-time="60">
-        <view class="row between">
-          <view class="row flex1">
-            <view v-if="!n.read" class="dot" />
-            <text class="tag" :class="n.type === 'APP_REJECTED' || n.type === 'TASK_OVERDUE' ? 'tag-red' : 'tag-blue'">
-              {{ NOTICE_TYPE_LABEL[n.type] ?? '通知' }}
-            </text>
-            <text class="ellipsis" :class="{ bold: !n.read }">{{ n.title }}</text>
-          </view>
+        <view class="row">
+          <text class="tag" :class="noticeTone(n.type)">
+            {{ NOTICE_TYPE_LABEL[n.type] ?? '通知' }}
+          </text>
+          <view v-if="!n.read" class="dot" />
+          <text class="title ellipsis" :class="{ unread: !n.read }">{{ n.title }}</text>
         </view>
         <view v-if="n.content" class="muted content break">{{ n.content }}</view>
-        <view class="muted">{{ fmtShort(n.createdAt) }}</view>
+        <view class="muted time">{{ fmtShort(n.createdAt) }}</view>
       </view>
     </SwipeCell>
 
@@ -130,25 +136,44 @@ onReachBottom(() => void list.loadMore())
 </template>
 
 <style scoped>
-.notice { margin-bottom: 0; }
+/* 嵌在 SwipeCell 里：间距和纸影都由外层负责 */
+.notice { margin: 0; }
+
+/* 与 .seg 的 32rpx 下边距对齐：行内两个盒子的内容中线才等高（全部已读不低一头） */
 .read-all {
-  margin: 0 0 24rpx 12rpx;
+  margin: 0 0 32rpx 12rpx;
 }
 
 .read-all.disabled {
-  color: var(--eas-ink-2);
+  color: var(--eas-ink-3);
 }
 
+/* 未读标记：铁锈圆点，放在标题前 */
 .dot {
-  width: 14rpx;
-  height: 14rpx;
+  width: 16rpx;
+  height: 16rpx;
   border-radius: 50%;
-  background: var(--eas-primary);
+  background: var(--eas-rust);
   margin-right: 10rpx;
   flex-shrink: 0;
 }
 
+.title {
+  flex: 1;
+  min-width: 0;
+  color: var(--eas-ink-2);
+}
+
+.title.unread {
+  font-weight: 600;
+  color: var(--eas-ink);
+}
+
 .content {
-  margin: 8rpx 0;
+  margin: 10rpx 0 0;
+}
+
+.time {
+  margin-top: 10rpx;
 }
 </style>

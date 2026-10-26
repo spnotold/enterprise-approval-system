@@ -3,7 +3,14 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { closeSwipeCells, openSwipeCell, swipeGesture, touchPoint, type SwipeTouchEvent } from '@/composables/useSwipeTabs'
 
 /** disabled：占位（如“加载中”），点击无响应；keepOpen：点击后不收起（如“重试”） */
-export interface SwipeAction { text: string; type?: 'primary' | 'danger' | 'muted'; key: string; disabled?: boolean; keepOpen?: boolean }
+export interface SwipeAction {
+  text: string
+  /** 色块：primary 藏青（标为已读）、mustard 芥黄（催办）、paper 纸色（撤回）、danger 铁锈（删除）、muted 灰墨（占位） */
+  type?: 'primary' | 'mustard' | 'paper' | 'danger' | 'muted'
+  key: string
+  disabled?: boolean
+  keepOpen?: boolean
+}
 const props = defineProps<{ cellId: string; actions: SwipeAction[] }>()
 // will-open：用户开始向左滑动这一行（尚未展开），可据此按需准备操作
 const emit = defineEmits<{ 'content-tap': []; action: [key: string]; 'will-open': [] }>()
@@ -85,12 +92,79 @@ function action(a: SwipeAction): void {
 </template>
 
 <style scoped>
-.swipe-cell { position: relative; overflow: hidden; border-radius: var(--eas-radius-panel); margin-bottom: 16rpx; touch-action: pan-y; }
-.swipe-content { position: relative; z-index: 1; background: var(--eas-surface); }
-.swipe-actions { position: absolute; right: 0; top: 0; bottom: 0; display: flex; }
-.swipe-action { flex: 1; display: flex; align-items: center; justify-content: center; min-width: 144rpx; min-height: 88rpx; font-size: 28rpx; color: var(--eas-surface); background: var(--eas-primary); }
-.swipe-action.is-pressed { color: var(--eas-ink); }
-.swipe-action--danger { background: var(--eas-danger); }
-.swipe-action--muted { background: var(--eas-ink-2); }
+/* 单据条目：单据本身的纸影由内边距留出（右 8rpx、下 8rpx），滑开时露出右侧的实色操作块 */
+.swipe-cell {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--eas-radius-panel);
+  padding: 0 8rpx 8rpx 0;
+  margin-bottom: 32rpx;
+  touch-action: pan-y;
+}
+
+.swipe-content { position: relative; z-index: 1; }
+
+/* 操作块：与单据同高同宽边界（右缘对齐单据，避开 8rpx 纸影留白）、同样圆角，实色 + 颗粒 */
+.swipe-actions {
+  position: absolute;
+  top: 0;
+  right: 8rpx;
+  bottom: 8rpx;
+  display: flex;
+  border-radius: var(--eas-radius-panel);
+  overflow: hidden;
+}
+
+.swipe-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 144rpx;
+  min-height: 88rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--eas-ink);
+  background-color: var(--eas-mustard);
+  background-image: var(--eas-grain);
+  background-size: var(--eas-grain-size);
+  background-blend-mode: multiply;
+}
+
+/* 标为已读：藏青 */
+.swipe-action--primary {
+  background-color: var(--eas-primary);
+  color: var(--eas-sheet);
+}
+
+.swipe-action--primary.is-pressed { background-color: var(--eas-primary-hover) !important; }
+
+/* 撤回：纸色块，纸面不叠颗粒 */
+.swipe-action--paper {
+  background-color: var(--eas-sheet);
+  color: var(--eas-ink);
+  background-image: none;
+}
+
+/* 删除：铁锈 */
+.swipe-action--danger {
+  background-color: var(--eas-rust);
+  color: var(--eas-sheet);
+}
+
+.swipe-action--danger.is-pressed { background-color: var(--eas-rust-deep) !important; }
+
+/* 加载中 / 重试占位：灰墨 */
+.swipe-action--muted {
+  background-color: var(--eas-ink-2);
+  color: var(--eas-sheet);
+}
+
+/* 按下：色块沉一档（催办芥黄、撤回纸色换行按下底） */
+/* 芥黄块按下保持底色（深一档的芥黄上墨字不够 4.5:1），用内圈深芥黄表示按下 */
+.swipe-action--mustard.is-pressed { background-color: var(--eas-mustard) !important; box-shadow: inset 0 0 0 6rpx var(--eas-mustard-deep); }
+.swipe-action--paper.is-pressed { background-color: var(--eas-row-hover) !important; }
+.swipe-action--muted.is-pressed { background-color: var(--eas-ink) !important; }
+
 .swipe-action.is-disabled { opacity: 0.7; }
 </style>

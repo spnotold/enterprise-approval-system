@@ -25,6 +25,7 @@ const type = ref<AppType | null>(null)
 const status = ref<AppStatus | null>(null)
 const keyword = ref('')
 const updates = ref(0)
+const searchFocus = ref(false)
 let ready = false
 let dirty = false
 
@@ -77,8 +78,8 @@ function actionsFor(a: ApplicationSummary): SwipeAction[] {
   if (p.state === 'error') return [RETRY_ACTION]
   const actions: SwipeAction[] = []
   if (a.status === 'IN_APPROVAL') {
-    if (p.actions.includes('URGE')) actions.push({ key: 'URGE', text: '催办', type: 'primary' })
-    if (p.actions.includes('WITHDRAW')) actions.push({ key: 'WITHDRAW', text: '撤回', type: 'danger' })
+    if (p.actions.includes('URGE')) actions.push({ key: 'URGE', text: '催办', type: 'mustard' })
+    if (p.actions.includes('WITHDRAW')) actions.push({ key: 'WITHDRAW', text: '撤回', type: 'paper' })
   }
   if (a.status === 'DRAFT' && p.actions.includes('DELETE')) actions.push({ key: 'DELETE', text: '删除', type: 'danger' })
   return actions
@@ -214,7 +215,7 @@ onReachBottom(() => void list.loadMore())
           <uni-icons type="bottom" size="12" color="var(--eas-ink-2)" />
         </view>
       </picker>
-      <view class="search flex1">
+      <view class="search flex1" :class="{ 'is-focus': searchFocus }">
         <uni-icons type="search" size="16" color="var(--eas-ink-3)" />
         <input
           v-model="keyword"
@@ -223,6 +224,8 @@ onReachBottom(() => void list.loadMore())
           placeholder-class="placeholder"
           confirm-type="search"
           @confirm="reload"
+          @focus="searchFocus = true"
+          @blur="searchFocus = false"
         />
       </view>
     </view>
@@ -241,6 +244,7 @@ onReachBottom(() => void list.loadMore())
 
       <EmptyState
         v-if="list.loaded.value && !list.items.value.length"
+        :kind="hasFilter ? 'search' : 'tray'"
         :text="hasFilter ? '没有符合条件的记录' : '暂无申请'"
         :action-text="hasFilter ? '清空筛选' : ''"
         @action="clearFilter"
@@ -252,21 +256,27 @@ onReachBottom(() => void list.loadMore())
 
 <style scoped>
 .list-area { min-height: 55vh; touch-action: pan-y; }
+
+/* 状态筛选一排 5–6 项：字号小一档，360 宽不挤坏 */
 .status-tabs .seg-item { font-size: var(--eas-fs-xs); }
+
+/* 搜索框：field 底胶囊，聚焦墨线框 + 芥黄错版（.is-focus 全局） */
 .search {
   display: flex;
   align-items: center;
   height: 88rpx;
-  padding: 0 20rpx;
-  background: var(--eas-surface);
-  border-radius: var(--eas-radius-control);
+  padding: 0 24rpx;
+  background: var(--eas-field);
+  border: 3rpx solid var(--eas-rule-strong);
+  border-radius: var(--eas-radius-pill);
   min-width: 0;
+  transition: border-color var(--eas-dur-fast) var(--eas-ease), box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 
 .search-input {
   flex: 1;
-  height: 88rpx;
-  margin-left: 8rpx;
+  height: 100%;
+  margin-left: 12rpx;
   font-size: 26rpx;
   min-width: 0;
 }
