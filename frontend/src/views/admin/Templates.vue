@@ -224,10 +224,6 @@ function deptText(row: TemplateAdminItem) {
         <h2 class="sheet-title">流程模板</h2>
         <p class="sheet-sub">内置模板表单固定，只能调整审批节点；停用后员工不能新建，审批中的申请不受影响。</p>
       </div>
-      <div class="head-actions">
-        <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">新建自定义模板</el-button>
-      </div>
     </header>
 
     <div class="toolbar list-filters">
@@ -236,13 +232,17 @@ function deptText(row: TemplateAdminItem) {
         <el-option value="BUILTIN" label="内置模板" />
         <el-option value="CUSTOM" label="自定义模板" />
       </el-select>
+      <div class="list-actions">
+        <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">新建自定义模板</el-button>
+      </div>
     </div>
 
     <el-skeleton v-if="loading && !loaded" :rows="6" animated />
     <el-table v-else v-loading="loading" :data="filtered" row-key="id" class="eas-row-table">
       <el-table-column label="模板名称" min-width="200">
         <template #default="{ row }">
-          <router-link :to="designPath(row.id)" class="name-link">{{ row.name }}</router-link>
+          <router-link :to="designPath(row.id)" class="name-link cell-link">{{ row.name }}</router-link>
           <div v-if="row.description" class="muted small desc">{{ row.description }}</div>
         </template>
       </el-table-column>
@@ -366,12 +366,13 @@ function deptText(row: TemplateAdminItem) {
 
 <style scoped>
 .name-link {
-  color: var(--eas-primary);
-  text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
 }
 .name-link:hover {
   text-decoration: underline;
+  text-decoration-color: var(--eas-mustard);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 .desc {
   line-height: 1.4;

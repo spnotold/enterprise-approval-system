@@ -108,7 +108,7 @@ async function submit() {
       </div>
     </header>
 
-    <div class="toolbar list-filters">
+    <div class="toolbar list-filters list-filters--wrap">
       <el-input
         v-model="filters.keyword"
         placeholder="申请编号 / 申请人 / 审批人"
@@ -128,8 +128,10 @@ async function submit() {
       >
         已停用审批人名下的待办
       </el-button>
-      <el-button type="primary" @click="search">查询</el-button>
       <el-button link type="primary" @click="reset">重置</el-button>
+      <div class="list-actions">
+        <el-button type="primary" @click="search">查询</el-button>
+      </div>
     </div>
 
     <el-table v-loading="loading" :data="records" row-key="taskId" class="task-table eas-row-table">

@@ -34,9 +34,6 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
         <h2 class="sheet-title">邮件投递</h2>
         <p class="sheet-sub">通知邮件的发送记录，只含标题、编号等摘要，不含金额明细和票据。</p>
       </div>
-      <div class="head-actions">
-        <el-button :icon="Refresh" @click="load">刷新</el-button>
-      </div>
     </header>
 
     <p class="page-note">
@@ -49,6 +46,9 @@ const { filters, records, total, page, size, loading, hasFilters, search, reset,
         <el-option v-for="o in statusOptions" :key="o.value" :value="o.value" :label="o.label" />
       </el-select>
       <el-button link type="primary" @click="reset">重置</el-button>
+      <div class="list-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
+      </div>
     </div>
 
     <el-table v-loading="loading" :data="records" row-key="id" class="delivery-table eas-row-table">

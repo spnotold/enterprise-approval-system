@@ -90,7 +90,7 @@ function hasData(r: AuditLogView): boolean {
       </div>
     </header>
 
-    <div class="toolbar list-filters">
+    <div class="toolbar list-filters list-filters--wrap">
       <el-input v-model="filters.action" placeholder="动作" clearable @keyup.enter="search" @clear="search" />
       <el-input v-model="filters.targetType" placeholder="对象类型" clearable @keyup.enter="search" @clear="search" />
       <el-input v-model="filters.targetId" placeholder="对象 ID" clearable @keyup.enter="search" @clear="search" />
@@ -113,8 +113,10 @@ function hasData(r: AuditLogView): boolean {
         unlink-panels
         @update:model-value="onRange"
       />
-      <el-button type="primary" :icon="Search" @click="search">查询</el-button>
       <el-button link type="primary" @click="reset">重置</el-button>
+      <div class="list-actions">
+        <el-button type="primary" :icon="Search" @click="search">查询</el-button>
+      </div>
     </div>
 
     <el-table v-loading="loading" :data="records" row-key="id" class="audit-table eas-row-table">
@@ -196,6 +198,7 @@ function hasData(r: AuditLogView): boolean {
 .audit-table {
   width: 100%;
 }
+/* 列多的密集表格：单元格左右收紧，否则全局 16px 内边距会把固定列里的内容挤掉 */
 .audit-table :deep(.cell) {
   padding-right: 8px;
   padding-left: 8px;

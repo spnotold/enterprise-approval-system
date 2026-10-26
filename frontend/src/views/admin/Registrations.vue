@@ -4,7 +4,7 @@ import '@/components/admin/admin.css'
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Search, User } from '@element-plus/icons-vue'
+import { Refresh, Search, User } from '@element-plus/icons-vue'
 import { api } from '@/lib/api'
 import type { ApiError } from '@/lib/http'
 import type { AdminUser } from '@/lib/types'
@@ -108,9 +108,6 @@ async function reject(u: AdminUser) {
         <h2 class="sheet-title">注册审核</h2>
         <p class="sheet-sub">通过时确认所属部门，系统自动授予“员工”角色；拒绝为终态，需填写原因。</p>
       </div>
-      <div class="head-actions">
-        <el-button :icon="User" @click="router.push('/admin/users')">用户管理</el-button>
-      </div>
     </header>
 
     <div class="toolbar list-filters">
@@ -122,9 +119,12 @@ async function reject(u: AdminUser) {
         @keyup.enter="search"
         @clear="search"
       />
-      <el-button type="primary" @click="search">查询</el-button>
       <el-button link type="primary" @click="reset">重置</el-button>
-      <el-button text @click="load">刷新</el-button>
+      <div class="list-actions">
+        <el-button text :icon="Refresh" @click="load">刷新</el-button>
+        <el-button :icon="User" @click="router.push('/admin/users')">用户管理</el-button>
+        <el-button type="primary" @click="search">查询</el-button>
+      </div>
     </div>
 
     <el-table v-loading="loading" :data="records" row-key="id" class="reg-table eas-row-table">

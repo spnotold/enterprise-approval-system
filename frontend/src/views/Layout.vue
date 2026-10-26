@@ -135,7 +135,7 @@ function onCommand(cmd: string) {
         <NoticeBell />
         <el-dropdown trigger="click" @command="onCommand">
           <button class="user" type="button" aria-label="用户菜单">
-            <el-avatar :size="36" class="avatar">{{ avatarText }}</el-avatar>
+            <el-avatar :size="36" class="avatar" :class="{ 'is-pair': avatarText?.length === 2 }">{{ avatarText }}</el-avatar>
             <span v-if="!isMobile" class="user-name">{{ auth.me?.realName }}</span>
             <el-icon v-if="!isMobile"><ArrowDown /></el-icon>
           </button>
@@ -276,6 +276,8 @@ function onCommand(cmd: string) {
   color: var(--eas-ink);
   font: 400 17px var(--eas-font-display);
 }
+/* 两个字的名字缩小，免得出圆 */
+.avatar.is-pair { font-size: 13px; }
 .user-card { padding: 12px 16px 8px; min-width: 180px; border-bottom: 2px dashed var(--eas-rule); }
 .user-card-name { font-weight: 600; margin-bottom: 2px; }
 .desk { position: relative; z-index: 1; min-height: calc(100vh - var(--eas-header-height)); }

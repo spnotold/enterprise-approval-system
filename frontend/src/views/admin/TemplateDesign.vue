@@ -420,7 +420,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
           :description="issuesStale ? '设计已在校验后修改，发布时将重新校验。' : '所有发布前检查均已通过。'"
           @close="clearIssues"
         />
-        <el-card v-else shadow="never" class="issue-card">
+        <el-card v-else class="issue-card">
           <template #header>
             <div class="issue-head">
               <span class="text-danger">发现 {{ issues.length }} 个问题，点击可定位到对应字段或节点</span>
@@ -476,7 +476,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
         </el-empty>
       </div>
 
-      <el-card shadow="never" class="versions-card">
+      <el-card class="versions-card">
         <template #header>
           <span class="section-head">版本历史</span>
           <span class="muted small">每个模板同一时刻至多一个草稿；已发布、已归档版本不可修改</span>
@@ -549,8 +549,11 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 20px;
+  gap: 6px 20px;
   margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 2px dashed var(--eas-rule);
+  color: var(--eas-ink-2);
 }
 .designer-wrap {
   min-height: 200px;
@@ -563,6 +566,9 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 }
 .issue-card :deep(.el-card__body) {
   padding: 4px 8px 8px;
+}
+.issue-card :deep(.el-card__header) {
+  border-bottom: 2px dashed var(--eas-rule);
 }
 .issue-head {
   display: flex;
@@ -582,7 +588,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 10px;
-  padding: 6px 8px;
+  padding: 6px 8px 6px 12px;
+  border-left: 3px solid var(--eas-danger);
   border-radius: var(--eas-radius-control);
   cursor: pointer;
   outline: none;
@@ -592,7 +599,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
   background: var(--eas-danger-tint);
 }
 .issue-item:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .code-tag {
@@ -607,7 +614,11 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
   word-break: break-all;
 }
 .section-head {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-20);
   font-weight: 600;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
   margin-right: 12px;
 }
 .publish-note {

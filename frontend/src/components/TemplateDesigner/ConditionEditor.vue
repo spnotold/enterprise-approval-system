@@ -237,13 +237,15 @@ const text = computed(() => conditionText(condition.value, props.vars))
   gap: 8px;
 }
 .cond-rule {
-  padding: 8px;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  background: var(--eas-desk);
+  padding: 10px 12px;
+  border: 0;
+  border-top: 2px dashed var(--eas-rule);
+  border-radius: 0;
+  background: var(--eas-field);
 }
 .cond-rule.cell-error {
-  border-color: var(--eas-danger);
+  border-top-color: var(--eas-danger);
+  background: var(--eas-danger-tint);
 }
 .cond-row {
   display: grid;
