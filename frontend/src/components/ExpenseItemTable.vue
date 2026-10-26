@@ -297,6 +297,10 @@ function typeName(r: object): string {
 </template>
 
 <style scoped>
+/* 无票行是芥黄浅底：错误提示和「删除」改用深一档的铁锈，对比度才够 4.5:1 */
+:deep(.row-no-invoice) {
+  --eas-danger: var(--eas-rust-deep);
+}
 .expense-table {
   min-width: 0;
 }
