@@ -35,6 +35,14 @@ const typeOptions = toOptions(APP_TYPE_LABEL)
 const statusOptions = computed(() =>
   toOptions(APP_STATUS_LABEL).filter((o) => props.scope === 'mine' || o.value !== 'DRAFT'),
 )
+/** 状态筛选文字前的色块：与状态胶囊同色（docs/ui_design.md 第 2 节状态映射） */
+const STATUS_SWATCH: Record<AppStatus, string> = {
+  DRAFT: 'var(--eas-tab)',
+  IN_APPROVAL: 'var(--eas-sky)',
+  APPROVED: 'var(--eas-sage)',
+  REJECTED: 'var(--eas-rust)',
+  WITHDRAWN: 'var(--eas-muted)',
+}
 const headDepts = computed(() => auth.me?.headDeptIds ?? [])
 const canCreate = computed(() => props.scope === 'mine' && auth.can('APP_CREATE'))
 // 外壳为本栏目渲染了页签行时，页面操作放到页签行右侧；否则留在工具栏里。
@@ -178,8 +186,8 @@ const emptyDescription = computed(() => {
             :aria-pressed="q.filters.status === tab.value"
             @click="pickStatus(tab.value)"
           >
-            <StatusTag v-if="tab.value" :status="tab.value" :show-node="false" />
-            <span v-else>全部</span>
+            <span v-if="tab.value" class="status-filter-swatch" :style="{ background: STATUS_SWATCH[tab.value] }" aria-hidden="true" />
+            <span>{{ tab.value ? APP_STATUS_LABEL[tab.value] : '全部' }}</span>
             <span v-if="tab.count !== null" class="status-filter-count">{{ tab.count }}</span>
           </button>
         </div>
@@ -259,13 +267,12 @@ const emptyDescription = computed(() => {
           </router-link>
           <div v-if="scope === 'mine'" class="mobile-card-actions">
             <template v-if="row.status === 'DRAFT'">
-              <el-button link type="primary" @click="router.push(`/applications/${row.id}/edit`)">编辑</el-button>
-              <el-button link type="danger" :disabled="act.loading.value" @click="remove(row as ApplicationSummary)">删除</el-button>
+              <el-button size="small" @click="router.push(`/applications/${row.id}/edit`)">编辑</el-button>
+              <el-button size="small" :disabled="act.loading.value" @click="remove(row as ApplicationSummary)">删除</el-button>
             </template>
             <el-button
               v-else-if="row.status === 'IN_APPROVAL'"
-              link
-              type="warning"
+              size="small"
               :disabled="act.loading.value"
               @click="withdraw(row as ApplicationSummary)"
             >
@@ -273,8 +280,7 @@ const emptyDescription = computed(() => {
             </el-button>
             <el-button
               v-else-if="row.status === 'REJECTED' || row.status === 'WITHDRAWN'"
-              link
-              type="primary"
+              size="small"
               :disabled="act.loading.value"
               @click="copy(row as ApplicationSummary)"
             >
@@ -321,7 +327,7 @@ const emptyDescription = computed(() => {
         <el-table-column label="当前节点" width="150">
           <template #default="{ row }">
             <div v-if="row.currentNode && row.status === 'IN_APPROVAL'" class="two-line">
-              <div>{{ row.currentNode.name }}</div>
+              <div><el-tag type="primary" size="small">{{ row.currentNode.name }}</el-tag></div>
               <div v-if="row.currentNode.assigneeName" class="cell-sub">{{ row.currentNode.assigneeName }}</div>
             </div>
           </template>
@@ -344,20 +350,19 @@ const emptyDescription = computed(() => {
         <el-table-column v-if="scope === 'mine'" label="更新时间" width="150">
           <template #default="{ row }"><span class="cell-nowrap eas-tnum">{{ fmtDateTime(row.updatedAt) }}</span></template>
         </el-table-column>
-        <el-table-column :width="scope === 'mine' ? 180 : 96">
+        <el-table-column :width="scope === 'mine' ? 230 : 100">
           <template #header><span class="eas-sr-only">操作</span></template>
           <template #default="{ row }">
             <div class="row-actions row-actions--end">
-              <el-button link type="primary" @click.stop="router.push(`/applications/${row.id}`)">查看</el-button>
+              <el-button size="small" @click.stop="router.push(`/applications/${row.id}`)">查看</el-button>
               <template v-if="scope === 'mine'">
                 <template v-if="row.status === 'DRAFT'">
-                  <el-button link type="primary" @click.stop="router.push(`/applications/${row.id}/edit`)">编辑</el-button>
-                  <el-button link type="danger" :disabled="act.loading.value" @click.stop="remove(row as ApplicationSummary)">删除</el-button>
+                  <el-button size="small" @click.stop="router.push(`/applications/${row.id}/edit`)">编辑</el-button>
+                  <el-button size="small" :disabled="act.loading.value" @click.stop="remove(row as ApplicationSummary)">删除</el-button>
                 </template>
                 <el-button
                   v-else-if="row.status === 'IN_APPROVAL'"
-                  link
-                  type="warning"
+                  size="small"
                   :disabled="act.loading.value"
                   @click.stop="withdraw(row as ApplicationSummary)"
                 >
@@ -365,8 +370,7 @@ const emptyDescription = computed(() => {
                 </el-button>
                 <el-button
                   v-else-if="row.status === 'REJECTED' || row.status === 'WITHDRAWN'"
-                  link
-                  type="primary"
+                  size="small"
                   :disabled="act.loading.value"
                   @click.stop="copy(row as ApplicationSummary)"
                 >
@@ -405,20 +409,21 @@ const emptyDescription = computed(() => {
 </template>
 
 <style scoped>
-/* 我的申请的状态筛选：一排带数量的文字，选中项加粗，前面是该状态的圆点 */
+/* 我的申请的状态筛选：一排胶囊形文字筛选，前面是该状态的色块，后面带数量；选中垫芥黄浅底 */
 .status-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 20px;
+  gap: 6px 8px;
   flex: 1 0 100%;
 }
 .status-filter {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-height: 32px;
-  padding: 0;
+  padding: 0 12px;
   border: 0;
+  border-radius: var(--eas-radius-pill);
   background: transparent;
   color: var(--eas-ink-2);
   font: inherit;
@@ -427,18 +432,27 @@ const emptyDescription = computed(() => {
 }
 .status-filter:hover {
   color: var(--eas-ink);
+  background: var(--eas-row-hover);
 }
 .status-filter.is-active {
+  background: var(--eas-mustard-tint);
   color: var(--eas-ink);
   font-weight: 600;
 }
-.status-filter :deep(.status-tag .label) {
-  color: inherit;
+.status-filter-swatch {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--eas-rule-strong) inset;
 }
 .status-filter-count {
   color: var(--eas-ink-3);
   font-size: var(--eas-fs-xs);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+}
+.status-filter.is-active .status-filter-count {
+  color: var(--eas-ink-2);
 }
 </style>
