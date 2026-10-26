@@ -54,11 +54,16 @@ function onDragStart(e: DragEvent, type: FieldType) {
 .field-library {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .panel-title {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-16);
   font-weight: 600;
-  font-size: 14px;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
+  padding-bottom: 8px;
+  border-bottom: 2px dashed var(--eas-rule);
 }
 .hint {
   margin-bottom: 4px;
@@ -73,23 +78,23 @@ function onDragStart(e: DragEvent, type: FieldType) {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px dashed var(--eas-rule-strong);
-  border-radius: var(--eas-radius-control);
-  background: var(--eas-sheet);
+  border: 0;
+  border-radius: var(--eas-radius-pill);
+  background: var(--eas-field);
   color: var(--eas-ink);
   font-size: var(--eas-fs-sm);
   cursor: pointer;
   text-align: left;
   transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
+    background-color var(--eas-dur-fast) var(--eas-ease),
     color var(--eas-dur-fast) var(--eas-ease);
 }
 .lib-item:hover:not(:disabled) {
-  border-color: var(--eas-primary);
+  background: var(--eas-row-hover);
   color: var(--eas-primary);
 }
 .lib-item:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .lib-item:disabled {

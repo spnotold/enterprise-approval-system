@@ -106,13 +106,13 @@ function openAudit(c: SysConfigItem) {
         <h2 class="sheet-title">系统配置</h2>
         <p class="sheet-sub">修改需填写原因并写入审计日志；修改前请确认配置值的格式与含义。</p>
       </div>
-      <div class="head-actions">
-        <el-button :icon="Refresh" @click="load">刷新</el-button>
-      </div>
     </header>
 
     <div class="toolbar list-filters">
       <el-input v-model="keyword" placeholder="按键名或说明过滤" clearable :prefix-icon="Search" />
+      <div class="list-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
+      </div>
     </div>
 
     <el-table v-loading="loading" :data="filtered" row-key="key" class="eas-row-table" style="width: 100%">

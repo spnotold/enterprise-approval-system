@@ -340,12 +340,9 @@ async function submitGrant() {
         <h2 class="sheet-title">用户管理</h2>
         <p class="sheet-sub">系统管理员只有管理类权限，不能审批；写操作需填写原因并写入审计日志。</p>
       </div>
-      <div class="head-actions">
-        <el-button :icon="UserFilled" @click="router.push('/admin/registrations')">注册审核</el-button>
-      </div>
     </header>
 
-    <div class="toolbar list-filters">
+    <div class="toolbar list-filters list-filters--wrap">
       <el-input
         v-model="filters.keyword"
         placeholder="用户名 / 姓名 / 邮箱"
@@ -360,8 +357,11 @@ async function submitGrant() {
       <el-select v-model="filters.deptId" placeholder="所属部门" clearable filterable @change="search">
         <el-option v-for="d in dict.departments" :key="d.id" :value="d.id" :label="d.name" />
       </el-select>
-      <el-button type="primary" @click="search">查询</el-button>
       <el-button link type="primary" @click="reset">重置</el-button>
+      <div class="list-actions">
+        <el-button :icon="UserFilled" @click="router.push('/admin/registrations')">注册审核</el-button>
+        <el-button type="primary" @click="search">查询</el-button>
+      </div>
     </div>
 
     <p v-if="filters.status === 'PENDING'" class="page-note">
@@ -558,10 +558,6 @@ async function submitGrant() {
 .users-table {
   width: 100%;
 }
-.users-table :deep(.cell) {
-  padding-right: 6px;
-  padding-left: 6px;
-}
 .cell-ellipsis {
   display: block;
   min-width: 0;
@@ -606,16 +602,15 @@ async function submitGrant() {
 .role-tag {
   cursor: pointer;
   gap: 2px;
-  height: 22px;
   max-width: 100%;
-  padding: 0 6px;
+  padding: 0 8px;
   overflow: hidden;
   font-size: var(--eas-fs-xs);
 }
 .primary-badge {
   margin-left: 2px;
-  padding: 0 4px;
-  border-radius: var(--eas-radius-tag);
+  padding: 0 5px;
+  border-radius: var(--eas-radius-pill);
   font-size: var(--eas-fs-xs);
   line-height: 16px;
   color: var(--eas-warning-text);

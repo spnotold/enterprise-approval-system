@@ -59,11 +59,14 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
         <h2 class="sheet-title">角色与权限</h2>
         <p class="sheet-sub">角色决定功能权限；角色授予与回收请在用户管理中操作。</p>
       </div>
-      <div class="head-actions">
+    </header>
+
+    <div class="toolbar list-filters">
+      <div class="list-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button :icon="User" @click="router.push('/admin/users')">用户管理</el-button>
       </div>
-    </header>
+    </div>
 
     <p class="page-note">系统管理员只有管理类权限，不能审批；查看业务正文需另行授予 BIZ_CONTENT_READ，每次访问留痕。</p>
 
@@ -135,8 +138,11 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
   line-height: 1.4;
 }
 .role-name {
+  font-family: var(--eas-font-display);
   font-weight: 600;
   font-size: var(--eas-fs-md);
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
 }
 .role-body {
   display: flex;
@@ -149,7 +155,9 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 .section-label {
   margin-top: 4px;
   font-weight: 600;
-  font-size: var(--eas-fs-sm);
+  font-size: var(--eas-fs-xs);
+  letter-spacing: 0.06em;
+  color: var(--eas-ink-2);
 }
 .perm-tags {
   display: flex;
@@ -159,6 +167,7 @@ const ROLE_NOTE: Partial<Record<RoleCode, string>> = {
 .perm-code {
   margin-left: 6px;
   opacity: 0.7;
+  font-family: var(--eas-font-sans);
   font-size: var(--eas-fs-xs);
 }
 </style>

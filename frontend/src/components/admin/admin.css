@@ -12,14 +12,13 @@
 @media (max-width: 767px) {
   .admin-page.page {
     background: var(--eas-sheet);
-    border: 1px solid var(--eas-rule);
     border-radius: var(--eas-radius-panel);
     box-shadow: var(--eas-shadow-sheet);
     padding: 16px;
   }
 }
 
-/* 单据头：页面名称 26px 宋体 600，至多一行 ink-2 说明，右侧页级操作同行右对齐。
+/* 单据头：展示字标题 + 一行说明，右侧页级操作同行右对齐。
    page 与 admin-page 可能是同一个元素（流程设计页），两种结构都要命中。 */
 .admin-page .page > .sheet-head,
 .admin-page.page > .sheet-head,
@@ -28,17 +27,16 @@
   align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 10px 16px;
   padding: 0 0 16px;
-  border-bottom: 1px solid var(--eas-rule);
 }
 .admin-page .sheet-title {
   margin: 0;
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-doc);
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-26);
   font-weight: 600;
   line-height: var(--eas-lh-title);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--eas-display-tracking);
   color: var(--eas-ink);
 }
 .admin-page .sheet-sub {
@@ -69,15 +67,19 @@
   }
 }
 
-/* 工具栏与分页：与单据左右对齐，上下画线 */
+/* 工具栏与分页：贴着单据左右，上下留白即可，不画细线 */
 .admin-page .page > .toolbar {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--eas-rule);
+  padding: 16px 0 12px;
 }
 .admin-page .page > .pager {
   margin-top: 0;
   padding: 14px 0 0;
-  border-top: 1px solid var(--eas-rule);
+}
+
+/* 单据内的分段：段与段之间一道虚线，像单据上的裁切线 */
+.admin-page .sheet-section {
+  padding: 20px 0 24px;
+  border-top: 2px dashed var(--eas-rule);
 }
 
 /* 单据头下方的一行说明（防误操作提示），13px ink-2 */
@@ -91,12 +93,13 @@
   vertical-align: baseline;
   margin: 0 2px;
 }
-/* 防误操作的紧凑警示行（浅警示底） */
+/* 防误操作的紧凑警示行（芥黄浅底 + 左侧警示竖条） */
 .admin-page .page-note--warn {
   color: var(--eas-ink);
   background: var(--eas-warning-tint);
-  padding: 8px 12px;
+  border-left: 3px solid var(--eas-warning);
   border-radius: var(--eas-radius-control);
+  padding: 8px 12px;
 }
 
 /* 外壳已提供 24px 内边距，登记簿表格贴住单据左右 */
@@ -107,38 +110,31 @@
   padding-right: 0;
 }
 
-.admin-page .el-card,
+/* 折叠分组（角色列表）：组与组之间一道虚线，不要外框 */
 .admin-page .el-collapse {
-  border-color: var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  box-shadow: none;
+  border: 0;
+  background: transparent;
 }
+.admin-page .el-collapse-item {
+  border-bottom: 2px dashed var(--eas-rule);
+}
+.admin-page .el-collapse-item:last-child {
+  border-bottom: 0;
+}
+.admin-page .el-collapse-item__header {
+  color: var(--eas-ink);
+  border-bottom: 0;
+}
+.admin-page .el-collapse-item__wrap {
+  border-bottom: 0;
+  background: transparent;
+}
+
 .admin-page .el-button.is-link,
 .admin-page .el-link {
   min-width: 32px;
   min-height: 32px;
 }
-.admin-page .admin-status.el-tag {
-  gap: 6px;
-  height: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--eas-ink);
-  line-height: 1.4;
-}
-.admin-page .admin-status.el-tag::before {
-  content: '';
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--eas-muted);
-}
-.admin-page .admin-status.el-tag--primary::before { background: var(--eas-primary); }
-.admin-page .admin-status.el-tag--success::before { background: var(--eas-success); }
-.admin-page .admin-status.el-tag--warning::before { background: var(--eas-warning); }
-.admin-page .admin-status.el-tag--danger::before { background: var(--eas-danger); }
 .admin-page .mono {
   font-family: var(--eas-font-sans);
   font-variant-numeric: tabular-nums;
@@ -150,18 +146,6 @@
 .admin-page .toolbar > .el-select {
   flex: 0 1 180px;
   min-width: 120px;
-}
-.admin-page .el-collapse-item__header {
-  color: var(--eas-ink);
-  border-color: var(--eas-rule);
-}
-.admin-page .el-collapse-item__wrap {
-  border-color: var(--eas-rule);
-}
-.admin-page .el-button:focus-visible,
-.admin-page .el-link:focus-visible {
-  outline: 2px solid var(--eas-primary);
-  outline-offset: 2px;
 }
 @media (max-width: 768px) {
   .admin-page .toolbar > .el-input,

@@ -143,60 +143,65 @@ function onNodeDrop(e: DragEvent, index: number) {
 .node-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
 }
 .panel-title {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-16);
   font-weight: 600;
-  font-size: 14px;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px dashed var(--eas-rule);
 }
 .node-card {
   display: flex;
-  gap: 10px;
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  padding: 10px 12px;
-  background: var(--eas-sheet);
+  gap: 12px;
+  border: 0;
+  border-radius: var(--eas-radius-pill);
+  padding: 12px 18px;
+  background: var(--eas-field);
   cursor: pointer;
   outline: none;
   transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
-    background-color var(--eas-dur-fast) var(--eas-ease);
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 .node-card:hover {
-  border-color: var(--eas-primary);
-  background: var(--eas-primary-tint);
-}
-.node-card.is-drop-target {
-  border: 2px dashed var(--eas-primary) !important;
-  background: var(--eas-primary-tint) !important;
+  background: var(--eas-row-hover);
 }
 .node-card:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
+.node-card.is-drop-target {
+  outline: 2px dashed var(--eas-primary) !important;
+  outline-offset: 2px;
+  background: var(--eas-sky-tint) !important;
+}
 .node-card.is-selected {
-  border-color: var(--eas-primary);
-  box-shadow: 0 0 0 1px var(--eas-primary) inset;
+  box-shadow: var(--eas-offset-mark);
 }
 .node-card.has-issue {
-  border-color: var(--eas-danger);
+  background: var(--eas-danger-tint);
+  box-shadow: inset 4px 0 0 var(--eas-danger);
 }
 .node-card.has-issue.is-selected {
-  box-shadow: 0 0 0 1px var(--eas-danger) inset;
+  box-shadow: var(--eas-offset-mark), inset 4px 0 0 var(--eas-danger);
 }
 .seq {
   flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--eas-primary-tint);
-  color: var(--eas-primary);
-  font-size: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--eas-radius-pill);
+  background: var(--eas-ink);
+  color: var(--eas-sheet);
+  font-size: var(--eas-fs-xs);
   font-weight: 600;
   display: flex;
   align-items: center;

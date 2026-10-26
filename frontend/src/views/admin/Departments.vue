@@ -196,11 +196,14 @@ async function submitHead() {
         <h2 class="sheet-title">部门管理</h2>
         <p class="sheet-sub">部门编码创建后不可修改；设置负责人会同步授予 / 回收“部门负责人”角色。</p>
       </div>
-      <div class="head-actions">
+    </header>
+
+    <div class="toolbar list-filters">
+      <div class="list-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">新建部门</el-button>
       </div>
-    </header>
+    </div>
 
     <el-table v-loading="loading" :data="list" row-key="id" class="eas-row-table" style="width: 100%">
       <el-table-column prop="code" label="编码" min-width="110" />

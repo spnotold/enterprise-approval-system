@@ -197,56 +197,64 @@ function onCanvasDrop(e: DragEvent) {
 .form-canvas {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
   transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
+    outline-color var(--eas-dur-fast) var(--eas-ease),
     background-color var(--eas-dur-fast) var(--eas-ease);
 }
 .form-canvas.is-drop-active {
-  border: 2px dashed var(--eas-primary);
-  background: var(--eas-primary-tint);
-  border-radius: var(--eas-radius-panel);
+  outline: 2px dashed var(--eas-primary);
+  outline-offset: 4px;
+  background: var(--eas-sky-tint);
+  border-radius: var(--eas-radius-control);
+  padding: 4px;
 }
 .panel-title {
+  font-family: var(--eas-font-display);
+  font-size: var(--eas-fs-16);
   font-weight: 600;
-  font-size: 14px;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px dashed var(--eas-rule);
 }
 .field-card {
-  border: 1px solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  padding: 10px 12px;
-  background: var(--eas-sheet);
+  border: 0;
+  border-radius: var(--eas-radius-control);
+  padding: 12px 14px;
+  background: var(--eas-field);
   cursor: pointer;
-  transition:
-    border-color var(--eas-dur-fast) var(--eas-ease),
-    background-color var(--eas-dur-fast) var(--eas-ease);
   outline: none;
+  transition:
+    background-color var(--eas-dur-fast) var(--eas-ease),
+    box-shadow var(--eas-dur-fast) var(--eas-ease);
 }
 .field-card:hover {
-  border-color: var(--eas-primary);
-  background: var(--eas-primary-tint);
-}
-.field-card.is-drop-target {
-  border: 2px dashed var(--eas-primary) !important;
-  background: var(--eas-primary-tint) !important;
+  background: var(--eas-row-hover);
 }
 .field-card:focus-visible {
-  outline: 2px solid var(--eas-primary);
+  outline: 2px solid var(--eas-ink);
   outline-offset: 2px;
 }
 .field-card.is-selected {
-  border-color: var(--eas-primary);
-  box-shadow: 0 0 0 1px var(--eas-primary) inset;
+  box-shadow: var(--eas-offset-mark);
+}
+.field-card.is-drop-target {
+  outline: 2px dashed var(--eas-primary) !important;
+  outline-offset: 2px;
+  background: var(--eas-sky-tint) !important;
 }
 .field-card.has-issue {
-  border-color: var(--eas-danger);
+  background: var(--eas-danger-tint);
+  box-shadow: inset 4px 0 0 var(--eas-danger);
 }
 .field-card.has-issue.is-selected {
-  box-shadow: 0 0 0 1px var(--eas-danger) inset;
+  box-shadow: var(--eas-offset-mark), inset 4px 0 0 var(--eas-danger);
 }
 .card-head {
   display: flex;
@@ -281,7 +289,7 @@ function onCanvasDrop(e: DragEvent) {
   margin-left: 4px;
 }
 .preview {
-  margin-top: 8px;
+  margin-top: 10px;
   pointer-events: none;
 }
 .help {

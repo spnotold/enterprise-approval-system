@@ -19,7 +19,19 @@ defineProps<{ error: ApiError | null }>()
   margin-bottom: 12px;
 }
 .server-error-list {
-  margin: 4px 0 0;
-  padding-left: 18px;
+  margin: 6px 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+.server-error-list li {
+  display: flex;
+  gap: 8px;
+  font-size: var(--eas-fs-note);
+  line-height: 1.6;
+}
+.server-error-list li::before {
+  content: '—';
+  flex: none;
+  opacity: 0.7;
 }
 </style>
