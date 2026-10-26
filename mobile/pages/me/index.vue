@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import AdminNotice from '@/components/AdminNotice.vue'
 import { auth, requireLogin } from '@/stores/auth'
 import { notice } from '@/stores/notice'
+import { SWITCH_COLOR } from '@/utils/palette'
 import { confirm, showError, toast } from '@/utils/feedback'
 import { ROLE_LABEL } from '@/utils/labels'
 import { go, goAppList } from '@/utils/nav'
@@ -15,8 +16,6 @@ const me = computed(() => auth.state.me)
 const adminOnly = computed(() => auth.isAdminOnly)
 const canDept = computed(() => auth.can('APP_READ_DEPT'))
 const savingPref = ref(false)
-// 原生 switch 的 color 属性读不到 CSS 变量，值与 --eas-primary 保持一致
-const SWITCH_COLOR = '#3e5c76'
 
 onLoad(async () => {
   await requireLogin()
@@ -49,28 +48,29 @@ async function logout(): Promise<void> {
 
 <template>
   <view class="me">
-    <view class="panel profile">
-      <view class="avatar">{{ (me?.realName ?? '?').slice(0, 1) }}</view>
-      <view class="flex1">
+    <view class="profile">
+      <view class="avatar inked">{{ (me?.realName ?? '?').slice(0, 1) }}</view>
+      <view class="profile-main">
         <view class="name">{{ me?.realName ?? '—' }}</view>
         <view class="sub">
-          <text>{{ me?.username }}</text>
-          <text class="sub-gap">{{ me?.deptName ?? '未分配部门' }}</text>
-        </view>
-        <view class="sub ellipsis">{{ me?.email }}</view>
-        <view v-if="me?.roles?.length" class="roles">
-          <text v-for="r in me?.roles ?? []" :key="r.code" class="role">
+          <text>{{ me?.deptName ?? '未分配部门' }}</text>
+          <text v-for="r in me?.roles ?? []" :key="r.code" class="sub-gap">
             {{ ROLE_LABEL[r.code] ?? r.name }}<text v-if="r.primaryHandler">（主办）</text>
           </text>
+        </view>
+        <view class="sub">
+          <text>{{ me?.username }}</text>
+          <text class="sub-gap">{{ me?.email }}</text>
         </view>
       </view>
     </view>
 
     <AdminNotice v-if="adminOnly" />
 
-    <view class="panel menu">
+    <view class="card menu">
       <view v-if="!adminOnly" class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="goAppList()">
         <text class="flex1">我的申请</text>
+        <view class="chevron" />
       </view>
       <view
         v-if="!adminOnly && canDept"
@@ -80,12 +80,15 @@ async function logout(): Promise<void> {
         @tap="goAppList({ scope: 'dept' })"
       >
         <text class="flex1">本部门申请</text>
+        <view class="chevron" />
       </view>
       <view v-if="!adminOnly" class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="go('/pages/stats/index')">
         <text class="flex1">统计报表</text>
+        <view class="chevron" />
       </view>
       <view class="row-item" hover-class="is-pressed" :hover-stay-time="60" @tap="go('/pages/me/password')">
         <text class="flex1">修改密码</text>
+        <view class="chevron" />
       </view>
       <view class="row-item">
         <view class="flex1">
@@ -96,7 +99,7 @@ async function logout(): Promise<void> {
       </view>
     </view>
 
-    <button class="logout" hover-class="is-pressed" :hover-stay-time="60" @tap="logout">退出登录</button>
+    <button class="btn btn-ghost-danger logout" hover-class="is-pressed" :hover-stay-time="60" @tap="logout">退出登录</button>
   </view>
 </template>
 
@@ -104,23 +107,16 @@ async function logout(): Promise<void> {
 .me {
   min-height: 100vh;
   padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
-  background: var(--eas-paper);
+  background: var(--eas-desk);
   color: var(--eas-ink);
   font-family: var(--eas-font-sans);
 }
 
-.panel {
-  margin-bottom: 24rpx;
-  background: var(--eas-surface);
-  border: 1rpx solid var(--eas-rule);
-  border-radius: var(--eas-radius-panel);
-  overflow: hidden;
-}
-
+/* ---------- 顶部：鼠尾草圆头像 + 展示字姓名，直接放在页面底上 ---------- */
 .profile {
   display: flex;
   align-items: center;
-  padding: 32rpx;
+  padding: 24rpx 8rpx 40rpx;
 }
 
 .avatar {
@@ -128,59 +124,59 @@ async function logout(): Promise<void> {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 112rpx;
-  height: 112rpx;
-  margin-right: 24rpx;
+  width: 120rpx;
+  height: 120rpx;
+  margin-right: 28rpx;
   border-radius: 50%;
-  background: var(--eas-primary-tint);
-  border: 1rpx solid var(--eas-rule-strong);
-  color: var(--eas-primary);
-  font-size: var(--eas-fs-lg);
-  font-weight: 600;
+  background-color: var(--eas-sage);
+  color: var(--eas-ink);
+  font-family: var(--eas-font-display);
+  font-size: 56rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.profile-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .name {
-  font-size: var(--eas-fs-md);
-  font-weight: 600;
-  line-height: 1.4;
+  font-family: var(--eas-font-display);
+  font-size: 44rpx;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
+  color: var(--eas-ink);
+  line-height: 1.3;
 }
 
 .sub {
+  display: flex;
+  flex-wrap: wrap;
   font-size: var(--eas-fs-xs);
   line-height: 1.6;
-  color: var(--eas-ink-3);
+  color: var(--eas-ink-2);
 }
 
 .sub-gap {
-  margin-left: 20rpx;
+  margin-left: 24rpx;
 }
 
-.roles {
-  display: flex;
-  flex-wrap: wrap;
-  margin-top: 8rpx;
-}
-
-.role {
-  margin: 0 12rpx 8rpx 0;
-  padding: 0 12rpx;
-  font-size: var(--eas-fs-xs);
-  line-height: 40rpx;
-  color: var(--eas-primary);
-  border: 1rpx solid var(--eas-rule-strong);
-  border-radius: var(--eas-radius-tag);
-}
-
+/* ---------- 设置项：一张单据，行间一条细线 ---------- */
 .menu {
   padding: 0;
+  overflow: hidden;
 }
 
 .row-item {
   display: flex;
   align-items: center;
-  min-height: 104rpx;
+  justify-content: space-between;
+  gap: 24rpx;
+  min-height: 88rpx;
   padding: 16rpx 32rpx;
   font-size: var(--eas-fs-sm);
+  color: var(--eas-ink);
   border-top: 1rpx solid var(--eas-rule);
 }
 
@@ -188,23 +184,18 @@ async function logout(): Promise<void> {
   border-top: none;
 }
 
-.logout {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 88rpx;
-  margin: 0;
-  padding: 0;
-  line-height: 88rpx;
-  font-size: var(--eas-fs-md);
-  color: var(--eas-danger);
-  background: var(--eas-surface);
-  border: 2rpx solid var(--eas-danger);
-  border-radius: var(--eas-radius-control);
+.chevron {
+  flex: none;
+  width: 14rpx;
+  height: 14rpx;
+  border-right: 3rpx solid var(--eas-ink-3);
+  border-bottom: 3rpx solid var(--eas-ink-3);
+  transform: rotate(-45deg);
 }
 
-.logout::after {
-  border: none;
+/* ---------- 退出登录：通栏纸色按钮，铁锈字 ---------- */
+.logout {
+  width: calc(100% - 8rpx);
+  margin: 0 8rpx 0 0;
 }
 </style>
