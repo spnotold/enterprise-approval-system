@@ -198,6 +198,11 @@ function hasData(r: AuditLogView): boolean {
 .audit-table {
   width: 100%;
 }
+/* 列多的密集表格：单元格左右收紧，否则全局 16px 内边距会把固定列里的内容挤掉 */
+.audit-table :deep(.cell) {
+  padding-right: 8px;
+  padding-left: 8px;
+}
 .cell-nowrap {
   white-space: nowrap;
 }

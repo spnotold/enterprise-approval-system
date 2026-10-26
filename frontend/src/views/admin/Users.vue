@@ -558,6 +558,11 @@ async function submitGrant() {
 .users-table {
   width: 100%;
 }
+/* 列多的密集表格：单元格左右收紧，否则全局 16px 内边距会把固定列里的内容挤掉 */
+.users-table :deep(.cell) {
+  padding-right: 6px;
+  padding-left: 6px;
+}
 .cell-ellipsis {
   display: block;
   min-width: 0;
