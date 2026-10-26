@@ -46,30 +46,33 @@ export function shortDesc(t: Pick<TemplateOption, 'category' | 'bizType' | 'desc
 
 export type ApplyIllustrationKey = 'purchase' | 'travel' | 'expense' | 'leave' | 'seal' | 'generic'
 
-/** 根据模板类型、编码与名称匹配对应的套色插画键名 */
+/** 编码分段 → 插画；按顺序匹配，排在前面的更具体 */
+const CODE_RULES: [ApplyIllustrationKey, string[]][] = [
+  ['leave', ['LEAVE']],
+  ['seal', ['SEAL', 'STAMP']],
+  ['expense', ['EXPENSE', 'REIMBURSE', 'REIMBURSEMENT']],
+  ['travel', ['TRAVEL', 'TRIP']],
+  ['purchase', ['PURCHASE', 'PROCUREMENT']],
+]
+/** 名称关键词 → 插画；「报销」排在「差旅」「采购」前面，「差旅报销」「采购报销」都算报销 */
+const NAME_RULES: [ApplyIllustrationKey, string[]][] = [
+  ['leave', ['请假', '休假']],
+  ['seal', ['用章', '印章', '盖章']],
+  ['expense', ['报销']],
+  ['travel', ['差旅', '出差']],
+  ['purchase', ['采购']],
+]
+
+/** 根据模板类型、编码与名称匹配对应的套色插画键名：先看业务类型，再看编码，最后看名称 */
 export function resolveApplyIllustrationKey(
   t: Pick<TemplateOption, 'bizType' | 'code' | 'name'>,
 ): ApplyIllustrationKey {
   if (t.bizType === 'PURCHASE') return 'purchase'
   if (t.bizType === 'TRAVEL') return 'travel'
   if (t.bizType === 'EXPENSE') return 'expense'
-  const code = (t.code ?? '').toUpperCase()
+  const codeParts = (t.code ?? '').toUpperCase().split(/[^A-Z0-9]+/)
+  for (const [key, words] of CODE_RULES) if (words.some((w) => codeParts.includes(w))) return key
   const name = t.name ?? ''
-  const codeParts = code.split(/[^A-Z0-9]+/)
-  if (codeParts.includes('LEAVE') || name.includes('请假') || name.includes('休假')) {
-    return 'leave'
-  }
-  if (
-    codeParts.includes('SEAL') ||
-    codeParts.includes('STAMP') ||
-    name.includes('用章') ||
-    name.includes('印章') ||
-    name.includes('盖章')
-  ) {
-    return 'seal'
-  }
-  if (codeParts.includes('PURCHASE') || name.includes('采购')) return 'purchase'
-  if (codeParts.includes('TRAVEL') || name.includes('差旅') || name.includes('出差')) return 'travel'
-  if (codeParts.includes('EXPENSE') || name.includes('报销')) return 'expense'
+  for (const [key, words] of NAME_RULES) if (words.some((w) => name.includes(w))) return key
   return 'generic'
 }

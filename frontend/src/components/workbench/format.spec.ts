@@ -67,6 +67,13 @@ describe('shortDesc', () => {
 })
 
 describe('resolveApplyIllustrationKey', () => {
+  it('trusts an explicit code over words in the name, and reads compound names as expenses', () => {
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'EXPENSE_REIMBURSEMENT', name: '差旅报销申请' })).toBe('expense')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'CUSTOM_EXPENSE', name: '采购报销申请' })).toBe('expense')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'CUSTOM_9', name: '差旅报销' })).toBe('expense')
+    expect(resolveApplyIllustrationKey({ bizType: 'CUSTOM', code: 'TRAVEL_EXTRA', name: '补充采购' })).toBe('travel')
+  })
+
   it('maps builtin business types directly', () => {
     expect(resolveApplyIllustrationKey({ bizType: 'PURCHASE', code: 'BUILTIN_PURCHASE', name: '采购申请' })).toBe('purchase')
     expect(resolveApplyIllustrationKey({ bizType: 'TRAVEL', code: 'BUILTIN_TRAVEL', name: '差旅申请' })).toBe('travel')
