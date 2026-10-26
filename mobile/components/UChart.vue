@@ -37,10 +37,13 @@ const BASE_TOOLTIP = {
   borderRadius: 2,
   gridColor: RULE_STRONG,
 }
+// 环形图 / 饼图：中心和边框都留纸色，图例与坐标轴用 ink-2；
+// 柱子顶部圆角（barBorderRadius 依次是左上、右上、右下、左下）。
+const BAR_TOP_RADIUS = 8
 const BASE_TYPE_EXTRA: Record<string, Record<string, unknown>> = {
-  ring: { borderWidth: 2, borderColor: SURFACE, centerColor: SURFACE },
-  pie: { borderWidth: 2, borderColor: SURFACE },
-  column: { activeBgColor: INK, activeBgOpacity: 0.06 },
+  ring: { border: true, borderWidth: 2, borderColor: SURFACE, centerColor: SURFACE },
+  pie: { border: true, borderWidth: 2, borderColor: SURFACE, centerColor: SURFACE },
+  column: { activeBgColor: INK, activeBgOpacity: 0.06, barBorderRadius: [BAR_TOP_RADIUS, BAR_TOP_RADIUS, 0, 0] },
 }
 
 const uid = `uc${Math.random().toString(36).slice(2, 10)}`
