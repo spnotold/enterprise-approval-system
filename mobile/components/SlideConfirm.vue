@@ -222,8 +222,9 @@ onBeforeUnmount(clearArm)
 .slide-track {
   position: relative;
   height: 96rpx;
-  background: var(--eas-paper-deep);
-  border-radius: var(--eas-radius-control);
+  min-height: 96rpx;
+  background: var(--eas-tab);
+  border-radius: var(--eas-radius-pill);
   overflow: hidden;
 }
 
@@ -233,8 +234,8 @@ onBeforeUnmount(clearArm)
   left: 0;
   top: 0;
   bottom: 0;
-  background: var(--eas-primary-tint);
-  border-radius: var(--eas-radius-control);
+  background: var(--eas-sage);
+  border-radius: var(--eas-radius-pill);
   transition: width var(--eas-dur) var(--eas-ease);
 }
 
@@ -260,21 +261,26 @@ onBeforeUnmount(clearArm)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--eas-primary);
-  border-radius: var(--eas-radius-control);
+  background-color: var(--eas-primary);
+  background-image: var(--eas-grain);
+  background-size: var(--eas-grain-size);
+  background-blend-mode: multiply;
+  border-radius: 50%;
+  box-shadow: var(--eas-offset-mark);
   transition: transform var(--eas-dur) var(--eas-ease), background-color var(--eas-dur) var(--eas-ease);
   touch-action: none;
 }
 
+/* #ifdef H5 */
+.slide-knob:focus-visible {
+  outline: 4rpx solid var(--eas-sheet);
+  outline-offset: -10rpx;
+}
+/* #endif */
+
 .slide-knob.dragging,
 .slide-fill.dragging {
   transition: none;
-}
-
-/* H5 键盘聚焦：轨道内描边，避免被 overflow 裁掉 */
-.slide-knob:focus-visible {
-  outline: 4rpx solid var(--eas-surface);
-  outline-offset: -10rpx;
 }
 
 /* 键盘待确认：提示文字加重，等第二次按键 */
@@ -307,13 +313,13 @@ onBeforeUnmount(clearArm)
 }
 
 .slide.is-done .slide-fill {
-  background: var(--eas-success-tint);
+  background: var(--eas-sage);
 }
 
 .slide.is-done .slide-hint {
   left: 0;
   right: 96rpx;
-  color: var(--eas-success);
+  color: var(--eas-ink);
   font-weight: 600;
 }
 

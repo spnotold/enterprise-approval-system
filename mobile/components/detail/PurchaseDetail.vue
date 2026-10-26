@@ -144,12 +144,10 @@ function money(cents: number | null): string {
   flex: 0 1 auto;
 }
 
-/* 拟选报价：左侧 4rpx 主色竖线 */
+/* 拟选报价：芥黄错版标明当前选择 */
 .quote.selected {
-  margin: 0 -28rpx;
-  padding-left: 24rpx;
-  padding-right: 28rpx;
-  border-left: 4rpx solid var(--eas-primary);
+  background: var(--eas-mustard-tint);
+  box-shadow: var(--eas-offset-mark);
 }
 
 .line-amount.lowest {

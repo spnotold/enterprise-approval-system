@@ -256,7 +256,7 @@ onPullDownRefresh(() => void load(true))
 
 <template>
   <view class="page" :class="{ 'page--bar': actions.length }">
-    <EmptyState v-if="notFound" text="无权查看或申请已不存在" />
+    <EmptyState v-if="notFound" kind="none" text="无权查看或申请已不存在" />
     <AppDetailBody v-else-if="detail" :detail="detail" :stamp-seq="stampSeq" />
 
     <view v-if="detail && actions.length" class="bottom-bar">

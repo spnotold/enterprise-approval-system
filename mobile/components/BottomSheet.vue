@@ -105,7 +105,7 @@ function onDragEnd(): void {
   top: 0;
   bottom: 0;
   z-index: 200;
-  background: rgba(34, 48, 58, 0.4);
+  background: rgba(34, 49, 63, 0.4);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -118,9 +118,9 @@ function onDragEnd(): void {
 }
 
 .sheet {
-  background: var(--eas-surface);
-  border-radius: var(--eas-radius-panel) var(--eas-radius-panel) 0 0;
-  box-shadow: var(--eas-shadow-float);
+  background: var(--eas-sheet);
+  border-radius: var(--eas-radius-sheet-top) var(--eas-radius-sheet-top) 0 0;
+  box-shadow: 0 -6rpx 0 var(--eas-shade);
   padding-bottom: env(safe-area-inset-bottom);
   max-height: 85vh;
   display: flex;
@@ -158,7 +158,7 @@ function onDragEnd(): void {
 
 .sheet-grab {
   flex-shrink: 0;
-  border-bottom: 1rpx solid var(--eas-rule);
+  border-bottom: 4rpx dashed var(--eas-rule);
 }
 
 .sheet-handle {
@@ -177,8 +177,10 @@ function onDragEnd(): void {
 }
 
 .sheet-title {
-  font-size: var(--eas-fs-md);
-  font-weight: 600;
+  font-family: var(--eas-font-display);
+  font-size: 36rpx;
+  font-weight: 700;
+  letter-spacing: var(--eas-display-tracking);
   color: var(--eas-ink);
 }
 

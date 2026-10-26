@@ -138,25 +138,6 @@ async function onSlideConfirm(): Promise<void> {
 </template>
 
 <style scoped>
-.textarea {
-  width: 100%;
-  min-height: 200rpx;
-  background: var(--eas-paper);
-  border: 2rpx solid transparent;
-  border-radius: var(--eas-radius-control);
-  color: var(--eas-ink);
-  transition: border-color var(--eas-dur-fast) var(--eas-ease);
-}
-
-.textarea.is-focus {
-  border-color: var(--eas-primary);
-}
-
-.textarea.is-error {
-  background: var(--eas-danger-tint) !important;
-  border-color: var(--eas-danger);
-}
-
 .count {
   flex-shrink: 0;
   margin-top: 8rpx;
