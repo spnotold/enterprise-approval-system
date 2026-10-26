@@ -54,41 +54,61 @@ const router = useRouter()
 
 /** 从全局 CSS 变量读色值，避免在图表配置里写死颜色 */
 function cssVar(name: string): string {
+  if (typeof window === 'undefined') return ''
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
 const STATUS_ORDER: AppStatus[] = ['DRAFT', 'IN_APPROVAL', 'APPROVED', 'REJECTED', 'WITHDRAWN']
-/** 状态分布沿用第 2 节的状态语义色；其余图表按序列使用图表配色。 */
-const STATUS_COLOR: Record<AppStatus, string> = {
-  DRAFT: cssVar('--eas-muted'),
-  IN_APPROVAL: cssVar('--eas-primary'),
-  APPROVED: cssVar('--eas-success'),
-  REJECTED: cssVar('--eas-danger'),
-  // 与草稿同为灰色的已撤回会和草稿在环形图上连成一片，借用图表第 6 色区分
-  WITHDRAWN: cssVar('--eas-chart-6'),
+
+function getChartColors(): string[] {
+  return Array.from({ length: 6 }, (_, i) => cssVar(`--eas-chart-${i + 1}`))
 }
-const CHART_COLORS = Array.from({ length: 6 }, (_, i) => cssVar(`--eas-chart-${i + 1}`))
+
+/** 状态色映射到套色体系（IN_APPROVAL=藏青, APPROVED=鼠尾草, REJECTED=铁锈, DRAFT=灰, WITHDRAWN=天青） */
+function getStatusColors(): Record<AppStatus, string> {
+  return {
+    DRAFT: cssVar('--eas-chart-5'),
+    IN_APPROVAL: cssVar('--eas-chart-1'),
+    APPROVED: cssVar('--eas-chart-2'),
+    REJECTED: cssVar('--eas-chart-4'),
+    WITHDRAWN: cssVar('--eas-chart-6'),
+  }
+}
+
 const TYPE_ORDER: AppType[] = ['PURCHASE', 'TRAVEL', 'EXPENSE', 'CUSTOM']
-const AXIS_TEXT = cssVar('--eas-ink-2')
-const GRID_LINE = cssVar('--eas-rule')
-const SURFACE = cssVar('--eas-sheet')
-const AXIS_LINE = { lineStyle: { color: GRID_LINE } }
-const CHART_BASE = {
-  color: CHART_COLORS,
-  // 不播放装饰性入场动画，同时覆盖 prefers-reduced-motion 场景。
-  animation: false,
-  textStyle: { fontFamily: cssVar('--eas-font-sans'), color: AXIS_TEXT },
+
+function getChartBase() {
+  const axisText = cssVar('--eas-ink-2')
+  return {
+    backgroundColor: 'transparent',
+    color: getChartColors(),
+    animation: false,
+    textStyle: { fontFamily: cssVar('--eas-font-sans'), color: axisText },
+  }
 }
-const TOOLTIP: TooltipComponentOption = {
-  backgroundColor: SURFACE,
-  borderColor: GRID_LINE,
-  textStyle: { color: AXIS_TEXT, fontFamily: cssVar('--eas-font-sans') },
-  extraCssText: 'box-shadow: none; font-variant-numeric: tabular-nums;',
-  axisPointer: {
-    lineStyle: { color: GRID_LINE },
-    shadowStyle: { color: cssVar('--eas-tab'), opacity: 0.5 },
-  },
+
+function getTooltip(): TooltipComponentOption {
+  const ink = cssVar('--eas-ink')
+  const fontSans = cssVar('--eas-font-sans')
+  const surface = cssVar('--eas-sheet')
+  const ruleStrong = cssVar('--eas-rule-strong')
+  const shade = cssVar('--eas-shade')
+  const tab = cssVar('--eas-tab')
+
+  return {
+    backgroundColor: surface,
+    borderColor: ruleStrong,
+    borderWidth: 1,
+    padding: [10, 14],
+    textStyle: { color: ink, fontFamily: fontSans, fontSize: 13 },
+    extraCssText: `border-radius: 12px; box-shadow: 4px 4px 0 ${shade}; font-variant-numeric: tabular-nums; line-height: 1.6;`,
+    axisPointer: {
+      lineStyle: { color: ruleStrong, width: 1.5 },
+      shadowStyle: { color: tab, opacity: 0.6 },
+    },
+  }
 }
+
 const SERIES_EMPHASIS = { focus: 'series' as const }
 const SERIES_BLUR = { itemStyle: { opacity: 0.2 }, lineStyle: { opacity: 0.2 } }
 
@@ -246,9 +266,6 @@ onMounted(() => {
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 /** ECharts 的 tooltip 以 HTML 渲染，部门名、费用类型名等文本必须转义 */
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c])
-const pct = (r: number | null | undefined) => (r == null ? '—' : `${(r * 100).toFixed(1)}%`)
-/** 仅用于坐标轴刻度（元） */
-const yuanAxis = (v: number) => (Math.abs(v) >= 10000 ? `${Number((v / 10000).toFixed(1))}万` : String(v))
 
 function paramList(p: TooltipComponentFormatterCallbackParams) {
   return Array.isArray(p) ? p : [p]
@@ -277,36 +294,44 @@ function pieTooltip(params: TooltipComponentFormatterCallbackParams) {
   return `${markerOf(p)}${esc(p.name)}：<b>${esc(p.value)}</b> 单（${esc(p.percent)}%）`
 }
 
-const LEGEND: LegendComponentOption = {
-  top: 0,
-  icon: 'roundRect',
-  itemWidth: 12,
-  itemHeight: 8,
-  textStyle: { color: AXIS_TEXT },
-  inactiveColor: cssVar('--eas-ink-3'),
-  inactiveBorderColor: GRID_LINE,
+function getLegend(): LegendComponentOption {
+  const axisText = cssVar('--eas-ink-2')
+  const ink3 = cssVar('--eas-ink-3')
+  const gridLine = cssVar('--eas-rule')
+  return {
+    top: 0,
+    icon: 'roundRect',
+    itemWidth: 12,
+    itemHeight: 8,
+    textStyle: { color: axisText },
+    inactiveColor: ink3,
+    inactiveBorderColor: gridLine,
+  }
 }
 
 function statusPie(counts: Partial<Record<AppStatus, number>>): ChartOption | null {
+  const statusColors = getStatusColors()
+  const surface = cssVar('--eas-sheet')
+  const axisText = cssVar('--eas-ink-2')
   const data = STATUS_ORDER.filter((s) => (counts[s] ?? 0) > 0).map((s) => ({
     name: APP_STATUS_LABEL[s],
     value: counts[s] ?? 0,
-    itemStyle: { color: STATUS_COLOR[s] },
+    itemStyle: { color: statusColors[s] },
   }))
   if (!data.length) return null
   return {
-    ...CHART_BASE,
-    tooltip: { ...TOOLTIP, trigger: 'item', formatter: pieTooltip },
-    legend: { ...LEGEND, top: undefined, bottom: 0 },
+    ...getChartBase(),
+    tooltip: { ...getTooltip(), trigger: 'item', formatter: pieTooltip },
+    legend: { ...getLegend(), top: undefined, bottom: 0 },
     series: [
       {
         type: 'pie',
         radius: ['45%', '70%'],
         center: ['50%', '45%'],
-        itemStyle: { borderColor: SURFACE, borderWidth: 2, borderRadius: 4 },
+        itemStyle: { borderColor: surface, borderWidth: 2, borderRadius: 4 },
         emphasis: SERIES_EMPHASIS,
         blur: SERIES_BLUR,
-        label: { formatter: '{b} {c}', color: AXIS_TEXT },
+        label: { formatter: '{b} {c}', color: axisText },
         data,
       },
     ],
@@ -325,8 +350,16 @@ const deptLedger = computed<LedgerItem[]>(() => {
   return [
     { label: '申请数', value: `${t.count}`, unit: '单' },
     { label: '已通过金额', cents: t.approvedAmountCents },
-    { label: '通过率', value: pct(t.approvalRate) },
-    { label: '平均审批时长', value: fmtHours(t.avgApprovalHours) },
+    {
+      label: '通过率',
+      value: t.approvalRate != null ? (t.approvalRate * 100).toFixed(1) : '—',
+      unit: t.approvalRate != null ? '%' : undefined,
+    },
+    {
+      label: '平均审批时长',
+      value: t.avgApprovalHours != null ? (Math.round(t.avgApprovalHours * 10) / 10).toFixed(1) : '—',
+      unit: t.avgApprovalHours != null ? '小时' : undefined,
+    },
   ]
 })
 
@@ -354,38 +387,49 @@ const deptTypeBar = computed<ChartOption | null>(() => {
   const statuses = STATUS_ORDER.filter((s) => rows.some((r) => r.status === s && r.count > 0))
   const countOf = (t: AppType, s: AppStatus) =>
     rows.filter((r) => r.type === t && r.status === s).reduce((n, r) => n + r.count, 0)
+  const statusColors = getStatusColors()
+  const axisText = cssVar('--eas-ink-2')
+  const gridLine = cssVar('--eas-rule')
+  const surface = cssVar('--eas-sheet')
+  const axisLine = { lineStyle: { color: gridLine } }
+
   return {
-    ...CHART_BASE,
+    ...getChartBase(),
     tooltip: {
-      ...TOOLTIP,
+      ...getTooltip(),
       trigger: 'axis',
-      axisPointer: { ...TOOLTIP.axisPointer, type: 'shadow' },
+      axisPointer: { ...getTooltip().axisPointer, type: 'shadow' },
       formatter: countTooltip(true),
     },
-    legend: LEGEND,
+    legend: getLegend(),
     grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
       data: types.map((t) => APP_TYPE_LABEL[t]),
-      axisLine: AXIS_LINE,
-      axisLabel: { color: AXIS_TEXT },
+      axisLine,
+      axisLabel: { color: axisText },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
-      axisLine: AXIS_LINE,
-      axisLabel: { color: AXIS_TEXT },
-      splitLine: { lineStyle: { color: GRID_LINE } },
+      axisLine,
+      axisLabel: { color: axisText },
+      splitLine: { lineStyle: { color: gridLine } },
     },
     series: statuses.map((s) => ({
       name: APP_STATUS_LABEL[s],
       type: 'bar' as const,
       stack: 'total',
-      barMaxWidth: 48,
-      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: STATUS_COLOR[s], borderWidth: 2 } },
+      barMaxWidth: 44,
+      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: statusColors[s], borderWidth: 2 } },
       blur: SERIES_BLUR,
-      itemStyle: { color: STATUS_COLOR[s], borderColor: SURFACE, borderWidth: 1 },
+      itemStyle: {
+        color: statusColors[s],
+        borderColor: surface,
+        borderWidth: 1,
+        borderRadius: [4, 4, 0, 0],
+      },
       data: types.map((t) => countOf(t, s)),
     })),
   }
@@ -419,10 +463,15 @@ const deptMonthly = computed<MonthlyRow[]>(() => {
 const deptMonthlyLine = computed<ChartOption | null>(() => {
   const rows = deptMonthly.value
   if (!rows.some((r) => r.count > 0 || r.approvedAmountCents > 0)) return null
+  const chartColors = getChartColors()
+  const axisText = cssVar('--eas-ink-2')
+  const gridLine = cssVar('--eas-rule')
+  const axisLine = { lineStyle: { color: gridLine } }
+
   return {
-    ...CHART_BASE,
+    ...getChartBase(),
     tooltip: {
-      ...TOOLTIP,
+      ...getTooltip(),
       trigger: 'axis',
       formatter: (params: TooltipComponentFormatterCallbackParams) => {
         const list = paramList(params)
@@ -437,13 +486,13 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         ].join('<br/>')
       },
     },
-    legend: LEGEND,
+    legend: getLegend(),
     grid: { left: 32, right: 32, top: 56, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
       data: rows.map((r) => r.month),
-      axisLine: AXIS_LINE,
-      axisLabel: { color: AXIS_TEXT },
+      axisLine,
+      axisLabel: { color: axisText },
       axisTick: { show: false },
     },
     yAxis: [
@@ -454,10 +503,10 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         min: 0,
         minInterval: 1,
         nameGap: 16,
-        nameTextStyle: { color: AXIS_TEXT, align: 'left', padding: [0, 0, 0, 8] },
-        axisLine: AXIS_LINE,
-        axisLabel: { color: AXIS_TEXT },
-        splitLine: { lineStyle: { color: GRID_LINE } },
+        nameTextStyle: { color: axisText, align: 'left', padding: [0, 0, 0, 8] },
+        axisLine,
+        axisLabel: { color: axisText },
+        splitLine: { lineStyle: { color: gridLine } },
       },
       {
         type: 'value',
@@ -465,9 +514,12 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         position: 'right',
         min: 0,
         nameGap: 16,
-        nameTextStyle: { color: AXIS_TEXT, align: 'right', padding: [0, 8, 0, 0] },
-        axisLine: AXIS_LINE,
-        axisLabel: { color: AXIS_TEXT, formatter: yuanAxis },
+        nameTextStyle: { color: axisText, align: 'right', padding: [0, 8, 0, 0] },
+        axisLine,
+        axisLabel: {
+          color: axisText,
+          formatter: (v: number) => (Math.abs(v) >= 10000 ? `${Number((v / 10000).toFixed(1))}万` : String(v)),
+        },
         splitLine: { show: false },
       },
     ],
@@ -477,8 +529,8 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         type: 'bar',
         yAxisIndex: 0,
         barMaxWidth: 32,
-        itemStyle: { color: CHART_COLORS[0], borderRadius: [4, 4, 0, 0] },
-        emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[0], borderWidth: 2 } },
+        itemStyle: { color: chartColors[0], borderRadius: [6, 6, 0, 0] },
+        emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: chartColors[0], borderWidth: 2 } },
         blur: SERIES_BLUR,
         data: rows.map((r) => r.count),
       },
@@ -489,7 +541,7 @@ const deptMonthlyLine = computed<ChartOption | null>(() => {
         z: 3,
         symbolSize: 8,
         lineStyle: { width: 2 },
-        itemStyle: { color: CHART_COLORS[1] },
+        itemStyle: { color: chartColors[1] },
         emphasis: SERIES_EMPHASIS,
         blur: SERIES_BLUR,
         // 仅用于绘图：分转元
@@ -515,7 +567,11 @@ const financeLedger = computed<LedgerItem[]>(() => {
     { label: '报销已通过金额', cents: financeTotals.value.expenseCents },
     { label: '采购已通过金额', cents: financeTotals.value.purchaseCents },
     { label: '无票金额', cents: d.noInvoice.amountCents },
-    { label: '无票金额占比', value: pct(d.noInvoice.ratio) },
+    {
+      label: '无票金额占比',
+      value: d.noInvoice.ratio != null ? (d.noInvoice.ratio * 100).toFixed(1) : '—',
+      unit: d.noInvoice.ratio != null ? '%' : undefined,
+    },
   ]
 })
 
@@ -533,12 +589,17 @@ const financeBarHeight = computed(() => Math.max(240, financeTypes.value.length 
 const financeBar = computed<ChartOption | null>(() => {
   const rows = financeTypes.value
   if (!rows.some((r) => r.approvedAmountCents > 0 || r.itemCount > 0)) return null
+  const chartColors = getChartColors()
+  const axisText = cssVar('--eas-ink-2')
+  const gridLine = cssVar('--eas-rule')
+  const axisLine = { lineStyle: { color: gridLine } }
+
   return {
-    ...CHART_BASE,
+    ...getChartBase(),
     tooltip: {
-      ...TOOLTIP,
+      ...getTooltip(),
       trigger: 'axis',
-      axisPointer: { ...TOOLTIP.axisPointer, type: 'shadow' },
+      axisPointer: { ...getTooltip().axisPointer, type: 'shadow' },
       formatter: (params: TooltipComponentFormatterCallbackParams) => {
         const r = rows[paramList(params)[0]?.dataIndex ?? -1]
         if (!r) return ''
@@ -552,15 +613,18 @@ const financeBar = computed<ChartOption | null>(() => {
     grid: { left: 8, right: 110, top: 8, bottom: 8, containLabel: true },
     xAxis: {
       type: 'value',
-      axisLine: AXIS_LINE,
-      axisLabel: { color: AXIS_TEXT, formatter: yuanAxis },
-      splitLine: { lineStyle: { color: GRID_LINE } },
+      axisLine,
+      axisLabel: {
+        color: axisText,
+        formatter: (v: number) => (Math.abs(v) >= 10000 ? `${Number((v / 10000).toFixed(1))}万` : String(v)),
+      },
+      splitLine: { lineStyle: { color: gridLine } },
     },
     yAxis: {
       type: 'category',
       data: rows.map((r) => r.name),
-      axisLine: AXIS_LINE,
-      axisLabel: { color: AXIS_TEXT },
+      axisLine,
+      axisLabel: { color: axisText },
       axisTick: { show: false },
     },
     series: [
@@ -568,13 +632,13 @@ const financeBar = computed<ChartOption | null>(() => {
         name: '已通过金额',
         type: 'bar',
         barMaxWidth: 24,
-        itemStyle: { color: CHART_COLORS[0], borderRadius: [0, 4, 4, 0] },
-        emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[0], borderWidth: 2 } },
+        itemStyle: { color: chartColors[0], borderRadius: [0, 6, 6, 0] },
+        emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: chartColors[0], borderWidth: 2 } },
         blur: SERIES_BLUR,
         label: {
           show: true,
           position: 'right',
-          color: AXIS_TEXT,
+          color: axisText,
           formatter: (p: DefaultLabelFormatterCallbackParams) =>
             `¥${formatCents(rows[p.dataIndex]?.approvedAmountCents ?? 0)}`,
         },
@@ -617,42 +681,47 @@ const enterpriseLedger = computed<LedgerItem[]>(() => {
 const enterpriseBar = computed<ChartOption | null>(() => {
   const rows = enterprise.data.value?.byDept ?? []
   if (!rows.length) return null
+  const chartColors = getChartColors()
+  const axisText = cssVar('--eas-ink-2')
+  const gridLine = cssVar('--eas-rule')
+  const axisLine = { lineStyle: { color: gridLine } }
+
   const series: { name: string; key: 'count' | 'approvedCount' | 'rejectedCount' }[] = [
     { name: '申请数', key: 'count' },
     { name: '已通过', key: 'approvedCount' },
     { name: '已驳回', key: 'rejectedCount' },
   ]
   return {
-    ...CHART_BASE,
+    ...getChartBase(),
     tooltip: {
-      ...TOOLTIP,
+      ...getTooltip(),
       trigger: 'axis',
-      axisPointer: { ...TOOLTIP.axisPointer, type: 'shadow' },
+      axisPointer: { ...getTooltip().axisPointer, type: 'shadow' },
       formatter: countTooltip(false),
     },
-    legend: LEGEND,
+    legend: getLegend(),
     grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
       data: rows.map((r) => r.deptName),
-      axisLine: AXIS_LINE,
-      axisLabel: { color: AXIS_TEXT, interval: 0, rotate: rows.length > 5 ? 30 : 0 },
+      axisLine,
+      axisLabel: { color: axisText, interval: 0, rotate: rows.length > 5 ? 30 : 0 },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
-      axisLine: AXIS_LINE,
-      axisLabel: { color: AXIS_TEXT },
-      splitLine: { lineStyle: { color: GRID_LINE } },
+      axisLine,
+      axisLabel: { color: axisText },
+      splitLine: { lineStyle: { color: gridLine } },
     },
     series: series.map((s, i) => ({
       name: s.name,
       type: 'bar' as const,
       barMaxWidth: 28,
       barGap: '10%',
-      itemStyle: { color: CHART_COLORS[i], borderRadius: [4, 4, 0, 0] },
-      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: CHART_COLORS[i], borderWidth: 2 } },
+      itemStyle: { color: chartColors[i], borderRadius: [6, 6, 0, 0] },
+      emphasis: { ...SERIES_EMPHASIS, itemStyle: { borderColor: chartColors[i], borderWidth: 2 } },
       blur: SERIES_BLUR,
       data: rows.map((r) => r[s.key]),
     })),
@@ -665,6 +734,10 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
 
 <template>
   <div class="page stats-page">
+    <header class="stats-header">
+      <h1 class="page-title">统计</h1>
+    </header>
+
     <IndexTabs class="stats-tabs" :items="tabItems" :active="active" label="统计范围" @select="onSelect">
       <template #actions>
         <div class="stats-actions">
@@ -702,7 +775,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
         <el-skeleton :rows="5" animated />
       </div>
       <div v-else-if="personal.failed.value" class="sheet">
-        <ListEmpty description="统计数据加载失败">
+        <ListEmpty description="统计数据加载失败，请检查网络或稍后重试">
           <template #action>
             <el-button type="primary" @click="personal.ensure(true)">重试</el-button>
           </template>
@@ -731,10 +804,12 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
           <p class="ledger-note">个人统计为全部时间的数据</p>
         </div>
         <section class="sheet chart-sheet">
-          <div class="sheet-head"><h2>我的申请状态分布</h2></div>
+          <div class="sheet-head">
+            <h2><i class="ink-glyph ink-glyph--sun" aria-hidden="true" />我的申请状态分布</h2>
+          </div>
           <div class="chart-body">
             <StatsChart v-if="personalPie" :option="personalPie" :height="320" />
-            <ListEmpty v-else description="还没有申请">
+            <ListEmpty v-else description="你尚未提交过任何审批申请，提交后将在此统计流转状态">
               <template #action>
                 <el-button v-if="auth.can('APP_CREATE')" type="primary" @click="router.push('/apply')">填写申请</el-button>
               </template>
@@ -750,7 +825,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
         <el-skeleton :rows="8" animated />
       </div>
       <div v-else-if="dept.failed.value" class="sheet">
-        <ListEmpty description="统计数据加载失败">
+        <ListEmpty description="统计数据加载失败，请检查网络或稍后重试">
           <template #action>
             <el-button type="primary" @click="dept.ensure(true)">重试</el-button>
           </template>
@@ -770,27 +845,36 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
           <p class="ledger-note">{{ deptNote }}</p>
         </div>
         <div v-if="dept.data.value.totals.count === 0" class="sheet">
-          <ListEmpty description="所选区间内，本部门没有已提交的申请" />
+          <ListEmpty description="所选日期区间内本部门暂无提交的申请，可调整上方日期区间或切换统计部门" />
         </div>
         <template v-else>
           <div class="chart-grid">
             <section class="sheet chart-sheet">
-              <div class="sheet-head"><h2>各类型申请数量（按状态堆叠）</h2></div>
+              <div class="sheet-head">
+                <h2><i class="ink-glyph ink-glyph--stack" aria-hidden="true" />各类型申请数量（按状态堆叠）</h2>
+              </div>
               <div class="chart-body">
                 <StatsChart v-if="deptTypeBar" :option="deptTypeBar" :height="320" />
+                <ListEmpty v-else description="所选区间内暂无各类型申请数据，可调整日期区间查看" />
               </div>
             </section>
             <section class="sheet chart-sheet">
-              <div class="sheet-head"><h2>状态分布</h2></div>
+              <div class="sheet-head">
+                <h2><i class="ink-glyph ink-glyph--leaf" aria-hidden="true" />状态分布</h2>
+              </div>
               <div class="chart-body">
                 <StatsChart v-if="deptStatusPie" :option="deptStatusPie" :height="320" />
+                <ListEmpty v-else description="所选区间内暂无状态分布数据，可调整日期区间查看" />
               </div>
             </section>
           </div>
           <section class="sheet chart-sheet">
-            <div class="sheet-head"><h2>月度趋势（按提交月份）</h2></div>
+            <div class="sheet-head">
+              <h2><i class="ink-glyph ink-glyph--hill" aria-hidden="true" />月度趋势（按提交月份）</h2>
+            </div>
             <div class="chart-body">
               <StatsChart v-if="deptMonthlyLine" :option="deptMonthlyLine" :height="320" />
+              <ListEmpty v-else description="所选区间内暂无月度趋势数据，可调整日期区间查看" />
             </div>
           </section>
         </template>
@@ -803,7 +887,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
         <el-skeleton :rows="8" animated />
       </div>
       <div v-else-if="finance.failed.value" class="sheet">
-        <ListEmpty description="统计数据加载失败">
+        <ListEmpty description="统计数据加载失败，请检查网络或稍后重试">
           <template #action>
             <el-button type="primary" @click="finance.ensure(true)">重试</el-button>
           </template>
@@ -823,14 +907,18 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
           <p class="ledger-note">{{ financeNote }}</p>
         </div>
         <section class="sheet chart-sheet">
-          <div class="sheet-head"><h2>按费用类型的报销已通过金额</h2></div>
+          <div class="sheet-head">
+            <h2><i class="ink-glyph ink-glyph--hill" aria-hidden="true" />按费用类型的报销已通过金额</h2>
+          </div>
           <div class="chart-body">
             <StatsChart v-if="financeBar" :option="financeBar" :height="financeBarHeight" />
-            <ListEmpty v-else description="所选区间内没有已通过的报销" />
+            <ListEmpty v-else description="所选区间内没有已通过的报销单，可尝试放宽日期区间查看" />
           </div>
         </section>
         <section class="sheet chart-sheet">
-          <div class="sheet-head"><h2>各部门报销与采购已通过金额</h2></div>
+          <div class="sheet-head">
+            <h2><i class="ink-glyph ink-glyph--stack" aria-hidden="true" />各部门报销与采购已通过金额</h2>
+          </div>
           <el-table
             :data="finance.data.value.byDept"
             show-summary
@@ -860,7 +948,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
         <el-skeleton :rows="8" animated />
       </div>
       <div v-else-if="enterprise.failed.value" class="sheet">
-        <ListEmpty description="统计数据加载失败">
+        <ListEmpty description="统计数据加载失败，请检查网络或稍后重试">
           <template #action>
             <el-button type="primary" @click="enterprise.ensure(true)">重试</el-button>
           </template>
@@ -868,7 +956,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
       </div>
       <template v-else-if="enterprise.data.value">
         <div v-if="!enterprise.data.value.byDept.length" class="sheet">
-          <ListEmpty description="所选区间内没有已提交的申请" />
+          <ListEmpty description="所选日期区间内全企业暂无提交的申请，可尝试放宽日期区间查看" />
         </div>
         <template v-else>
           <div class="sheet ledger-sheet">
@@ -884,13 +972,18 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
             <p class="ledger-note">{{ enterprise.data.value.from }} 至 {{ enterprise.data.value.to }}</p>
           </div>
           <section class="sheet chart-sheet">
-            <div class="sheet-head"><h2>各部门申请数量对比</h2></div>
+            <div class="sheet-head">
+              <h2><i class="ink-glyph ink-glyph--hill" aria-hidden="true" />各部门申请数量对比</h2>
+            </div>
             <div class="chart-body">
               <StatsChart v-if="enterpriseBar" :option="enterpriseBar" :height="340" />
+              <ListEmpty v-else description="所选区间内暂无部门申请对比数据，可尝试放宽日期区间查看" />
             </div>
           </section>
           <section class="sheet chart-sheet">
-            <div class="sheet-head"><h2>各部门明细</h2></div>
+            <div class="sheet-head">
+              <h2><i class="ink-glyph ink-glyph--stack" aria-hidden="true" />各部门明细</h2>
+            </div>
             <el-table :data="enterprise.data.value.byDept" class="full">
               <el-table-column prop="deptName" label="部门" min-width="110" />
               <el-table-column prop="count" label="申请数" min-width="90" align="right" sortable />
@@ -922,7 +1015,7 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
                 sortable
                 :sort-method="nullLast('approvalRate')"
               >
-                <template #default="{ row }">{{ pct(row.approvalRate) }}</template>
+                <template #default="{ row }">{{ row.approvalRate != null ? `${(row.approvalRate * 100).toFixed(1)}%` : '—' }}</template>
               </el-table-column>
               <el-table-column
                 label="平均审批时长"
@@ -943,15 +1036,21 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
 
 <style scoped>
 .stats-page {
-  gap: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--eas-gap);
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.stats-header {
+  margin-bottom: -10px;
 }
 .stats-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
 }
 .dept-select {
   width: 160px;
@@ -966,10 +1065,6 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   gap: var(--eas-gap);
   min-height: 200px;
 }
-/* 第一张单据与选中的页签连成一片 */
-.tab-body > .sheet:first-child {
-  border-top-left-radius: 0;
-}
 .skeleton-sheet {
   padding: var(--eas-sheet-pad);
 }
@@ -977,23 +1072,23 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   width: 100%;
 }
 
-/* 账单行：指标横排，之间 1px 竖线 */
+/* 账单行：指标横排，之间 2px 虚线 */
 .ledger-sheet {
-  padding: 20px var(--eas-sheet-pad) 14px;
+  padding: 22px var(--eas-sheet-pad) 18px;
 }
 .ledger {
   display: flex;
+  align-items: stretch;
 }
 .ledger-item {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 4px 24px;
+  gap: 6px;
+  padding: 4px 28px;
   color: inherit;
   text-decoration: none;
-  border-radius: var(--eas-radius-control);
 }
 .ledger-item:first-child {
   padding-left: 0;
@@ -1002,42 +1097,48 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   padding-right: 0;
 }
 .ledger-item + .ledger-item {
-  border-left: 1px solid var(--eas-rule);
+  border-left: 2px dashed var(--eas-rule);
 }
 .ledger-link:hover .ledger-value {
   color: var(--eas-primary);
 }
 .ledger-label {
-  font-size: var(--eas-fs-xs);
+  font-size: var(--eas-fs-12);
   color: var(--eas-ink-3);
+  line-height: 1.4;
 }
 .ledger-value {
-  font-family: var(--eas-font-serif);
-  font-size: var(--eas-fs-32);
+  font-family: var(--eas-font-display);
+  font-size: 36px;
+  font-weight: 600;
   line-height: var(--eas-lh-title);
-  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--eas-display-tracking);
   color: var(--eas-ink);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color var(--eas-dur-fast) var(--eas-ease);
 }
 .ledger-unit {
   margin-left: 6px;
   font-family: var(--eas-font-sans);
-  font-size: var(--eas-fs-sm);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: normal;
   color: var(--eas-ink-2);
 }
 .ledger-note {
-  margin: 14px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--eas-rule);
-  font-size: var(--eas-fs-xs);
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 2px dashed var(--eas-rule);
+  font-size: var(--eas-fs-12);
   color: var(--eas-ink-2);
 }
 
 /* 图表单据 */
 .chart-body {
-  padding: 8px 16px 16px;
+  padding: 8px 16px 20px;
 }
 .chart-grid {
   display: grid;
@@ -1050,25 +1151,23 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   }
 }
 
-/* 窄屏：操作区换到页签上一行右对齐，页签仍与单据相接 */
 @media (max-width: 767px) {
-  /* stats-tabs 落在 IndexTabs 的根节点上，与 .index-tabs-row 是同一个元素，直接改它 */
   .stats-tabs {
     flex-direction: column;
     align-items: stretch;
-    gap: 0;
+    gap: 10px;
   }
   .stats-tabs :deep(.index-tabs) {
     width: 100%;
   }
   .stats-tabs :deep(.index-tab-actions) {
     order: -1;
-    align-self: flex-end;
-    max-width: 100%;
-    padding-bottom: 10px;
+    align-self: flex-start;
+    width: 100%;
   }
   .stats-actions {
-    max-width: 100%;
+    width: 100%;
+    justify-content: flex-start;
   }
   .dept-select {
     width: 140px;
@@ -1084,27 +1183,28 @@ const nullLast = (k: 'approvalRate' | 'avgApprovalHours') => (a: EnterpriseRow, 
   }
 }
 
-/* 账单行窄屏两列 */
-@media (max-width: 700px) {
+@media (max-width: 800px) {
   .ledger {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    row-gap: 16px;
+    gap: 16px 20px;
   }
   .ledger-item,
   .ledger-item:first-child,
   .ledger-item:last-child {
-    padding: 4px 0;
+    padding: 0;
   }
   .ledger-item + .ledger-item {
     border-left: 0;
   }
-  .ledger-item:nth-child(2n) {
-    border-left: 1px solid var(--eas-rule);
-    padding-left: 16px;
-  }
   .ledger-value {
-    font-size: var(--eas-fs-26);
+    font-size: 28px;
+  }
+}
+@media (max-width: 440px) {
+  .ledger {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 }
 </style>
