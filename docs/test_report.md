@@ -8,7 +8,7 @@
 | 数据库 | 真实 PostgreSQL 16，Flyway 迁移与演示数据和部署环境一致；不用 H2，因为条件更新、部分唯一索引、触发器只有在真实 PostgreSQL 上才测得准 |
 | 隔离 | 每次运行新建带随机后缀的临时库，结束后删除；每个用例开始前清空业务数据并重放种子脚本（`IntegrationTestBase`） |
 | 文件存储 | 测试中 `StorageService` 由 Mock 替代；Tika 魔数检测、附件绑定与权限检查走真实代码，对象读写及写入时的哈希计算不由该套集成测试验证 |
-| Web 前端 | Vitest：金额与表单 Schema 工具、路由（栏目、菜单、滚动恢复）、登录分栏与单据头展示逻辑、模板设计器与工作台格式化、背景风景（风与飘叶）计算等（15 个测试文件） |
+| Web 前端 | Vitest：金额与表单 Schema 工具、路由（栏目、菜单、滚动恢复）、登录分栏与单据头展示逻辑、模板设计器与工作台格式化、背景风景（风与飘叶）计算等（16 个测试文件） |
 | 移动端 | Node test runner：表单校验、金额、自定义表单渲染工具函数 |
 
 有 Docker 的机器上直接运行，`TestDatabase` 用 Testcontainers 启动 `postgres:16-alpine`，所有测试类共用这一个容器（运行用户需能访问 Docker，例如在 `docker` 组中）：
@@ -27,35 +27,38 @@ cd backend && mvn test
 
 两者都不可用时，集成测试报错（`Could not find a valid Docker environment`），不会被静默跳过。
 
-本机（Docker 29.8、Compose v5.6）三种情况都实际运行过：不设变量、经 Testcontainers 启动容器，84 项全部通过，测试结束后容器自动清理；用环境变量指向本机 PostgreSQL 16，84 项全部通过；在访问不到 Docker 的进程里不设变量，测试全部报错而不是显示通过。Spring Boot 3.3 自带的 Testcontainers 1.19 使用的 Docker API 版本过旧，Docker 29 会拒绝连接，`pom.xml` 中已将 Testcontainers 升级到 1.21.4。
+本机（Docker 29.8、Compose v5.6）三种情况都实际运行过：不设变量、经 Testcontainers 启动容器，测试全部通过（2026-10-16 时为 84 项），测试结束后容器自动清理；用环境变量指向本机 PostgreSQL 16，全部通过（2026-11-01 为 105 项）；在访问不到 Docker 的进程里不设变量，测试全部报错而不是显示通过。Spring Boot 3.3 自带的 Testcontainers 1.19 使用的 Docker API 版本过旧，Docker 29 会拒绝连接，`pom.xml` 中已将 Testcontainers 升级到 1.21.4。
 
 ## 2. 结果汇总
 
 | 模块 | 用例数 | 通过 | 失败 |
 |---|---:|---:|---:|
-| 后端 `CoreWorkflowIntegrationTest` | 13 | 13 | 0 |
+| 后端 `CoreWorkflowIntegrationTest` | 14 | 14 | 0 |
 | 后端 `BusinessRulesTest` | 4 | 4 | 0 |
+| 后端 `QuoteDateRemarksTest` | 9 | 9 | 0 |
 | 后端 `ReviewRegressionTest` | 7 | 7 | 0 |
-| 后端 `FlowRulesTest` | 7 | 7 | 0 |
+| 后端 `FlowRulesTest` | 9 | 9 | 0 |
 | 后端 `ApproverEligibilityTest` | 2 | 2 | 0 |
-| 后端 `AdminTemplateStatsTest` | 13 | 13 | 0 |
-| 后端 `DeliveriesTitleLeakTest` | 2 | 2 | 0 |
+| 后端 `AdminTemplateStatsTest` | 14 | 14 | 0 |
+| 后端 `DeliveriesTitleLeakTest` | 3 | 3 | 0 |
 | 后端 `AccessControlTest` | 7 | 7 | 0 |
-| 后端 `RefreshRotationTest` | 3 | 3 | 0 |
+| 后端 `RefreshRotationTest` | 4 | 4 | 0 |
 | 后端 `TokenServicePlaceholderSecretTest` | 4 | 4 | 0 |
 | 后端 `PublicConfigTest` | 2 | 2 | 0 |
-| 后端 `TemplateVersionTest` | 1 | 1 | 0 |
+| 后端 `TemplateVersionTest` | 3 | 3 | 0 |
 | 后端 `NotificationTest` | 1 | 1 | 0 |
 | 后端 `SmtpConfigTest` | 5 | 5 | 0 |
+| 后端 `SseSessionInvalidateTest` | 3 | 3 | 0 |
+| 后端 `MailDispatcherRetryTest` | 1 | 1 | 0 |
 | 后端 `DemoDataTest` | 3 | 3 | 0 |
 | 后端 `MaintenanceJobsTest` | 3 | 3 | 0 |
 | 后端 `ReviewRound2Test` | 5 | 5 | 0 |
 | 后端 `AdminBootstrapTest` | 2 | 2 | 0 |
-| 后端合计 | **84** | **84** | **0** |
-| Web `npm run test` | 223 | 223 | 0 |
-| 移动端 `npm run test` | 80 | 80 | 0 |
+| 后端合计 | **105** | **105** | **0** |
+| Web `npm run test` | 237 | 237 | 0 |
+| 移动端 `npm run test` | 86 | 86 | 0 |
 
-后端结果为 2026-10-16 的完整重跑（此后后端代码未改动），依据 18 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 84 项，全部通过，失败 0、错误 0、跳过 0。Web 与移动端为 2026-10-26 网页界面 v3「套色」（见 `docs/ui_design.md`）合入后的结果：Web 的 `npm run lint`、`npm run typecheck`、`npm run build` 通过，15 个测试文件共 223 项测试通过（v2 的格纸点阵连同它的 67 项测试一起删除，换成背景风景的 10 项测试；其余新增为发起入口插画匹配等）；移动端在同日套用了 v3（`docs/ui_design.md` 第 9 节）：12 个测试文件共 80 项测试通过（新增发起入口插画匹配 5 项），`npm run typecheck`、`npm run build:h5`、`npm run build:mp-weixin` 通过，小程序包 1.07 MB（主包上限 2 MB）；H5 在 390 与 360 宽下逐页截图，无横向溢出。
+以上为 2026-11-01 的完整重跑，对应 dev 分支合入报价日期与单据备注（PR #84）、草稿保存规则修复（PR #86）之后的代码。后端依据 21 份 `backend/target/surefire-reports/TEST*.xml`：真实 PostgreSQL 回归共 105 项，全部通过，失败 0、错误 0、跳过 0（新增 `QuoteDateRemarksTest` 9 项：报价日期必填与不得晚于当天、备注保存与清空、复制重提保留新字段等）。Web：`npm run typecheck`、`npx vite build` 通过，16 个测试文件共 237 项通过（新增草稿 / 提交分级的成对字段规则用例）。移动端：`npm run typecheck`、`npm run build:h5`、`npm run build:mp-weixin` 通过，12 个测试文件共 86 项通过；小程序包 1.07 MB（主包上限 2 MB，无分包）。
 
 ## 3. 关键场景（设计文档 Q17，T01–T16）
 
