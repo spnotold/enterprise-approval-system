@@ -36,6 +36,10 @@ function money(cents: number | null): string {
 
     <view class="panel">
       <view class="panel-title">采购信息</view>
+      <view v-if="data.remark?.trim()" class="kv">
+        <text class="kv-label">采购单备注</text>
+        <text class="kv-value">{{ data.remark }}</text>
+      </view>
       <view class="kv">
         <text class="kv-label">采购事由</text>
         <text class="kv-value">{{ textOr(data.reason) }}</text>
@@ -88,6 +92,7 @@ function money(cents: number | null): string {
         </view>
         <view class="line-meta">
           <text class="line-meta-item">{{ CHANNEL_LABEL[q.channel] }}</text>
+          <text class="line-meta-item">报价日期：{{ textOr(q.quoteDate) }}</text>
         </view>
         <view
           v-if="q.url"

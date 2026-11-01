@@ -49,10 +49,12 @@ public class BusinessValidator {
         long lowest=Long.MAX_VALUE;
         for(int i=0;i<qs.size();i++) {
             var q=qs.get(i);String p="quotes["+i+"].";
+            dateYear(q.quoteDate(),p+"quoteDate",e);
             if(!blank(q.supplierName())&&!suppliers.add(q.supplierName().replaceAll("\\s+","").toLowerCase(Locale.ROOT)))e.add(p+"supplierName","PUR_QUOTES_INSUFFICIENT","供应商不能重复");
             if(!blank(q.url())&&!httpUrl(q.url()))e.add(p+"url","PUR_QUOTE_EVIDENCE","请输入 http 或 https 链接");
             if(full){
                 if(blank(q.supplierName()))e.add(p+"supplierName","REQUIRED","请填写供应商");
+                if(q.quoteDate()==null||q.quoteDate().isAfter(LocalDate.now(clock.withZone(CN))))e.add(p+"quoteDate","PUR_QUOTE_DATE","请选择不晚于今天的报价日期");
                 if(q.quoteAmountCents()==null||q.quoteAmountCents()<=0)e.add(p+"quoteAmountCents","REQUIRED","报价金额必须大于 0");
                 if("ONLINE".equals(q.channel())){
                     if(blank(q.url())||list(q.attachmentIds()).isEmpty())e.add(p+"attachmentIds","PUR_QUOTE_EVIDENCE","线上报价需要链接及至少一张截图");

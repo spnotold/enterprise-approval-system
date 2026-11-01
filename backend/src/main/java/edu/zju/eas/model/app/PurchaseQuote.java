@@ -3,6 +3,7 @@ package edu.zju.eas.model.app;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import java.util.List;
+import java.time.LocalDate;
 import edu.zju.eas.common.mybatis.JsonbHandlers;
 
 @Data
@@ -18,6 +19,7 @@ public class PurchaseQuote {
     private String supplierName;
     private String channel;
     private Long quoteAmountCents;
+    private LocalDate quoteDate;
     private String url;
     private String description;
     @TableField(typeHandler = JsonbHandlers.LongListHandler.class)

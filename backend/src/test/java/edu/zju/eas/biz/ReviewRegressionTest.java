@@ -52,7 +52,7 @@ class ReviewRegressionTest extends IntegrationTestBase {
         long travelId=submitted("travel","rd_emp_wang",travel);
         long purchaseFile=attachment("敏感采购报价.pdf");var purchase=map("title","含附件采购","reason","验证附件边界","budgetLimitCents",50000,"expectedArrivalDate",LocalDate.now(CN).plusDays(2).toString(),"selectedQuoteIndex",0,
             "items",List.of(map("name","配件","unit","件","quantity","1","unitPriceCents",1000)),
-            "quotes",List.of(map("supplierName","供应商甲","channel","OFFLINE","quoteAmountCents",1000,"attachmentIds",List.of(purchaseFile)),map("supplierName","供应商乙","channel","OFFLINE","quoteAmountCents",2000,"description","报价说明")),"attachmentIds",List.of(purchaseFile));
+            "quotes",List.of(map("quoteDate",java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).minusDays(1).toString(),"supplierName","供应商甲","channel","OFFLINE","quoteAmountCents",1000,"attachmentIds",List.of(purchaseFile)),map("quoteDate",java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).minusDays(1).toString(),"supplierName","供应商乙","channel","OFFLINE","quoteAmountCents",2000,"description","报价说明")),"attachmentIds",List.of(purchaseFile));
         long purchaseId=submitted("purchase","rd_emp_wang",purchase);
         long invoiceFile=attachment("个人票据.pdf");var item=expenseItem(1000);item.put("noInvoice",false);item.put("noInvoiceReason",null);item.put("invoices",List.of(map("attachmentId",invoiceFile,"invoiceNo","PRIVATE-001")));
         long expenseId=submitted("expense","rd_emp_wang",expenseBody(List.of(item)));

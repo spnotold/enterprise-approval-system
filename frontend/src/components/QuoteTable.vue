@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 报价比较表：最低价高亮（金额相同视为最低价），标出拟选供应商；支持编辑与只读两种模式
 import { computed } from 'vue'
+import { todayShanghai } from '@/lib/datetime'
 import { Plus } from '@element-plus/icons-vue'
 import { emptyQuote, isHttpUrl, lowestQuoteCents, type QuoteDraft } from '@/lib/formModels'
 import AmountInput from './AmountInput.vue'
@@ -35,6 +36,11 @@ function isLowest(r: object): boolean {
 
 function rowClass({ row, rowIndex }: { row: QuoteDraft; rowIndex: number }): string {
   return [isLowest(row) ? 'row-lowest' : '', selected.value === rowIndex ? 'row-selected' : ''].join(' ')
+}
+
+function afterToday(d: Date): boolean {
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return date > todayShanghai()
 }
 
 function add() {
@@ -91,6 +97,15 @@ function remove(i: number) {
               <el-option value="OFFLINE" label="线下" />
               <el-option value="ONLINE" label="线上" />
             </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="报价日期" width="180">
+          <template #default="{ row, $index }">
+            <span v-if="readonly">{{ row.quoteDate || '—' }}</span>
+            <div v-else :class="{ 'cell-error': err($index, 'quoteDate') }">
+              <el-date-picker v-model="row.quoteDate" type="date" value-format="YYYY-MM-DD" :disabled-date="afterToday" placeholder="不晚于今天" style="width: 100%" />
+              <div v-if="err($index, 'quoteDate')" class="cell-error-msg">{{ err($index, 'quoteDate') }}</div>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="报价金额（元）" width="155" align="right">
@@ -179,7 +194,7 @@ function remove(i: number) {
   outline-offset: 2px;
 }
 .table--edit {
-  min-width: 1100px;
+  min-width: 1280px;
 }
 .table :deep(.el-table__body td.el-table__cell) {
   vertical-align: top;

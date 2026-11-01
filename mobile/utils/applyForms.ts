@@ -18,6 +18,7 @@ export interface PurchaseItem extends PurchaseItemInput { key: number }
 export interface Quote {
   key: number
   supplierName: string
+  quoteDate: string
   channel: 'ONLINE' | 'OFFLINE'
   quoteAmountCents: number | null
   url: string
@@ -27,6 +28,7 @@ export interface Quote {
 export interface PurchaseForm {
   title: string
   reason: string
+  remark: string
   budgetLimitCents: number | null
   expectedArrivalDate: string
   singleSource: boolean
@@ -40,10 +42,10 @@ export interface PurchaseForm {
   attachments: AttachmentMeta[]
 }
 export const emptyPurchaseItem = (): PurchaseItem => ({ key: rowKey(), name: '', spec: '', unit: '', quantity: '', unitPriceCents: null, remark: '' })
-export const emptyQuote = (): Quote => ({ key: rowKey(), supplierName: '', channel: 'OFFLINE', quoteAmountCents: null, url: '', description: '', attachments: [] })
-export const emptyPurchase = (): PurchaseForm => ({ title: '', reason: '', budgetLimitCents: null, expectedArrivalDate: '', singleSource: false, singleSourceReason: '', singleSourceAttachments: [], selectedQuoteIndex: null, selectionReason: '', notLowestReason: '', items: [emptyPurchaseItem()], quotes: [emptyQuote(), emptyQuote()], attachments: [] })
+export const emptyQuote = (): Quote => ({ key: rowKey(), supplierName: '', quoteDate: '', channel: 'OFFLINE', quoteAmountCents: null, url: '', description: '', attachments: [] })
+export const emptyPurchase = (): PurchaseForm => ({ title: '', reason: '', remark: '', budgetLimitCents: null, expectedArrivalDate: '', singleSource: false, singleSourceReason: '', singleSourceAttachments: [], selectedQuoteIndex: null, selectionReason: '', notLowestReason: '', items: [emptyPurchaseItem()], quotes: [emptyQuote(), emptyQuote()], attachments: [] })
 export const emptyPurchaseRow = (r: PurchaseItem): boolean => ![r.name, r.spec, r.unit, r.quantity, r.remark].some(trimOrNull) && r.unitPriceCents === null
-export const emptyQuoteRow = (q: Quote): boolean => ![q.supplierName, q.url, q.description].some(trimOrNull) && q.quoteAmountCents === null && !q.attachments.length
+export const emptyQuoteRow = (q: Quote): boolean => ![q.supplierName, q.quoteDate, q.url, q.description].some(trimOrNull) && q.quoteAmountCents === null && !q.attachments.length
 export function lowestQuote(quotes: Quote[]): number | null {
   const values = quotes.map(q => q.quoteAmountCents).filter((v): v is number => v !== null)
   return values.length ? Math.min(...values) : null
@@ -53,13 +55,13 @@ export function purchaseBody(m: PurchaseForm): { body: PurchaseSaveRequest; item
   const items = compactRows(m.items, emptyPurchaseRow), quotes = compactRows(m.quotes, emptyQuoteRow)
   const selected = m.selectedQuoteIndex === null ? -1 : quotes.map.indexOf(m.selectedQuoteIndex)
   return { itemMap: items.map, quoteMap: quotes.map, body: {
-    title: trimOrNull(m.title), reason: trimOrNull(m.reason), budgetLimitCents: m.budgetLimitCents,
+    title: trimOrNull(m.title), reason: trimOrNull(m.reason), remark: trimOrNull(m.remark), budgetLimitCents: m.budgetLimitCents,
     expectedArrivalDate: trimOrNull(m.expectedArrivalDate), singleSource: m.singleSource,
     singleSourceReason: m.singleSource ? trimOrNull(m.singleSourceReason) : null,
     singleSourceAttachmentIds: m.singleSource ? m.singleSourceAttachments.map(a => a.id) : [],
     selectedQuoteIndex: selected < 0 ? null : selected, selectionReason: trimOrNull(m.selectionReason), notLowestReason: trimOrNull(m.notLowestReason),
     items: items.kept.map(r => ({ name: trimOrNull(r.name), spec: trimOrNull(r.spec), unit: trimOrNull(r.unit), quantity: trimOrNull(r.quantity), unitPriceCents: r.unitPriceCents, remark: trimOrNull(r.remark) })),
-    quotes: quotes.kept.map(q => ({ supplierName: trimOrNull(q.supplierName), channel: q.channel, quoteAmountCents: q.quoteAmountCents, url: trimOrNull(q.url), description: trimOrNull(q.description), attachmentIds: q.attachments.map(a => a.id) })),
+    quotes: quotes.kept.map(q => ({ supplierName: trimOrNull(q.supplierName), quoteDate: trimOrNull(q.quoteDate), channel: q.channel, quoteAmountCents: q.quoteAmountCents, url: trimOrNull(q.url), description: trimOrNull(q.description), attachmentIds: q.attachments.map(a => a.id) })),
     attachmentIds: m.attachments.map(a => a.id),
   } }
 }
@@ -69,6 +71,7 @@ export function validatePurchase(m: PurchaseForm, full: boolean): FieldError[] {
   const add = (field: string, message: string) => errors.push({ field, message, rule: 'CLIENT' })
   const max = (field: string, value: string | null, limit: number) => { if (len(value) > limit) add(field, `不能超过 ${limit} 字`) }
   max('title', m.title, 100); max('reason', m.reason, 1000); max('singleSourceReason', m.singleSourceReason, 1000)
+  if (m.remark.length > 500) add('remark', '备注不能超过 500 字')
   max('selectionReason', m.selectionReason, 500); max('notLowestReason', m.notLowestReason, 500)
   const items = compactRows(m.items, emptyPurchaseRow), quotes = compactRows(m.quotes, emptyQuoteRow)
   if (items.kept.length > 50) add('items', '采购明细最多 50 条')
@@ -92,6 +95,7 @@ export function validatePurchase(m: PurchaseForm, full: boolean): FieldError[] {
     if (q.url && !/^https?:\/\/[^\s/?#]+(?:[^\s]*)$/i.test(q.url.trim())) add(`${p}.url`, '请填写有效的 http:// 或 https:// 链接')
     if (q.channel === 'ONLINE' && !q.url.trim()) add(`${p}.url`, '线上报价必须填写购买链接')
     if (!full) return
+    if (!isDateString(q.quoteDate) || q.quoteDate > todayCN()) add(`${p}.quoteDate`, '请选择不晚于今天的报价日期')
     if (!name) add(`${p}.supplierName`, '请填写供应商')
     if (q.quoteAmountCents === null || q.quoteAmountCents <= 0) add(`${p}.quoteAmountCents`, '报价金额必须大于 0')
     if (q.channel === 'ONLINE' && !q.attachments.some(a => a.contentType.startsWith('image/'))) add(`${p}.attachmentIds`, '线上报价至少上传 1 张截图')
@@ -131,19 +135,20 @@ export interface ExpenseRow {
 export interface ExpenseForm {
   title: string
   description: string
+  remark: string
   linkMode: 'RELATED' | 'INDEPENDENT'
   relatedApplicationIds: number[]
   independentReason: string
   items: ExpenseRow[]
 }
 export const emptyExpenseRow = (): ExpenseRow => ({ key: rowKey(), expenseTypeCode: '', occurDate: '', purpose: '', amountCents: null, noInvoice: false, noInvoiceReason: '', attachments: [], invoiceNos: [] })
-export const emptyExpense = (): ExpenseForm => ({ title: '', description: '', linkMode: 'RELATED', relatedApplicationIds: [], independentReason: '', items: Array.from({ length: 3 }, emptyExpenseRow) })
+export const emptyExpense = (): ExpenseForm => ({ title: '', description: '', remark: '', linkMode: 'RELATED', relatedApplicationIds: [], independentReason: '', items: Array.from({ length: 3 }, emptyExpenseRow) })
 export const emptyExpenseItem = (r: ExpenseRow): boolean => ![r.expenseTypeCode, r.occurDate, r.purpose, r.noInvoiceReason].some(trimOrNull) && r.amountCents === null && !r.noInvoice && !r.attachments.length
 
 export function expenseBody(m: ExpenseForm): { body: ExpenseSaveRequest; itemMap: number[] } {
   const rows = compactRows(m.items, emptyExpenseItem)
   return { itemMap: rows.map, body: {
-    title: trimOrNull(m.title), description: trimOrNull(m.description), relatedApplicationIds: m.linkMode === 'RELATED' ? [...m.relatedApplicationIds] : [], independentReason: m.linkMode === 'INDEPENDENT' ? trimOrNull(m.independentReason) : null,
+    title: trimOrNull(m.title), description: trimOrNull(m.description), remark: trimOrNull(m.remark), relatedApplicationIds: m.linkMode === 'RELATED' ? [...m.relatedApplicationIds] : [], independentReason: m.linkMode === 'INDEPENDENT' ? trimOrNull(m.independentReason) : null,
     items: rows.kept.map(r => ({ expenseTypeCode: trimOrNull(r.expenseTypeCode), occurDate: trimOrNull(r.occurDate), purpose: trimOrNull(r.purpose), amountCents: r.amountCents, noInvoice: r.noInvoice, noInvoiceReason: r.noInvoice ? trimOrNull(r.noInvoiceReason) : null, invoices: r.noInvoice ? [] : r.attachments.map((a, i) => ({ attachmentId: a.id, invoiceNo: trimOrNull(r.invoiceNos[i]) })) })),
   } }
 }
@@ -152,6 +157,7 @@ export function validateExpense(m: ExpenseForm, full: boolean, enabledTypes: str
   const errors: FieldError[] = []
   const add = (field: string, message: string) => errors.push({ field, message, rule: 'CLIENT' })
   if (len(m.title) > 100) add('title', '标题不能超过 100 字')
+  if (m.remark.length > 500) add('remark', '备注不能超过 500 字')
   if (len(m.description) > 1000) add('description', '报销说明不能超过 1000 字')
   if (len(m.independentReason) > 500) add('independentReason', '独立报销说明不能超过 500 字')
   const rows = compactRows(m.items, emptyExpenseItem)

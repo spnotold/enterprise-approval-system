@@ -14,6 +14,7 @@ import {
   isEmptyExpenseItem,
   remapIndexPath,
   trimOrNull,
+  remarkError,
   type ExpenseItemDraft,
 } from '@/lib/formModels'
 import { MAX_ITEM_CENTS, formatCents, sumCents } from '@/lib/money'
@@ -27,6 +28,7 @@ const props = defineProps<{ id?: number }>()
 const router = useRouter()
 
 interface ExpenseModel {
+  remark: string | null
   title: string | null
   description: string | null
   /** 界面用：关联申请 / 独立报销 */
@@ -38,6 +40,7 @@ interface ExpenseModel {
 
 const LABELS: Record<string, string> = {
   title: '标题',
+  remark: '报销单备注',
   description: '报销说明',
   relatedApplicationIds: '关联申请',
   independentReason: '独立报销说明',
@@ -61,6 +64,7 @@ let itemMap: number[] = []
 function emptyModel(): ExpenseModel {
   return {
     title: null,
+    remark: null,
     description: null,
     linkMode: 'RELATED',
     relatedApplicationIds: [],
@@ -75,6 +79,7 @@ function toBody(m: ExpenseModel): Omit<ExpenseSaveRequest, 'version'> {
   itemMap = items.map
   return {
     title: trimOrNull(m.title),
+    remark: trimOrNull(m.remark),
     description: trimOrNull(m.description),
     relatedApplicationIds: m.linkMode === 'RELATED' ? m.relatedApplicationIds : [],
     independentReason: m.linkMode === 'INDEPENDENT' ? trimOrNull(m.independentReason) : null,
@@ -84,6 +89,8 @@ function toBody(m: ExpenseModel): Omit<ExpenseSaveRequest, 'version'> {
 
 function validate(m: ExpenseModel, full: boolean): Record<string, string> {
   const e: Record<string, string> = {}
+  const remarkMessage = remarkError(m.remark)
+  if (remarkMessage) e.remark = remarkMessage
   if (len(m.title) > 100) e.title = '标题不能超过 100 字'
   if (len(m.description) > 1000) e.description = '报销说明不能超过 1000 字'
   if (len(m.independentReason) > 500) e.independentReason = '独立报销说明不能超过 500 字'
@@ -196,6 +203,7 @@ const draft = useDraftForm<ExpenseModel>({
     while (items.length < DEFAULT_ROWS) items.push(emptyExpenseItem())
     return {
       title: d.title,
+      remark: x.remark,
       description: x.description,
       linkMode: x.relatedApplicationIds.length === 0 && x.independentReason ? 'INDEPENDENT' : 'RELATED',
       relatedApplicationIds: x.relatedApplicationIds ?? [],
@@ -265,6 +273,9 @@ const selectedRelated = computed(() =>
         </el-form-item>
         <el-form-item label="报销说明" :error="err('description')">
           <el-input v-model="model.description" type="textarea" :rows="2" maxlength="1000" show-word-limit />
+        </el-form-item>
+        <el-form-item label="报销单备注" :error="err('remark')">
+          <el-input v-model="model.remark" type="textarea" :rows="2" maxlength="500" show-word-limit placeholder="选填" />
         </el-form-item>
         <el-form-item label="关联方式" required>
           <el-radio-group v-model="model.linkMode">

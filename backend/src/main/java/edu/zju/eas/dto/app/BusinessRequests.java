@@ -15,13 +15,14 @@ public final class BusinessRequests {
         @Size(max=1000) String singleSourceReason, @Size(max=50) List<@Positive Long> singleSourceAttachmentIds,
         @PositiveOrZero Integer selectedQuoteIndex, @Size(max=500) String selectionReason,
         @Size(max=500) String notLowestReason, @Size(max=50) List<@NotNull @Valid PurchaseItem> items,
-        @Size(max=20) List<@NotNull @Valid Quote> quotes, @Size(max=50) List<@Positive Long> attachmentIds) {}
+        @Size(max=20) List<@NotNull @Valid Quote> quotes, @Size(max=50) List<@Positive Long> attachmentIds,
+        @Size(max=500) String remark) {}
     public record PurchaseItem(@Size(max=100) String name, @Size(max=200) String spec,
         @Size(max=20) String unit, @Pattern(regexp="^\\d{1,9}(?:\\.\\d{1,3})?$") String quantity,
         @PositiveOrZero @Max(9007199254740991L) Long unitPriceCents, @Size(max=200) String remark) {}
     public record Quote(@Size(max=100) String supplierName, @Pattern(regexp="ONLINE|OFFLINE") String channel,
         @Positive @Max(9007199254740991L) Long quoteAmountCents, @Size(max=500) String url,
-        @Size(max=1000) String description, @Size(max=50) List<@Positive Long> attachmentIds) {}
+        @Size(max=1000) String description, @Size(max=50) List<@Positive Long> attachmentIds, LocalDate quoteDate) {}
     public record Travel(Integer version, @Size(max=100) String title, @Size(max=100) String origin,
         @Size(max=100) String destination, OffsetDateTime startTime, OffsetDateTime endTime,
         @Pattern(regexp="PLANE|TRAIN|BUS|CAR|OTHER") String transport, @Size(max=1000) String purpose,
@@ -30,7 +31,7 @@ public final class BusinessRequests {
     public record Companion(@Positive Long userId, @Size(max=50) String name) {}
     public record Expense(Integer version, @Size(max=100) String title, @Size(max=1000) String description,
         @Size(max=50) List<@Positive Long> relatedApplicationIds, @Size(max=500) String independentReason,
-        @Size(max=50) List<@NotNull @Valid ExpenseItem> items) {}
+        @Size(max=50) List<@NotNull @Valid ExpenseItem> items, @Size(max=500) String remark) {}
     public record ExpenseItem(@Size(max=32) String expenseTypeCode, LocalDate occurDate,
         @Size(max=200) String purpose, @Positive @Max(10000000L) Long amountCents,
         boolean noInvoice, @Size(max=300) String noInvoiceReason,

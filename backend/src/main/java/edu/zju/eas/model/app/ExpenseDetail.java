@@ -9,6 +9,7 @@ public class ExpenseDetail {
     @TableId(type = IdType.INPUT)
     private Long applicationId;
     private String description;
+    private String remark;
     private String independentReason;
     private Long totalAmountCents;
 }

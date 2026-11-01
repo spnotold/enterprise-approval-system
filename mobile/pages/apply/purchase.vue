@@ -44,7 +44,7 @@ function locate(): void {
   scrollToError()
 }
 function remap(field: string): string | null {
-  if (!/^(title|reason|budgetLimitCents|expectedArrivalDate|singleSourceReason|singleSourceAttachmentIds|selectedQuoteIndex|selectionReason|notLowestReason|items|quotes|attachmentIds)(?:$|\[|\.)/.test(field)) return null
+  if (!/^(title|remark|reason|budgetLimitCents|expectedArrivalDate|singleSourceReason|singleSourceAttachmentIds|selectedQuoteIndex|selectionReason|notLowestReason|items|quotes|attachmentIds)(?:$|\[|\.)/.test(field)) return null
   const item = remapIndex(field, 'items', itemMap)
   return item === null ? null : remapIndex(item, 'quotes', quoteMap)
 }
@@ -75,11 +75,11 @@ async function fill(id: number): Promise<void> {
     if (!d.purchase) throw new Error('采购草稿内容不完整')
     const p = d.purchase
     Object.assign(form, {
-      title: d.title ?? '', reason: p.reason ?? '', budgetLimitCents: p.budgetLimitCents,
+      title: d.title ?? '', reason: p.reason ?? '', remark: p.remark ?? '', budgetLimitCents: p.budgetLimitCents,
       expectedArrivalDate: p.expectedArrivalDate ?? '', singleSource: p.singleSource, singleSourceReason: p.singleSourceReason ?? '',
       singleSourceAttachments: [...p.singleSourceAttachments], selectedQuoteIndex: p.selectedQuoteIndex, selectionReason: p.selectionReason ?? '', notLowestReason: p.notLowestReason ?? '',
       items: p.items.length ? p.items.map(i => ({ ...i, key: rowKey() })) : [emptyPurchaseItem()],
-      quotes: p.quotes.length ? p.quotes.map(q => ({ key: rowKey(), supplierName: q.supplierName ?? '', channel: q.channel, quoteAmountCents: q.quoteAmountCents, url: q.url ?? '', description: q.description ?? '', attachments: [...q.attachments] })) : [emptyQuote(), emptyQuote()],
+      quotes: p.quotes.length ? p.quotes.map(q => ({ key: rowKey(), supplierName: q.supplierName ?? '', quoteDate: q.quoteDate ?? '', channel: q.channel, quoteAmountCents: q.quoteAmountCents, url: q.url ?? '', description: q.description ?? '', attachments: [...q.attachments] })) : [emptyQuote(), emptyQuote()],
       attachments: [...p.attachments],
     })
     fe.clear(); markClean(); ready.value = true
@@ -155,6 +155,19 @@ onLoad(async q => {
                 placeholder="说明采购用途与必要性"
                 @input="fe.clearField('reason')"
                 @focus="foc = 'reason'"
+                @blur="foc = ''"
+              />
+            </FormItem>
+            <FormItem label="采购单备注" :error="fe.get('remark')">
+              <textarea
+                v-model="form.remark"
+                class="textarea"
+                :class="ic('remark')"
+                maxlength="500"
+                auto-height
+                placeholder="选填"
+                @input="fe.clearField('remark')"
+                @focus="foc = 'remark'"
                 @blur="foc = ''"
               />
             </FormItem>
@@ -336,6 +349,19 @@ onLoad(async q => {
                 @tap="q.channel = 'ONLINE'; fe.clearUnder(`quotes[${i}]`)"
               >线上报价</view>
             </view>
+            <FormItem label="报价日期" required :error="fe.get(`quotes[${i}].quoteDate`)">
+              <picker
+                mode="date"
+                :value="q.quoteDate"
+                :end="todayCN()"
+                @change="q.quoteDate = $event.detail.value; fe.clearField(`quotes[${i}].quoteDate`)"
+              >
+                <view class="picker-value" :class="ic(`qd${i}`, `quotes[${i}].quoteDate`)" hover-class="is-pressed" :hover-stay-time="60">
+                  <text :class="{ placeholder: !q.quoteDate }">{{ q.quoteDate || '请选择日期' }}</text>
+                  <uni-icons type="calendar" size="18" color="var(--eas-ink-3)" />
+                </view>
+              </picker>
+            </FormItem>
             <FormItem label="报价金额" required :error="fe.get(`quotes[${i}].quoteAmountCents`)">
               <MoneyInput v-model="q.quoteAmountCents" :error="!!fe.get(`quotes[${i}].quoteAmountCents`)" @update:model-value="fe.clearField(`quotes[${i}].quoteAmountCents`)" />
             </FormItem>

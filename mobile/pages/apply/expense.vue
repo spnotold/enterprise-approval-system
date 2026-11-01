@@ -91,7 +91,7 @@ async function fill(id: number): Promise<void> {
     savedRelated.value = [...e.related]
     const rows: ExpenseRow[] = e.items.map(r => ({ key: rowKey(), expenseTypeCode: r.expenseTypeCode ?? '', occurDate: r.occurDate ?? '', purpose: r.purpose ?? '', amountCents: r.amountCents, noInvoice: r.noInvoice, noInvoiceReason: r.noInvoiceReason ?? '', attachments: r.invoices.map(v => v.attachment), invoiceNos: r.invoices.map(v => v.invoiceNo ?? '') }))
     while (rows.length < 3) rows.push(emptyExpenseRow())
-    Object.assign(form, { title: d.title ?? '', description: e.description ?? '', linkMode: e.relatedApplicationIds.length || !e.independentReason ? 'RELATED' : 'INDEPENDENT', relatedApplicationIds: [...e.relatedApplicationIds], independentReason: e.independentReason ?? '', items: rows })
+    Object.assign(form, { title: d.title ?? '', description: e.description ?? '', remark: e.remark ?? '', linkMode: e.relatedApplicationIds.length || !e.independentReason ? 'RELATED' : 'INDEPENDENT', relatedApplicationIds: [...e.relatedApplicationIds], independentReason: e.independentReason ?? '', items: rows })
     fe.clear(); markClean(); ready.value = true
     await loadDuplicates(id)
   } catch (e) { loadError.value = '草稿加载失败，请重试'; showError(e) }
@@ -118,7 +118,7 @@ async function act(full: boolean): Promise<void> {
     else { loading('保存中'); const r = await save(data.body); await loadDuplicates(r.id) }
   } catch (e) {
     applyApiError(fe, e, {
-      remap: f => /^(title|description|relatedApplicationIds|independentReason|items)(?:$|\[|\.)/.test(f) ? remapIndex(f, 'items', itemMap) : null,
+      remap: f => /^(title|description|remark|relatedApplicationIds|independentReason|items)(?:$|\[|\.)/.test(f) ? remapIndex(f, 'items', itemMap) : null,
       onRefresh: reloadDraft,
     })
   }
@@ -179,6 +179,19 @@ onLoad(async q => {
               placeholder="选填，说明报销背景"
               @input="fe.clearField('description')"
               @focus="foc = 'description'"
+              @blur="foc = ''"
+            />
+          </FormItem>
+          <FormItem label="报销单备注" :error="fe.get('remark')">
+            <textarea
+              v-model="form.remark"
+              class="textarea"
+              :class="ic('remark')"
+              maxlength="500"
+              auto-height
+              placeholder="选填"
+              @input="fe.clearField('remark')"
+              @focus="foc = 'remark'"
               @blur="foc = ''"
             />
           </FormItem>
