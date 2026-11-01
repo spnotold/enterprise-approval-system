@@ -66,6 +66,8 @@ export function purchaseBody(m: PurchaseForm): { body: PurchaseSaveRequest; item
   } }
 }
 
+// 成对字段约束（线上报价需链接、单一来源需说明、无票需原因）自 V5 迁移起仅提交（full）时校验，
+// 保存草稿只查格式 / 长度，与后端 BusinessValidator 一致。
 export function validatePurchase(m: PurchaseForm, full: boolean): FieldError[] {
   const errors: FieldError[] = []
   const add = (field: string, message: string) => errors.push({ field, message, rule: 'CLIENT' })
@@ -93,15 +95,14 @@ export function validatePurchase(m: PurchaseForm, full: boolean): FieldError[] {
     if (name && suppliers.has(name)) add(`${p}.supplierName`, `与第 ${(suppliers.get(name) ?? 0) + 1} 家供应商重复`)
     else if (name) suppliers.set(name, i)
     if (q.url && !/^https?:\/\/[^\s/?#]+(?:[^\s]*)$/i.test(q.url.trim())) add(`${p}.url`, '请填写有效的 http:// 或 https:// 链接')
-    if (q.channel === 'ONLINE' && !q.url.trim()) add(`${p}.url`, '线上报价必须填写购买链接')
     if (!full) return
     if (!isDateString(q.quoteDate) || q.quoteDate > todayCN()) add(`${p}.quoteDate`, '请选择不晚于今天的报价日期')
     if (!name) add(`${p}.supplierName`, '请填写供应商')
     if (q.quoteAmountCents === null || q.quoteAmountCents <= 0) add(`${p}.quoteAmountCents`, '报价金额必须大于 0')
+    if (q.channel === 'ONLINE' && !q.url.trim()) add(`${p}.url`, '线上报价必须填写购买链接')
     if (q.channel === 'ONLINE' && !q.attachments.some(a => a.contentType.startsWith('image/'))) add(`${p}.attachmentIds`, '线上报价至少上传 1 张截图')
     if (q.channel === 'OFFLINE' && !q.attachments.length && !q.description.trim()) add(`${p}.attachmentIds`, '请上传报价单或填写报价说明')
   })
-  if (m.singleSource && !m.singleSourceReason.trim()) add('singleSourceReason', '单一来源必须填写说明')
   if (!full) return errors
   if (!m.title.trim()) add('title', '请填写标题')
   if (!m.reason.trim()) add('reason', '请填写采购事由')
@@ -170,7 +171,6 @@ export function validateExpense(m: ExpenseForm, full: boolean, enabledTypes: str
     if (len(r.purpose) > 200) add(`${p}.purpose`, '用途说明不能超过 200 字')
     if (len(r.noInvoiceReason) > 300) add(`${p}.noInvoiceReason`, '无票原因不能超过 300 字')
     if (r.amountCents !== null && r.amountCents > MAX_ITEM_CENTS) add(`${p}.amountCents`, '单条金额不能超过 ¥100,000.00')
-    if (r.noInvoice && !r.noInvoiceReason.trim()) add(`${p}.noInvoiceReason`, '无票必须填写原因')
     if (r.noInvoice && r.attachments.length) add(`${p}.invoices`, '无票明细不能同时上传票据')
     if (r.attachments.length > 10) add(`${p}.invoices`, '每条明细最多 10 张票据')
     r.attachments.forEach((a, j) => {

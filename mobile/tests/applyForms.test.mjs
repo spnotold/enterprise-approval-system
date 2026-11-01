@@ -37,12 +37,19 @@ test('同价视为最低价；高价选择需理由且不能超预算', () => {
   assert.ok(fields(f.validatePurchase(m, true)).includes('notLowestReason'))
   assert.ok(fields(f.validatePurchase(m, true)).includes('budgetLimitCents'))
 })
-test('草稿允许不完整内容，仍拒绝重复供应商和线上缺链接', () => {
+test('草稿允许不完整内容，仍拒绝重复供应商', () => {
   assert.equal(f.validatePurchase(f.emptyPurchase(), false).length, 0)
   const m = purchase()
-  m.quotes[0].supplierName = ' Ac me '; m.quotes[1].supplierName = 'acME'; m.quotes[1].channel = 'ONLINE'
-  const errors = fields(f.validatePurchase(m, false))
-  assert.ok(errors.includes('quotes[1].supplierName')); assert.ok(errors.includes('quotes[1].url'))
+  m.quotes[0].supplierName = ' Ac me '; m.quotes[1].supplierName = 'acME'
+  assert.ok(fields(f.validatePurchase(m, false)).includes('quotes[1].supplierName'))
+})
+test('线上缺链接、单一来源缺说明：草稿可保存，提交时才校验成对规则', () => {
+  const m = purchase()
+  m.quotes[0].channel = 'ONLINE'; m.singleSource = true; m.singleSourceReason = ''
+  const draft = fields(f.validatePurchase(m, false))
+  assert.ok(!draft.includes('quotes[0].url')); assert.ok(!draft.includes('singleSourceReason'))
+  const submit = fields(f.validatePurchase(m, true))
+  assert.ok(submit.includes('quotes[0].url')); assert.ok(submit.includes('singleSourceReason'))
 })
 test('采购验证截图、数量格式、到货日期与单一来源说明', () => {
   const m = purchase()
@@ -75,12 +82,15 @@ test('报销日期、单条十万元边界及停用类型', () => {
   const errors = fields(f.validateExpense(m, true, []))
   for (const key of ['items[1].occurDate', 'items[1].amountCents', 'items[1].expenseTypeCode']) assert.ok(errors.includes(key), key)
 })
-test('无票原因成对约束、票据互斥；独立模式不发送隐藏的关联申请', () => {
+test('无票缺原因草稿可保存、提交时拦截；票据互斥仍即时拦截；独立模式不发送隐藏的关联申请', () => {
   const m = expense(), r = m.items[1]
   r.noInvoice = true
   let errors = fields(f.validateExpense(m, false, ['OFFICE']))
-  assert.ok(errors.includes('items[1].noInvoiceReason')); assert.ok(errors.includes('items[1].invoices'))
-  r.attachments = []; r.invoiceNos = []; r.noInvoiceReason = '说明本次遗失票据的详细原因'
+  assert.ok(!errors.includes('items[1].noInvoiceReason')); assert.ok(errors.includes('items[1].invoices'))
+  r.attachments = []; r.invoiceNos = []
+  assert.equal(f.validateExpense(m, false, ['OFFICE']).length, 0)
+  assert.ok(fields(f.validateExpense(m, true, ['OFFICE'])).includes('items[1].noInvoiceReason'))
+  r.noInvoiceReason = '说明本次遗失票据的详细原因'
   m.relatedApplicationIds = [7]
   assert.equal(f.validateExpense(m, true, ['OFFICE']).length, 0)
   assert.equal(f.expenseBody(m).body.relatedApplicationIds.length, 0)

@@ -11,6 +11,7 @@ import {
   emptyExpenseItem,
   expenseItemFromView,
   expenseItemToInput,
+  expensePairRuleErrors,
   isEmptyExpenseItem,
   remapIndexPath,
   trimOrNull,
@@ -100,13 +101,12 @@ function validate(m: ExpenseModel, full: boolean): Record<string, string> {
     if (it.amountCents != null && it.amountCents > MAX_ITEM_CENTS) e[`items[${i}].amountCents`] = '单条金额不能超过 ¥100,000.00'
   })
   if (m.items.filter((it) => !isEmptyExpenseItem(it)).length > 50) e.items = '明细最多 50 条'
-  // 成对字段约束（保存草稿时服务端也会检查）：无票需原因、每条最多 10 张票据、同单内票据不重复
+  // 票约束（保存草稿时服务端也会检查）：每条最多 10 张票据、同单内票据不重复
   const seenFile = new Map<string, number>()
   const seenNo = new Map<string, number>()
   m.items.forEach((it, i) => {
     if (isEmptyExpenseItem(it)) return
     const p = `items[${i}]`
-    if (it.noInvoice && !len(it.noInvoiceReason)) e[`${p}.noInvoiceReason`] = '勾选无票时必须填写原因'
     if (it.noInvoice) return
     if (it.invoices.length > 10) e[`${p}.invoices`] = '每条明细最多 10 张票据'
     for (const inv of it.invoices) {
@@ -120,6 +120,8 @@ function validate(m: ExpenseModel, full: boolean): Record<string, string> {
       if (no && !seenNo.has(no)) seenNo.set(no, i)
     }
   })
+  // 无票原因成对约束：V5 迁移后草稿允许暂缺（服务端仅提交时校验），前端保持一致
+  Object.assign(e, expensePairRuleErrors(m.items, full))
   if (!full) return e
 
   if (!len(m.title)) e.title = '请填写标题'
@@ -141,9 +143,7 @@ function validate(m: ExpenseModel, full: boolean): Record<string, string> {
     }
     if (!len(it.purpose)) e[`${p}.purpose`] = '请填写用途说明'
     if (it.amountCents == null || it.amountCents <= 0) e[`${p}.amountCents`] = '金额必须大于 0'
-    if (it.noInvoice) {
-      if (len(it.noInvoiceReason) < 10) e[`${p}.noInvoiceReason`] = '勾选无票时需填写原因（至少 10 字）'
-    } else if (it.invoices.length === 0) {
+    if (!it.noInvoice && it.invoices.length === 0) {
       e[`${p}.invoices`] = '请上传票据或勾选无票并填写原因'
     }
   }
