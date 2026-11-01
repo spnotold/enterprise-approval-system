@@ -255,7 +255,7 @@ erDiagram
 | process_template_dept | 模板适用部门 | PK(template_id, dept_id) |
 | process_template_version | 模板版本 | UK(template_id, version_no)；status ∈ DRAFT / PUBLISHED / ARCHIVED；form_schema、node_config 为 JSONB；每个模板至多一个 DRAFT、一个 PUBLISHED（部分唯一索引）；触发器禁止修改已发布版本 |
 | application | 申请主表 | app_no UK；type；status；applicant_id、dept_id（提交时固化）；amount_cents；current_node_seq；source_application_id（复制来源）；version（乐观锁）；deleted_at 只允许草稿 |
-| purchase_detail / purchase_item / purchase_quote | 采购 | 报价 UK(application_id, lower(supplier_name))；线上报价必须有链接、单一来源必须有说明（提交时校验，见 Q5） |
+| purchase_detail / purchase_item / purchase_quote | 采购 | 报价 UK(application_id, lower(supplier_name))；报价含 quote_date；线上报价必须有链接、单一来源必须有说明（提交时校验，见 Q5） |
 | travel_detail / travel_companion | 差旅 | CHECK(end_time ≥ start_time)；natural_days、duration_hours 由服务端写入；同行人为系统用户或文本姓名二选一 |
 | expense_type | 费用类型 | 被引用后只能停用 |
 | expense_detail / expense_item | 报销单与费用明细 | total_amount_cents；无票明细必须有原因（提交时校验，见 Q7）；UK(application_id, seq) |
@@ -630,7 +630,8 @@ public record ExpenseSaveRequest(
     @Size(max = 1000) String description,
     List<Long> relatedApplicationIds,   // 关联的差旅 / 采购单
     @Size(max = 500) String independentReason,
-    @Size(max = 50) List<@Valid Item> items
+    @Size(max = 50) List<@Valid Item> items,
+    @Size(max = 500) String remark      // 报销单备注
 ) {
     public record Item(
         String expenseTypeCode,
@@ -1494,7 +1495,7 @@ public class FileService {
 
 ## Q5：采购申请的报价规则如何校验？
 
-采购申请由三部分组成：采购明细（可增删，≥ 1 条）、报价比较（≥ 2 家）、采购选择（拟选供应商与理由）。明细金额 `amount_cents = round(quantity × unit_price_cents)` 由服务端用 `BigDecimal`、`HALF_UP` 计算，数量用字符串传输，避免浮点。
+采购申请由三部分组成：采购明细（可增删，≥ 1 条）、报价比较（≥ 2 家）、采购选择（拟选供应商与理由），各字段见 3.4。明细金额 `amount_cents = round(quantity × unit_price_cents)` 由服务端用 `BigDecimal`、`HALF_UP` 计算，数量用字符串传输，避免浮点。
 
 提交时 `BusinessValidator` 依次检查以下规则，失败时在 `errors[].rule` 中返回规则码：
 
@@ -1503,6 +1504,7 @@ public class FileService {
 | `PUR_ITEMS_REQUIRED` | 明细至少 1 条，每条字段完整 |
 | `PUR_QUOTES_INSUFFICIENT` | 非单一来源时，至少 2 家不同供应商的报价（供应商名去空白、不区分大小写比较） |
 | `PUR_QUOTE_EVIDENCE` | 线下报价需有报价单附件或报价明细说明；线上报价必须有购买链接和至少 1 张截图 |
+| `PUR_QUOTE_DATE` | 每家报价都要填报价日期，且不晚于提交当天（上海时区） |
 | `PUR_SELECTED_INVALID` | 拟选报价必须属于本单 |
 | `PUR_NOT_LOWEST_REASON` | 拟选报价不是最低价时，必须填写理由（≥ 10 字）；金额相同视为最低价 |
 | `PUR_SINGLE_SOURCE` | 勾选单一来源时，说明 ≥ 20 字，并附说明材料或在说明中写明依据 |
@@ -2109,6 +2111,7 @@ Flyway 脚本：
 | `V3__seed_base.sql` | 角色、权限点、费用类型、系统配置、部门 |
 | `V4__seed_builtin_templates.sql` | 三个内置模板 |
 | `V5__allow_incomplete_draft_details.sql` | 去掉线上报价链接、单一来源说明、无票原因三条 CHECK，让草稿可以保存未填完的内容；这些规则改由提交校验执行 |
+| `V6__quote_date_and_remarks.sql` | 报价表加 `quote_date`，采购单、报销单加 `remark`；报价日期允许为空（草稿），提交时校验 |
 | `db/demo/R__seed_demo.sql` | 演示账号、两个自定义模板、数据范围授权；仅 `demo` profile 加载 |
 
 种子脚本可重复执行，基础数据用 `ON CONFLICT DO NOTHING`。初始化部门为研发部、市场部、财务部、总经办，演示账号统一初始密码 `Demo@2026`（以 BCrypt 哈希写入）：
