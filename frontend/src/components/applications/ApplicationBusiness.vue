@@ -29,6 +29,7 @@ const expenseItems = computed(() => props.detail.expense?.items.map(expenseItemF
         <SlipFields>
           <SlipField label="预算上限"><MoneyText :cents="detail.purchase.budgetLimitCents" /></SlipField>
           <SlipField label="期望到货日期"><span class="num">{{ fmtDate(detail.purchase.expectedArrivalDate) }}</span></SlipField>
+          <SlipField v-if="detail.purchase.remark?.trim()" label="采购单备注" full><span class="pre-wrap">{{ detail.purchase.remark }}</span></SlipField>
           <SlipField label="采购事由" full><span class="pre-wrap">{{ detail.purchase.reason ?? '—' }}</span></SlipField>
           <SlipField label="单一来源采购">{{ detail.purchase.singleSource ? '是' : '否' }}</SlipField>
           <SlipField label="拟选金额"><MoneyText :cents="detail.purchase.selectedAmountCents" strong /></SlipField>
@@ -88,6 +89,7 @@ const expenseItems = computed(() => props.detail.expense?.items.map(expenseItemF
       <SlipSection title="申请内容">
         <template v-if="detail.templateVersionNo != null" #note><span class="form-version">表单版本 v{{ detail.templateVersionNo }}</span></template>
         <SlipFields>
+          <SlipField v-if="detail.expense.remark?.trim()" label="报销单备注" full><span class="pre-wrap">{{ detail.expense.remark }}</span></SlipField>
           <SlipField label="报销说明" full><span class="pre-wrap">{{ detail.expense.description ?? '—' }}</span></SlipField>
           <SlipField label="报销总额"><MoneyText :cents="detail.expense.totalAmountCents" strong /></SlipField>
           <SlipField label="无票明细"><span class="num">{{ detail.expense.noInvoiceCount }} 项</span><span class="gap" /><MoneyText :cents="detail.expense.noInvoiceAmountCents" /></SlipField>

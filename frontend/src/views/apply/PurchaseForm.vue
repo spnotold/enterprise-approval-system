@@ -17,8 +17,10 @@ import {
   QUANTITY_RE,
   quoteFromView,
   quoteToInput,
+  quoteDateError,
   remapIndexPath,
   trimOrNull,
+  remarkError,
   type PurchaseItemDraft,
   type QuoteDraft,
 } from '@/lib/formModels'
@@ -34,6 +36,7 @@ import AttachmentUploader from '@/components/AttachmentUploader.vue'
 const props = defineProps<{ id?: number }>()
 
 interface PurchaseModel {
+  remark: string | null
   title: string | null
   reason: string | null
   budgetLimitCents: number | null
@@ -72,6 +75,7 @@ const LABELS: Record<string, string> = {
   supplierName: '供应商',
   channel: '渠道',
   quoteAmountCents: '报价金额',
+  quoteDate: '报价日期',
   url: '购买链接',
   description: '报价说明',
   attachmentIds: '附件',
@@ -87,6 +91,7 @@ let quoteMap: number[] = []
 function emptyModel(): PurchaseModel {
   return {
     title: null,
+    remark: null,
     reason: null,
     budgetLimitCents: null,
     expectedArrivalDate: null,
@@ -110,6 +115,7 @@ function toBody(m: PurchaseModel): Omit<PurchaseSaveRequest, 'version'> {
   const sel = m.selectedQuoteIndex == null ? -1 : quotes.map.indexOf(m.selectedQuoteIndex)
   return {
     title: trimOrNull(m.title),
+    remark: trimOrNull(m.remark),
     reason: trimOrNull(m.reason),
     budgetLimitCents: m.budgetLimitCents,
     expectedArrivalDate: m.expectedArrivalDate,
@@ -127,6 +133,8 @@ function toBody(m: PurchaseModel): Omit<PurchaseSaveRequest, 'version'> {
 
 function validate(m: PurchaseModel, full: boolean): Record<string, string> {
   const e: Record<string, string> = {}
+  const remarkMessage = remarkError(m.remark)
+  if (remarkMessage) e.remark = remarkMessage
   // 格式（保存草稿也检查）
   if (len(m.title) > 100) e.title = '标题不能超过 100 字'
   if (len(m.reason) > 1000) e.reason = '采购事由不能超过 1000 字'
@@ -173,6 +181,8 @@ function validate(m: PurchaseModel, full: boolean): Record<string, string> {
   }
 
   for (const { q, i } of quotes) {
+    const dateMessage = quoteDateError(q.quoteDate, full)
+    if (dateMessage) e[`quotes[${i}].quoteDate`] = dateMessage
     if (!len(q.supplierName)) e[`quotes[${i}].supplierName`] = '请填写供应商'
     if (q.quoteAmountCents == null || q.quoteAmountCents <= 0) e[`quotes[${i}].quoteAmountCents`] = '请填写报价金额'
     if (q.channel === 'ONLINE') {
@@ -213,6 +223,7 @@ const draft = useDraftForm<PurchaseModel>({
     if (!p) return emptyModel()
     return {
       title: d.title,
+      remark: p.remark,
       reason: p.reason,
       budgetLimitCents: p.budgetLimitCents,
       expectedArrivalDate: p.expectedArrivalDate,
@@ -291,6 +302,9 @@ function beforeToday(d: Date) {
         </el-form-item>
         <el-form-item label="采购事由" required :error="err('reason')">
           <el-input v-model="model.reason" type="textarea" :rows="3" maxlength="1000" show-word-limit />
+        </el-form-item>
+        <el-form-item label="采购单备注" :error="err('remark')">
+          <el-input v-model="model.remark" type="textarea" :rows="2" maxlength="500" show-word-limit placeholder="选填" />
         </el-form-item>
         <el-row :gutter="16">
           <el-col :xs="24" :sm="12">

@@ -79,16 +79,16 @@ public class DemoDataInitializer implements ApplicationRunner {
                 "现有测试环境资源不足，需新增两台服务器用于自动化回归测试", 3_000_000L, today.plusDays(14), false,
                 null, List.of(), 0, "报价最低且交付周期满足要求", null,
                 List.of(new PurchaseItem("机架式服务器", "2U / 64 核 / 256GB", "台", "2", 1_250_000L, null)),
-                List.of(new Quote("华东服务器有限公司", "OFFLINE", 2_500_000L, null, "线下询价，含三年上门保修", List.of()),
-                        new Quote("新锐计算科技", "OFFLINE", 2_760_000L, null, "线下询价，含一年保修", List.of())),
-                List.of()));
+                List.of(new Quote("华东服务器有限公司", "OFFLINE", 2_500_000L, null, "线下询价，含三年上门保修", List.of(), today.minusDays(2)),
+                        new Quote("新锐计算科技", "OFFLINE", 2_760_000L, null, "线下询价，含一年保修", List.of(), today.minusDays(1))),
+                List.of(), null));
         approve(purchase, RD_HEAD_LI, "确有需要，同意");
 
         // 王工：已驳回的报销（部门负责人驳回）
         long expense = submit("EXPENSE", RD_EMP_WANG, new Expense(null, "团队加班餐费", null, List.of(),
                 "项目上线前团队加班，无对应差旅或采购单",
                 List.of(new ExpenseItem("MEAL", today.minusDays(5), "上线前加班晚餐", 68_000L, true,
-                        "商家无法开具发票，附点餐记录说明", List.of()))));
+                        "商家无法开具发票，附点餐记录说明", List.of())), null));
         reject(expense, RD_HEAD_LI, "超出部门餐费标准，请按标准拆分后重新提交");
 
         // 周敏：审批中的请假（超过 3 天，会经过企业负责人；当前在部门负责人孙经理处）

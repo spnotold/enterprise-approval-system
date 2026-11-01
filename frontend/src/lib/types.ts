@@ -362,6 +362,7 @@ export interface PurchaseItemView extends PurchaseItemInput {
 
 export interface PurchaseQuoteInput {
   supplierName: string | null
+  quoteDate: string | null
   channel: 'ONLINE' | 'OFFLINE'
   quoteAmountCents: number | null
   url: string | null // 线上报价必填
@@ -376,6 +377,7 @@ export interface PurchaseQuoteView extends PurchaseQuoteInput {
 
 export interface PurchaseSaveRequest {
   version?: number // 新建时不传
+  remark: string | null
   title: string | null
   reason: string | null
   budgetLimitCents: number | null
@@ -476,6 +478,7 @@ export interface ExpenseItemView extends Omit<ExpenseItemInput, 'invoices'> {
 
 export interface ExpenseSaveRequest {
   version?: number
+  remark: string | null
   title: string | null
   description: string | null
   relatedApplicationIds: number[]

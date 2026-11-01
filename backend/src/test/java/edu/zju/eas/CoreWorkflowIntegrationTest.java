@@ -124,7 +124,7 @@ class CoreWorkflowIntegrationTest {
     @Test void purchaseTotalAndMultiStageApproval()throws Exception{
         var body=map("title","测试采购","reason","设备采购测试","budgetLimitCents",20000,"expectedArrivalDate",java.time.LocalDate.now().plusDays(2).toString(),"singleSource",false,"selectedQuoteIndex",0,
             "items",List.of(map("name","配件","unit","件","quantity","1.235","unitPriceCents",100)),
-            "quotes",List.of(map("supplierName","供应商A","channel","OFFLINE","quoteAmountCents",10000,"description","报价说明"),map("supplierName","供应商B","channel","OFFLINE","quoteAmountCents",12000,"description","报价说明")));
+            "quotes",List.of(map("quoteDate",java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).minusDays(1).toString(),"supplierName","供应商A","channel","OFFLINE","quoteAmountCents",10000,"description","报价说明"),map("quoteDate",java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).minusDays(1).toString(),"supplierName","供应商B","channel","OFFLINE","quoteAmountCents",12000,"description","报价说明")));
         MvcResult created=call(post("/applications/purchase"),employee,body);assertEquals(200,created.getResponse().getStatus(),created.getResponse().getContentAsString());long id=data(created).path("id").asLong();
         assertEquals(124,jdbc.queryForObject("SELECT items_total_cents FROM purchase_detail WHERE application_id=?",Long.class,id));
         assertEquals(10000,jdbc.queryForObject("SELECT amount_cents FROM application WHERE id=?",Long.class,id));

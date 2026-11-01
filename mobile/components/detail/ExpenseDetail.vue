@@ -36,6 +36,10 @@ function warnings(invoices: InvoiceView[]): Record<number, string> {
   <view>
     <view class="panel">
       <view class="panel-title">报销信息</view>
+      <view v-if="data.remark?.trim()" class="kv">
+        <text class="kv-label">报销单备注</text>
+        <text class="kv-value">{{ data.remark }}</text>
+      </view>
       <view class="kv">
         <text class="kv-label">报销合计</text>
         <text class="kv-value amount">¥{{ formatCents(data.totalAmountCents) }}</text>

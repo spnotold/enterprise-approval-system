@@ -10,6 +10,8 @@ import type {
   PurchaseQuoteView,
 } from './types'
 
+import { isDateString, todayShanghai } from './datetime'
+
 let seq = 0
 /** 本地行 key，只用于 v-for，不提交 */
 export const rowKey = () => ++seq
@@ -28,6 +30,7 @@ export interface PurchaseItemDraft extends PurchaseItemInput {
 export interface QuoteDraft {
   key: number
   supplierName: string | null
+  quoteDate: string | null
   channel: 'ONLINE' | 'OFFLINE'
   quoteAmountCents: number | null
   url: string | null
@@ -50,6 +53,7 @@ export const emptyPurchaseItem = (): PurchaseItemDraft => ({
 export const emptyQuote = (): QuoteDraft => ({
   key: rowKey(),
   supplierName: null,
+  quoteDate: null,
   channel: 'OFFLINE',
   quoteAmountCents: null,
   url: null,
@@ -61,7 +65,7 @@ export const isEmptyPurchaseItem = (i: PurchaseItemDraft) =>
   blank(i.name) && blank(i.spec) && blank(i.unit) && blank(i.quantity) && i.unitPriceCents == null && blank(i.remark)
 
 export const isEmptyQuote = (q: QuoteDraft) =>
-  blank(q.supplierName) && q.quoteAmountCents == null && blank(q.url) && blank(q.description) && q.attachments.length === 0
+  blank(q.supplierName) && blank(q.quoteDate) && q.quoteAmountCents == null && blank(q.url) && blank(q.description) && q.attachments.length === 0
 
 export const purchaseItemToInput = (i: PurchaseItemDraft): PurchaseItemInput => ({
   name: trimOrNull(i.name),
@@ -74,6 +78,7 @@ export const purchaseItemToInput = (i: PurchaseItemDraft): PurchaseItemInput => 
 
 export const quoteToInput = (q: QuoteDraft): PurchaseQuoteInput => ({
   supplierName: trimOrNull(q.supplierName),
+  quoteDate: trimOrNull(q.quoteDate),
   channel: q.channel,
   quoteAmountCents: q.quoteAmountCents,
   url: trimOrNull(q.url),
@@ -95,6 +100,7 @@ export const purchaseItemFromView = (i: PurchaseItemView): PurchaseItemDraft => 
 export const quoteFromView = (q: PurchaseQuoteView): QuoteDraft => ({
   key: rowKey(),
   supplierName: q.supplierName,
+  quoteDate: q.quoteDate,
   channel: q.channel,
   quoteAmountCents: q.quoteAmountCents,
   url: q.url,
@@ -102,6 +108,19 @@ export const quoteFromView = (q: PurchaseQuoteView): QuoteDraft => ({
   attachments: q.attachments ?? [],
   lowest: q.lowest,
 })
+
+/** 报价日期只在提交时要求完整，今天按上海时区计算。 */
+export function quoteDateError(date: string | null, full: boolean): string | undefined {
+  if (!full) return undefined
+  if (!date) return '请选择报价日期'
+  if (!isDateString(date) || date > todayShanghai()) return '报价日期不能晚于今天'
+  return undefined
+}
+
+/** 采购单与报销单备注均可留空，最多 500 字。 */
+export function remarkError(remark: string | null): string | undefined {
+  return (remark?.length ?? 0) > 500 ? '备注不能超过 500 字' : undefined
+}
 
 /** 报价中的最低金额（金额相同视为最低价） */
 export function lowestQuoteCents(quotes: { quoteAmountCents: number | null }[]): number | null {

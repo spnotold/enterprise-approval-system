@@ -12,8 +12,8 @@ function purchase() {
   const m = f.emptyPurchase()
   Object.assign(m, { title: '研发采购', reason: '办公采购', budgetLimitCents: 20000, expectedArrivalDate: time.todayCN(), selectedQuoteIndex: 0 })
   Object.assign(m.items[0], { name: '键盘', unit: '个', quantity: '1.125', unitPriceCents: 10000 })
-  Object.assign(m.quotes[0], { supplierName: '供应商A', quoteAmountCents: 12000, description: '含税包邮' })
-  Object.assign(m.quotes[1], { supplierName: '供应商B', quoteAmountCents: 12000, description: '含税包邮' })
+  Object.assign(m.quotes[0], { supplierName: '供应商A', quoteAmountCents: 12000, quoteDate: time.todayCN(), description: '含税包邮' })
+  Object.assign(m.quotes[1], { supplierName: '供应商B', quoteAmountCents: 12000, quoteDate: time.todayCN(), description: '含税包邮' })
   return m
 }
 function expense() {
@@ -111,4 +111,69 @@ test('自定义日期、金额与附件值的格式错误不能混入草稿', ()
   assert.equal(custom.validateCustom(schema, values, { full: false }).length, 3)
   assert.equal(time.isDateString('2024-02-29'), true)
   assert.equal(time.isDateString('2026-02-29'), false)
+})
+
+
+test('报价日期草稿可空或晚于今天，提交逐行校验日期且接受今天及过去日期', () => {
+  const m = purchase()
+  m.quotes[0].quoteDate = ''; m.quotes[1].quoteDate = time.addDays(time.todayCN(), 1)
+  assert.equal(f.validatePurchase(m, false).length, 0)
+  let errors = fields(f.validatePurchase(m, true))
+  assert.ok(errors.includes('quotes[0].quoteDate')); assert.ok(errors.includes('quotes[1].quoteDate'))
+  m.quotes[0].quoteDate = time.addDays(time.todayCN(), -1); m.quotes[1].quoteDate = time.todayCN()
+  assert.equal(f.validatePurchase(m, true).length, 0)
+  m.quotes[0].quoteDate = '2026-02-30'
+  assert.ok(fields(f.validatePurchase(m, true)).includes('quotes[0].quoteDate'))
+})
+
+test('单一来源只需现有的一家报价，但同样必填报价日期', () => {
+  const m = purchase()
+  m.singleSource = true; m.singleSourceReason = '原有设备必须使用原厂配套零件，根据兼容性要求采购'
+  m.quotes.splice(1)
+  assert.equal(f.validatePurchase(m, true).length, 0)
+  m.quotes[0].quoteDate = ''
+  assert.equal(fields(f.validatePurchase(m, true)).join(','), 'quotes[0].quoteDate')
+})
+
+test('仅填日期的报价行不会剔除，日期随请求保留且下标映射正确', () => {
+  const m = f.emptyPurchase()
+  m.quotes[1].quoteDate = time.todayCN()
+  const result = f.purchaseBody(m)
+  assert.equal(result.quoteMap.join(','), '1')
+  assert.equal(result.body.quotes[0].quoteDate, time.todayCN())
+  assert.ok(fields(f.validatePurchase(m, true)).includes('quotes[1].supplierName'))
+})
+
+test('采购单备注和报销单备注可空、随请求保存，并在草稿和提交限制500字', () => {
+  for (const [m, validate, body] of [
+    [purchase(), (m, full) => f.validatePurchase(m, full), m => f.purchaseBody(m).body],
+    [expense(), (m, full) => f.validateExpense(m, full, ['OFFICE']), m => f.expenseBody(m).body],
+  ]) {
+    assert.equal(body(m).remark, null)
+    m.remark = '备'.repeat(500)
+    assert.equal(body(m).remark, m.remark)
+    assert.equal(validate(m, true).length, 0)
+    m.remark += '注'
+    for (const full of [false, true]) assert.ok(fields(validate(m, full)).includes('remark'))
+    m.remark = '  '
+    assert.equal(body(m).remark, null)
+  }
+  const m = expense()
+  m.description = '报销背景'; m.remark = '补充备注'
+  assert.equal(f.expenseBody(m).body.description, '报销背景')
+  assert.equal(f.expenseBody(m).body.remark, '补充备注')
+})
+
+test('报价日期以中国时区跨午夜判断今天', () => {
+  let instant = Date.parse('2026-10-31T15:59:59Z')
+  class FixedDate extends Date {
+    static now() { return instant }
+  }
+  const fixed = loadTs('utils/applyForms.ts', {}, { Date: FixedDate })
+  const m = purchase()
+  m.expectedArrivalDate = '2026-11-02'
+  for (const q of m.quotes) q.quoteDate = '2026-11-01'
+  assert.ok(fields(fixed.validatePurchase(m, true)).includes('quotes[0].quoteDate'))
+  instant += 1000
+  assert.equal(fixed.validatePurchase(m, true).length, 0)
 })

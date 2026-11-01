@@ -12,6 +12,7 @@ public class PurchaseDetail {
     @TableId(type = IdType.INPUT)
     private Long applicationId;
     private String reason;
+    private String remark;
     private Long budgetLimitCents;
     private java.time.LocalDate expectedArrivalDate;
     private Boolean singleSource;
