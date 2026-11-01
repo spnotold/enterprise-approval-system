@@ -235,3 +235,49 @@ export function isHttpUrl(s: string | null | undefined): boolean {
     return false
   }
 }
+
+// ---------- 成对字段约束（草稿 / 提交分级） ----------
+// V5 迁移（allow_incomplete_draft_details）后服务端不再在草稿保存时强制这些规则，
+// BusinessValidator 仅在提交（full）时校验；前端保持一致：保存草稿只查格式 / 长度，
+// 不要求成对字段已填（线上报价链接、单一来源说明、无票原因）。
+
+const textLength = (s: string | null | undefined) => [...(s ?? '').trim()].length
+
+export interface PurchasePairRuleModel {
+  singleSource: boolean
+  singleSourceReason: string | null
+  quotes: QuoteDraft[]
+}
+
+/**
+ * 采购成对字段约束：线上报价（channel=ONLINE）需购买链接；单一来源需说明（至少 20 字）。
+ * 保存草稿（full=false）不产生这些错误。
+ */
+export function purchasePairRuleErrors(m: PurchasePairRuleModel, full: boolean): Record<string, string> {
+  const e: Record<string, string> = {}
+  if (!full) return e
+  m.quotes.forEach((q, i) => {
+    if (!isEmptyQuote(q) && q.channel === 'ONLINE' && blank(q.url)) {
+      e[`quotes[${i}].url`] = '线上报价必须填写购买链接'
+    }
+  })
+  if (m.singleSource && textLength(m.singleSourceReason) < 20) {
+    e.singleSourceReason = '单一来源采购需说明原因（至少 20 字），并附说明材料或写明依据'
+  }
+  return e
+}
+
+/**
+ * 报销成对字段约束：勾选无票的明细需填写原因（至少 10 字）。
+ * 保存草稿（full=false）不产生这些错误。
+ */
+export function expensePairRuleErrors(items: ExpenseItemDraft[], full: boolean): Record<string, string> {
+  const e: Record<string, string> = {}
+  if (!full) return e
+  items.forEach((it, i) => {
+    if (!isEmptyExpenseItem(it) && it.noInvoice && textLength(it.noInvoiceReason) < 10) {
+      e[`items[${i}].noInvoiceReason`] = '勾选无票时需填写原因（至少 10 字）'
+    }
+  })
+  return e
+}

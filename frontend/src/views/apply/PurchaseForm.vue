@@ -14,6 +14,7 @@ import {
   lowestQuoteCents,
   purchaseItemFromView,
   purchaseItemToInput,
+  purchasePairRuleErrors,
   QUANTITY_RE,
   quoteFromView,
   quoteToInput,
@@ -147,12 +148,8 @@ function validate(m: PurchaseModel, full: boolean): Record<string, string> {
   m.quotes.forEach((q, i) => {
     if (q.url && !isHttpUrl(q.url)) e[`quotes[${i}].url`] = '请输入以 http:// 或 https:// 开头的链接'
   })
-  // 成对字段约束（对应数据库 CHECK / 唯一索引，保存草稿时服务端也会拒绝）
+  // 供应商查重（保存草稿时服务端也会拒绝重复供应商）
   const quotes = m.quotes.map((q, i) => ({ q, i })).filter(({ q }) => !isEmptyQuote(q))
-  for (const { q, i } of quotes) {
-    if (q.channel === 'ONLINE' && !len(q.url)) e[`quotes[${i}].url`] = '线上报价必须填写购买链接'
-  }
-  if (m.singleSource && !len(m.singleSourceReason)) e.singleSourceReason = '单一来源采购必须填写说明'
   const seen = new Map<string, number>()
   for (const { q, i } of quotes) {
     const k = normSupplier(q.supplierName)
@@ -160,6 +157,8 @@ function validate(m: PurchaseModel, full: boolean): Record<string, string> {
     if (seen.has(k)) e[`quotes[${i}].supplierName`] = `与第 ${seen.get(k)! + 1} 行供应商重复`
     else seen.set(k, i)
   }
+  // 成对字段约束：V5 迁移后草稿允许暂缺（服务端仅提交时校验），前端保持一致
+  Object.assign(e, purchasePairRuleErrors(m, full))
   if (!full) return e
 
   // 提交前完整检查
@@ -193,7 +192,6 @@ function validate(m: PurchaseModel, full: boolean): Record<string, string> {
   }
   const suppliers = new Set(quotes.map(({ q }) => normSupplier(q.supplierName)).filter(Boolean))
   if (m.singleSource) {
-    if (len(m.singleSourceReason) < 20) e.singleSourceReason = '单一来源采购需说明原因（至少 20 字），并附说明材料或写明依据'
     if (quotes.length === 0) e.quotes = '请填写该供应商的报价'
   } else if (suppliers.size < 2) {
     e.quotes = '非单一来源采购需至少 2 家不同供应商的报价'
