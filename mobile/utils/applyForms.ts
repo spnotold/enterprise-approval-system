@@ -100,7 +100,7 @@ export function validatePurchase(m: PurchaseForm, full: boolean): FieldError[] {
     if (!name) add(`${p}.supplierName`, '请填写供应商')
     if (q.quoteAmountCents === null || q.quoteAmountCents <= 0) add(`${p}.quoteAmountCents`, '报价金额必须大于 0')
     if (q.channel === 'ONLINE' && !q.url.trim()) add(`${p}.url`, '线上报价必须填写购买链接')
-    if (q.channel === 'ONLINE' && !q.attachments.some(a => a.contentType.startsWith('image/'))) add(`${p}.attachmentIds`, '线上报价至少上传 1 张截图')
+    if (q.channel === 'ONLINE' && !q.attachments.length) add(`${p}.attachmentIds`, '线上报价至少上传 1 张截图或报价单')
     if (q.channel === 'OFFLINE' && !q.attachments.length && !q.description.trim()) add(`${p}.attachmentIds`, '请上传报价单或填写报价说明')
   })
   if (!full) return errors

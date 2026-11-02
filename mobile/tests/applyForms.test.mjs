@@ -56,6 +56,8 @@ test('采购验证截图、数量格式、到货日期与单一来源说明', ()
   Object.assign(m.quotes[0], { channel: 'ONLINE', url: 'https://example.com/item', attachments: [file(1)] })
   assert.equal(f.validatePurchase(m, true).length, 0)
   m.quotes[0].attachments = [{ ...file(1), contentType: 'application/pdf' }]
+  assert.equal(f.validatePurchase(m, true).length, 0, '线上报价接受 PDF，与 Web、后端一致')
+  m.quotes[0].attachments = []
   m.items[0].quantity = '1.0001'; m.expectedArrivalDate = time.addDays(time.todayCN(), -1)
   m.singleSource = true; m.singleSourceReason = '不足二十字'
   const errors = fields(f.validatePurchase(m, true))
