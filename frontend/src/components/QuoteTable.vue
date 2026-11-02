@@ -154,7 +154,7 @@ function remove(i: number) {
                 :readonly="readonly"
                 :max-count="5"
                 button-text="上传"
-                :tip="row.channel === 'ONLINE' ? '线上报价需至少 1 张截图' : '线下报价需报价单或填写说明'"
+                :tip="row.channel === 'ONLINE' ? '线上报价需至少 1 张截图或报价单' : '线下报价需报价单或填写说明'"
               />
               <div v-if="err($index, 'attachmentIds')" class="cell-error-msg">{{ err($index, 'attachmentIds') }}</div>
             </div>

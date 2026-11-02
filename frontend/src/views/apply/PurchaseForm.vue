@@ -185,7 +185,7 @@ function validate(m: PurchaseModel, full: boolean): Record<string, string> {
     if (!len(q.supplierName)) e[`quotes[${i}].supplierName`] = '请填写供应商'
     if (q.quoteAmountCents == null || q.quoteAmountCents <= 0) e[`quotes[${i}].quoteAmountCents`] = '请填写报价金额'
     if (q.channel === 'ONLINE') {
-      if (q.attachments.length === 0) e[`quotes[${i}].attachmentIds`] = '线上报价至少上传 1 张截图'
+      if (q.attachments.length === 0) e[`quotes[${i}].attachmentIds`] = '线上报价至少上传 1 张截图或报价单'
     } else if (q.attachments.length === 0 && !len(q.description)) {
       e[`quotes[${i}].attachmentIds`] = '线下报价需上传报价单或填写报价说明'
     }

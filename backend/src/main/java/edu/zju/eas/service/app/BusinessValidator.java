@@ -57,7 +57,7 @@ public class BusinessValidator {
                 if(q.quoteDate()==null||q.quoteDate().isAfter(LocalDate.now(clock.withZone(CN))))e.add(p+"quoteDate","PUR_QUOTE_DATE","请选择不晚于今天的报价日期");
                 if(q.quoteAmountCents()==null||q.quoteAmountCents()<=0)e.add(p+"quoteAmountCents","REQUIRED","报价金额必须大于 0");
                 if("ONLINE".equals(q.channel())){
-                    if(blank(q.url())||list(q.attachmentIds()).isEmpty())e.add(p+"attachmentIds","PUR_QUOTE_EVIDENCE","线上报价需要链接及至少一张截图");
+                    if(blank(q.url())||list(q.attachmentIds()).isEmpty())e.add(p+"attachmentIds","PUR_QUOTE_EVIDENCE","线上报价需要链接及至少一张截图或报价单");
                 }else if(list(q.attachmentIds()).isEmpty()&&blank(q.description()))e.add(p+"description","PUR_QUOTE_EVIDENCE","线下报价需要附件或报价说明");
             }
             if(q.quoteAmountCents()!=null)lowest=Math.min(lowest,q.quoteAmountCents());
