@@ -334,7 +334,7 @@ erDiagram
 | 报价金额 | quote_amount_cents | 整数分 | 必填，> 0 |
 | 购买链接 | url | 文本 ≤ 500 | 线上报价必填，只允许 http / https |
 | 报价说明 | description | 文本 ≤ 1000 | 线下报价无附件时必填 |
-| 报价附件 / 截图 | attachment_ids | 附件列表 | 线上报价至少 1 张截图 |
+| 报价附件 / 截图 | attachment_ids | 附件列表 | 线上报价至少 1 个附件（截图或报价单，JPG／PNG／PDF） |
 
 采购选择（`purchase_detail`）：拟选报价 `selected_quote_id`（必填，必须属于本单）、选择理由 `selection_reason`、未选最低价理由 `not_lowest_reason`（未选最低价时 ≥ 10 字）、单一来源 `single_source` 及说明 `single_source_reason`（≥ 20 字）和说明材料。预计采购总额即拟选报价金额，由服务端写入 `application.amount_cents`。
 
@@ -1503,7 +1503,7 @@ public class FileService {
 |---|---|
 | `PUR_ITEMS_REQUIRED` | 明细至少 1 条，每条字段完整 |
 | `PUR_QUOTES_INSUFFICIENT` | 非单一来源时，至少 2 家不同供应商的报价（供应商名去空白、不区分大小写比较） |
-| `PUR_QUOTE_EVIDENCE` | 线下报价需有报价单附件或报价明细说明；线上报价必须有购买链接和至少 1 张截图 |
+| `PUR_QUOTE_EVIDENCE` | 线下报价需有报价单附件或报价明细说明；线上报价必须有购买链接和至少 1 个附件（截图或报价单） |
 | `PUR_QUOTE_DATE` | 每家报价都要填报价日期，且不晚于提交当天（上海时区） |
 | `PUR_SELECTED_INVALID` | 拟选报价必须属于本单 |
 | `PUR_NOT_LOWEST_REASON` | 拟选报价不是最低价时，必须填写理由（≥ 10 字）；金额相同视为最低价 |
