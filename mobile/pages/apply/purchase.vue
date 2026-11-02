@@ -311,7 +311,7 @@ onLoad(async q => {
 
         <view v-show="step === 2" class="card detail-sheet">
           <view class="card-title">{{ steps[2] }}</view>
-          <view class="banner banner-info quote-help">非单一来源至少 2 家供应商；线上报价需链接及截图，线下需报价单或说明。</view>
+          <view class="banner banner-info quote-help">非单一来源至少 2 家供应商；线上报价需链接及截图或报价单，线下需报价单或说明。</view>
           <view v-if="fe.get('quotes')" class="field-err page-err">{{ fe.get('quotes') }}</view>
           <view v-for="(q, i) in form.quotes" :key="q.key" class="detail-block" :class="{ lowest: q.quoteAmountCents !== null && q.quoteAmountCents === lowest }">
             <view class="detail-title row between">
